@@ -12,12 +12,15 @@
     "test": "vitest run",
     "bridge": "node scripts/foh_bridge_daemon.js",
     "build:assets": "node scripts/build-asset-library.js",
+    "fetch:gdtf": "node scripts/fetch_gdtf_library.js",
     "verify": "scripts/workflows/verify_foundational_setup.sh"
   },
   "dependencies": {
     "@mkkellogg/gaussian-splats-3d": "^0.4.7",
     "cesium": "^1.145.0",
     "express": "^4.22.3",
+    "fast-xml-parser": "^4.5.7",
+    "jszip": "^3.10.2",
     "three": "^0.186.0",
     "ws": "^8.21.3"
   },
