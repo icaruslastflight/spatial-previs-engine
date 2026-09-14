@@ -9,17 +9,23 @@
  * a previz pass unreadable during a sightline check.
  *
  * So the buffers are allocated once, up front, and recycled. `acquire` and
- * `release` allocate nothing: they move an existing buffer between a free list
- * and a loan ledger.
+ * `release` allocate nothing in the steady state: they move an existing buffer
+ * between a free list and a loan ledger.
  *
- * EXHAUSTION IS AN ERROR, NOT A RESIZE
- * ------------------------------------
- * A pool that quietly grows when it runs dry is a pool that hides a leak while
- * reintroducing the allocations it was built to remove. Running out means
- * buffers are not being released -- a real defect -- so `acquire` throws
- * `PoolExhaustedError` and names the pool's state. Callers that legitimately
- * cannot tolerate a throw check `availableUint8()` / `availableFloat32()`
- * first, or size the pool for their true concurrency at construction.
+ * GROWTH IS BLOCKED, NOT PER-BUFFER
+ * ---------------------------------
+ * A show that patches more universes than the pool was sized for must not fail
+ * mid-cue, so an exhausted pool grows by `POOL_GROWTH_BLOCK` buffers at a time
+ * rather than one-by-one. Allocating a block amortises the cost across the
+ * whole burst that triggered it, keeping the collector out of the frame that
+ * happened to hit the boundary.
+ *
+ * Growth is still bounded. A pool that grows without limit turns a missing
+ * `release()` into an out-of-memory crash instead of a diagnosable fault, so
+ * growth stops at `maxCapacity` and `acquire` then throws `PoolExhaustedError`.
+ * `highWaterMark` in `stats()` reports the true concurrency, which is what to
+ * size `uint8Capacity` / `float32Capacity` against so growth never fires in
+ * steady state.
  */
 
 /**
@@ -41,16 +47,43 @@ export const POOL_BUFFER_LENGTH = 512;
  */
 export const DEFAULT_POOL_CAPACITY = 32;
 
+/**
+ * Buffers added per growth step when a pool runs dry.
+ *
+ * Eight is half a 16-universe show: large enough that a burst which overruns
+ * the initial capacity is absorbed in one allocation, small enough that an
+ * over-provisioned pool does not strand megabytes it will never hand out.
+ */
+export const POOL_GROWTH_BLOCK = 8;
+
+/**
+ * Ceiling on grown capacity, per type.
+ *
+ * 4096 buffers is 2 MB of `Uint8Array` or 8 MB of `Float32Array` -- far above
+ * any real patch, so reaching it means buffers are leaking rather than in use.
+ */
+export const DEFAULT_MAX_POOL_CAPACITY = 4096;
+
 export interface MemoryPoolOptions {
   /** `Uint8Array(512)` buffers to pre-allocate. Default `DEFAULT_POOL_CAPACITY`. */
   uint8Capacity?: number;
   /** `Float32Array(512)` buffers to pre-allocate. Default `DEFAULT_POOL_CAPACITY`. */
   float32Capacity?: number;
+  /** Buffers added per growth step. Default `POOL_GROWTH_BLOCK`. */
+  growthBlock?: number;
+  /** Hard ceiling on grown capacity, per type. Default `DEFAULT_MAX_POOL_CAPACITY`. */
+  maxCapacity?: number;
+}
+
+/** Current pre-allocated buffer count for each pooled type. */
+export interface PoolCapacity {
+  readonly uint8: number;
+  readonly float32: number;
 }
 
 /** A snapshot of one type's pool occupancy. */
 export interface PoolTypeStats {
-  /** Buffers pre-allocated at construction. Never changes. */
+  /** Buffers currently allocated. Rises by `growthBlock` when the pool grows. */
   readonly capacity: number;
   /** Buffers currently on loan. */
   readonly inUse: number;
@@ -65,7 +98,7 @@ export interface MemoryPoolStats {
   readonly float32: PoolTypeStats;
 }
 
-/** Thrown when every buffer of a type is already on loan. */
+/** Thrown when a pool is at `maxCapacity` and every buffer is already on loan. */
 export class PoolExhaustedError extends Error {
   readonly kind: 'Uint8Array' | 'Float32Array';
   readonly capacity: number;
@@ -73,9 +106,10 @@ export class PoolExhaustedError extends Error {
   constructor(kind: 'Uint8Array' | 'Float32Array', capacity: number) {
     super(
       `[TypedArrayMemoryPool] All ${capacity} ${kind}(${POOL_BUFFER_LENGTH}) buffers are on ` +
-        `loan. This means buffers are not being released -- check for a missing ` +
-        `release() on an early return or a thrown error -- or the pool is sized ` +
-        `below the real concurrency of the telemetry path.`,
+        `loan and the pool has reached its maxCapacity ceiling, so it cannot grow ` +
+        `further. This means buffers are not being released -- check for a missing ` +
+        `release() on an early return or a thrown error -- or raise maxCapacity if ` +
+        `this concurrency is genuine.`,
     );
     this.name = 'PoolExhaustedError';
     this.kind = kind;
@@ -94,17 +128,22 @@ export class PoolExhaustedError extends Error {
 export class TypedArrayMemoryPool {
   readonly #uint8Free: Uint8Array[] = [];
   readonly #uint8Loaned = new Set<Uint8Array>();
-  readonly #uint8Capacity: number;
+  #uint8Capacity: number;
   #uint8HighWater = 0;
 
   readonly #float32Free: Float32Array[] = [];
   readonly #float32Loaned = new Set<Float32Array>();
-  readonly #float32Capacity: number;
+  #float32Capacity: number;
   #float32HighWater = 0;
+
+  readonly #growthBlock: number;
+  readonly #maxCapacity: number;
 
   constructor(options: MemoryPoolOptions = {}) {
     this.#uint8Capacity = options.uint8Capacity ?? DEFAULT_POOL_CAPACITY;
     this.#float32Capacity = options.float32Capacity ?? DEFAULT_POOL_CAPACITY;
+    this.#growthBlock = options.growthBlock ?? POOL_GROWTH_BLOCK;
+    this.#maxCapacity = options.maxCapacity ?? DEFAULT_MAX_POOL_CAPACITY;
 
     if (!Number.isInteger(this.#uint8Capacity) || this.#uint8Capacity < 0) {
       throw new RangeError(`uint8Capacity must be a non-negative integer, got ${this.#uint8Capacity}`);
@@ -112,6 +151,20 @@ export class TypedArrayMemoryPool {
     if (!Number.isInteger(this.#float32Capacity) || this.#float32Capacity < 0) {
       throw new RangeError(
         `float32Capacity must be a non-negative integer, got ${this.#float32Capacity}`,
+      );
+    }
+    if (!Number.isInteger(this.#growthBlock) || this.#growthBlock < 1) {
+      throw new RangeError(`growthBlock must be a positive integer, got ${this.#growthBlock}`);
+    }
+    if (!Number.isInteger(this.#maxCapacity) || this.#maxCapacity < 0) {
+      throw new RangeError(`maxCapacity must be a non-negative integer, got ${this.#maxCapacity}`);
+    }
+    // A pool constructed above its own ceiling could never grow and would report
+    // a capacity the ceiling claims is impossible, so reject the contradiction.
+    if (this.#uint8Capacity > this.#maxCapacity || this.#float32Capacity > this.#maxCapacity) {
+      throw new RangeError(
+        `maxCapacity (${this.#maxCapacity}) must be >= the initial capacities ` +
+          `(uint8 ${this.#uint8Capacity}, float32 ${this.#float32Capacity}).`,
       );
     }
 
@@ -125,10 +178,23 @@ export class TypedArrayMemoryPool {
     }
   }
 
-  /** Take a zeroed `Uint8Array(512)`. Throws `PoolExhaustedError` if none are free. */
+  /**
+   * Take a zeroed `Uint8Array(512)`.
+   *
+   * Grows the pool by `growthBlock` if nothing is free. Throws
+   * `PoolExhaustedError` only once growth has hit `maxCapacity`.
+   */
   acquireUint8(): Uint8Array {
-    const buffer = this.#uint8Free.pop();
-    if (buffer === undefined) throw new PoolExhaustedError('Uint8Array', this.#uint8Capacity);
+    if (this.#uint8Free.length === 0) {
+      const block = Math.min(this.#growthBlock, this.#maxCapacity - this.#uint8Capacity);
+      if (block <= 0) throw new PoolExhaustedError('Uint8Array', this.#uint8Capacity);
+      for (let i = 0; i < block; i++) {
+        this.#uint8Free.push(new Uint8Array(POOL_BUFFER_LENGTH));
+      }
+      this.#uint8Capacity += block;
+    }
+    // Non-null: the free list was just refilled if it had been empty.
+    const buffer = this.#uint8Free.pop() as Uint8Array;
     this.#uint8Loaned.add(buffer);
     if (this.#uint8Loaned.size > this.#uint8HighWater) {
       this.#uint8HighWater = this.#uint8Loaned.size;
@@ -155,10 +221,23 @@ export class TypedArrayMemoryPool {
     this.#uint8Free.push(buffer);
   }
 
-  /** Take a zeroed `Float32Array(512)`. Throws `PoolExhaustedError` if none are free. */
+  /**
+   * Take a zeroed `Float32Array(512)`.
+   *
+   * Grows the pool by `growthBlock` if nothing is free. Throws
+   * `PoolExhaustedError` only once growth has hit `maxCapacity`.
+   */
   acquireFloat32(): Float32Array {
-    const buffer = this.#float32Free.pop();
-    if (buffer === undefined) throw new PoolExhaustedError('Float32Array', this.#float32Capacity);
+    if (this.#float32Free.length === 0) {
+      const block = Math.min(this.#growthBlock, this.#maxCapacity - this.#float32Capacity);
+      if (block <= 0) throw new PoolExhaustedError('Float32Array', this.#float32Capacity);
+      for (let i = 0; i < block; i++) {
+        this.#float32Free.push(new Float32Array(POOL_BUFFER_LENGTH));
+      }
+      this.#float32Capacity += block;
+    }
+    // Non-null: the free list was just refilled if it had been empty.
+    const buffer = this.#float32Free.pop() as Float32Array;
     this.#float32Loaned.add(buffer);
     if (this.#float32Loaned.size > this.#float32HighWater) {
       this.#float32HighWater = this.#float32Loaned.size;
@@ -187,6 +266,16 @@ export class TypedArrayMemoryPool {
   /** Buffers available to `acquireFloat32` right now. */
   availableFloat32(): number {
     return this.#float32Free.length;
+  }
+
+  /**
+   * Buffers currently allocated for each type, on loan or not.
+   *
+   * Rises by `growthBlock` each time a pool grows, so comparing it against the
+   * constructed capacity shows whether the initial sizing was too small.
+   */
+  getCapacity(): PoolCapacity {
+    return { uint8: this.#uint8Capacity, float32: this.#float32Capacity };
   }
 
   /**

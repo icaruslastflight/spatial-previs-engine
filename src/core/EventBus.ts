@@ -27,7 +27,7 @@ import type { Vec3 } from '../geo/GeoAnchor.ts';
 /**
  * One universe of DMX levels, as received from the FOH bridge.
  *
- * `channels` is BORROWED, not owned. It is typically a buffer on loan from
+ * `data` is BORROWED, not owned. It is typically a buffer on loan from
  * `TypedArrayMemoryPool` and is recycled the moment dispatch returns, so a
  * listener that needs to keep the levels must copy them (`slice()`, or a
  * `set()` into its own storage) rather than retain the reference.
@@ -48,15 +48,10 @@ export interface DmxUpdatePayload {
    * which wire the frame arrived on -- not here.
    */
   readonly universe: number;
-  /**
-   * Wire sequence byte, 0-255, wrapping. 0 means "sequencing disabled", in
-   * both Art-Net 4 (byte 12) and sACN (framing-layer byte 111).
-   */
-  readonly sequence: number;
   /** Exactly 512 channel levels, 0-255. Borrowed -- copy to retain. */
-  readonly channels: Uint8Array;
+  readonly data: Uint8Array;
   /** `performance.now()` timestamp at which the frame was parsed, ms. */
-  readonly receivedAt: number;
+  readonly timestamp: number;
 }
 
 /**
@@ -69,15 +64,15 @@ export interface DmxUpdatePayload {
  */
 export interface SocketSnapPayload {
   /** `socket_id` on the object that was being dragged. */
-  readonly movingSocketId: string;
+  readonly sourceId: string;
   /** `socket_id` on the stationary object it mated to. */
-  readonly targetSocketId: string;
-  /** Origin separation at capture time, metres. Always < SNAP_THRESHOLD_METERS. */
-  readonly distanceMeters: number;
-  /** Roll detent the joint locked onto: 0, 90, 180 or 270 degrees. */
-  readonly detentDegrees: number;
-  /** Whether the resulting joint carries load -- gates the rigging solver. */
-  readonly loadBearing: boolean;
+  readonly targetId: string;
+  /**
+   * Translation applied to seat the joint, metres, in the local ENU scene
+   * frame. Its magnitude is the capture distance, so it is always shorter
+   * than `SNAP_THRESHOLD_METERS`.
+   */
+  readonly offset: Vec3;
 }
 
 /**
@@ -89,37 +84,27 @@ export interface SocketSnapPayload {
  * back through `SITE_FRAME`.
  */
 export interface CameraMovePayload {
+  /** Eye position, metres. */
   readonly position: Vec3;
+  /** Point the camera is aimed at, metres. */
   readonly target: Vec3;
-  readonly fovDegrees: number;
-  readonly movedAt: number;
 }
 
-/** What kind of limit an `OVERLOAD_WARNING` reports. */
-export type OverloadDomain = 'STRUCTURAL' | 'ELECTRICAL' | 'THERMAL';
-
-/** How far past the limit the measurement sits. */
-export type OverloadSeverity = 'ADVISORY' | 'EXCEEDED' | 'CRITICAL';
-
 /**
- * A rated limit has been approached or passed.
+ * A distribution circuit has drawn past its rated breaker capacity.
  *
- * Raised by the rigging load path (a truss span or hoist over its `max_load_kg`)
- * and by the electrical distribution solver (a phase over its breaker rating).
- * `measured` and `limit` share `unit` so the HUD can render the ratio without
- * knowing the domain.
+ * Raised by the electrical load solver when the summed draw of the fixtures
+ * patched to a circuit exceeds its rating. The HUD renders
+ * `currentAmps / limitAmps` as a fill ratio, so both are amps and neither
+ * carries a unit field.
  */
 export interface OverloadWarningPayload {
-  /** Asset or circuit the warning is about -- socket id, hoist id, phase name. */
-  readonly sourceId: string;
-  readonly domain: OverloadDomain;
-  readonly severity: OverloadSeverity;
-  /** Measured value, in `unit`. */
-  readonly measured: number;
-  /** Rated limit, in `unit`. */
-  readonly limit: number;
-  /** Unit shared by `measured` and `limit`, e.g. 'kg', 'A', 'degC'. */
-  readonly unit: string;
+  /** The distribution circuit the warning is about. */
+  readonly circuitId: string;
+  /** Measured draw on the circuit, amps. */
+  readonly currentAmps: number;
+  /** Rated breaker capacity for the circuit, amps. */
+  readonly limitAmps: number;
 }
 
 /**
