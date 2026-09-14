@@ -101,6 +101,8 @@ require_file tsconfig.json
 require_file vite.config.ts
 require_file vitest.config.ts
 require_file index.html
+require_file .github/workflows/ci.yml
+require_file .github/workflows/deploy.yml
 
 # ---------------------------------------------------------- [4] invariants ---
 section "[4] Cross-platform invariants"

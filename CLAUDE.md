@@ -285,6 +285,8 @@ src/
   geospatial/PointStateParkAnchor.ts   CP-1 venue origin + landmark registration
   viewport/  DragSnapController.ts     touch drag-and-snap gesture contract
              SiteBounds.ts             GeoJSON site envelope → scene
+  components/PlaytestController.ts     WASD/RMB desktop playtest rig + diagnostics HUD
+             SplatViewport.ts          Gaussian splat viewer composition
   render/    (Phase 6)                 WebGPU volumetric beams, laser MPE safety
   network/   (Phase 4)                 Art-Net 4 / sACN telemetry ingest
   ui/        (Phase 2, 4, 6)           operator HUD, DMX inspector, atmosphere

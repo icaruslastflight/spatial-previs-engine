@@ -17,6 +17,7 @@ import { loadSiteBounds } from './viewport/SiteBounds.ts';
 import { loadRegisteredSplatScenes } from './assets/SplatSceneLoader.ts';
 import type { SplatLoadResult } from './assets/SplatSceneLoader.ts';
 import { DragSnapController } from './viewport/DragSnapController.ts';
+import { PlaytestController } from './components/PlaytestController.ts';
 import { engineLoop, TICK_PRIORITY } from './core/EngineLoop.ts';
 import './style.css';
 
@@ -136,6 +137,10 @@ controls.target.set(0, 1, 0);
 // One finger orbits; two fingers pinch-zoom AND pan together.
 controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
 controls.update();
+
+// Desktop playtest rig: WASD/RMB-orbit + diagnostics HUD, additive to the
+// touch contract above. See PlaytestController's header for the split.
+new PlaytestController({ domElement: canvas, camera, controls, engineLoop });
 
 /* -------------------------------------------------------------------------- */
 /* Show assets                                                                 */
