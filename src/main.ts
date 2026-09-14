@@ -11,6 +11,9 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { SocketSnappingEngine, SNAP_THRESHOLD_METERS } from './engine/SocketSnappingEngine.ts';
 import type { SnapCandidate } from './engine/SocketSnappingEngine.ts';
 import { createF34BoxTruss2M, createStageDeck4x8 } from './assets/ModularPrimitives.ts';
+import { GDTFAssetResolver } from './engine/GDTFAssetResolver.ts';
+import { parseDescriptionXml } from './engine/GDTFParser.ts';
+import { SAMPLE_GDTF_DESCRIPTION_XML } from './assets/SampleGdtfProfile.ts';
 import { CesiumGlobe } from './geo/CesiumGlobe.ts';
 import { POINT_STATE_PARK } from './geo/GeoAnchor.ts';
 import { loadSiteBounds } from './viewport/SiteBounds.ts';
@@ -151,6 +154,14 @@ const showLayer = new THREE.Group();
 showLayer.name = 'ShowLayer';
 scene.add(showLayer);
 
+// Real manufacturer fixtures need a fetched-and-cached .gdtf archive (a free
+// GDTF Share account -- see CLAUDE.md §11). Until one is cached, the palette
+// spawns this synthetic profile, parsed through the same real XML pipeline a
+// fetched archive's description.xml would go through.
+const gdtfResolver = new GDTFAssetResolver();
+const sampleFixtureProfile = parseDescriptionXml(SAMPLE_GDTF_DESCRIPTION_XML);
+gdtfResolver.registerProfile(sampleFixtureProfile);
+
 function spawn(object: THREE.Object3D, position: THREE.Vector3): THREE.Object3D {
   object.position.copy(position);
   showLayer.add(object);
@@ -172,15 +183,22 @@ function buildStartingPlot(): void {
 buildStartingPlot();
 
 let spawnCursor = 0;
-function spawnFromPalette(kind: 'truss' | 'deck'): void {
+function spawnFromPalette(kind: 'truss' | 'deck' | 'fixture'): void {
   // Lay new stock out in a row off to the side of the build.
   spawnCursor += 1;
   const x = 5 + (spawnCursor % 4) * 2.6;
   const z = 4 + Math.floor(spawnCursor / 4) * 2.2;
   if (kind === 'truss') {
     spawn(createF34BoxTruss2M(), new THREE.Vector3(x, 2.4, z));
-  } else {
+  } else if (kind === 'deck') {
     spawn(createStageDeck4x8(), new THREE.Vector3(x, 0, z));
+  } else {
+    const fixture = gdtfResolver.instantiateFixture(sampleFixtureProfile.fixtureTypeId);
+    if (fixture === null) {
+      console.error('[main] Sample GDTF fixture failed to instantiate.');
+      return;
+    }
+    spawn(fixture, new THREE.Vector3(x, 2.4, z));
   }
 }
 
@@ -189,6 +207,9 @@ requireElement<HTMLButtonElement>('add-truss').addEventListener('click', () =>
 );
 requireElement<HTMLButtonElement>('add-deck').addEventListener('click', () =>
   spawnFromPalette('deck'),
+);
+requireElement<HTMLButtonElement>('add-fixture').addEventListener('click', () =>
+  spawnFromPalette('fixture'),
 );
 
 /* -------------------------------------------------------------------------- */

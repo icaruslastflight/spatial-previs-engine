@@ -32,6 +32,11 @@ dist-ssr
 *.ply
 models/sam2/
 
+# Fetched GDTF Share fixture archives (needs a free account, CLAUDE.md §11).
+# Regenerate with: npm run fetch:gdtf
+*.gdtf
+public/assets/fixtures/cache/
+
 # Python
 __pycache__/
 *.py[cod]

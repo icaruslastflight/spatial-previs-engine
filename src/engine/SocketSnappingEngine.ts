@@ -52,6 +52,19 @@ export const SOCKET_TYPES = [
   'SFX_MOUNT',
   /** Barricade / fencing panel hinge. */
   'BARRICADE_HINGE',
+  /**
+   * A moving fixture's pan/tilt articulation point (GDTF `Axis` geometry).
+   *
+   * Unlike every other type above, this never participates in magnetic
+   * snapping -- nothing in the catalogue mates with it, and
+   * `kinematic_rules.can_parent`/`can_child` are always false wherever this
+   * type is emitted (see `GDTFParser.injectFixtureSockets`). It rides on the
+   * same `extras.sockets` contract purely so a fixture's articulation points
+   * are discoverable through the one query mechanism (`readSockets`) the rest
+   * of the codebase already uses, instead of requiring bespoke GDTF-tree
+   * traversal wherever that information is needed.
+   */
+  'FIXTURE_YOKE_AXIS',
 ] as const;
 
 export type SocketType = (typeof SOCKET_TYPES)[number];

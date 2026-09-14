@@ -36,6 +36,17 @@ Every 3D feature, snapping kinematic, and protocol parser must behave
 > not a capability gap — the desktop is not authoritative here. Port the same
 > number to UE5 and delete this note.
 
+> **OPEN PARITY DIVERGENCE — `FIXTURE_YOKE_AXIS` socket type.** Phase 3 added
+> `FIXTURE_YOKE_AXIS` to `SOCKET_TYPES` (§3, `src/engine/SocketSnappingEngine.ts`)
+> so a GDTF fixture's pan/tilt articulation points ride on the same
+> `extras.sockets` query mechanism as every other socket. It is a genuinely new
+> capability, not a correction, and it has **not** been mirrored into the UE5
+> socket vocabulary. It is deliberately inert for snapping purposes --
+> `can_parent`/`can_child` are always false wherever it is emitted -- so this
+> divergence cannot cause a web/desktop snapping mismatch; it can only make a
+> fixture's articulation point undiscoverable to UE5 tooling that queries
+> sockets. Add the type to the UE5 socket enum and delete this note.
+
 ### 1.2 $0 financial budget
 
 This line is developed on a phone with no spend. That is a hard constraint, not
@@ -46,6 +57,11 @@ a preference.
 - **Hosting:** free-tier static only — Vercel or GitHub Pages. See §5.
 - **No paid API keys are assumed.** Anything needing a key must degrade
   gracefully to a keyless path. The basemap does this across three tiers (§4).
+- **GDTF Share needs a free account, not a paid key** — but it still degrades
+  gracefully. `getList.php`/`downloadFile.php` require a login session, not an
+  anonymous GET; `scripts/fetch_gdtf_library.js` reads credentials from the
+  environment and, when they are absent, prints how to register a free account
+  and exits `0` rather than failing. See §11.
 - **No cross-origin isolation.** Static free hosts cannot set COOP/COEP headers,
   so `sharedMemoryForWorkers` stays `false` in the splat loader. Do not turn it
   on without a host that can serve those headers.
@@ -234,6 +250,7 @@ npx tsc --noEmit    # typecheck only (also: npm run typecheck)
 npm test            # vitest: core engine, geodetic, CP-1, snapping, asset library
 npm run verify      # full foundation health check — structure + all three gates
 npm run build:assets # compile the modular asset library to GLB
+npm run fetch:gdtf  # fetch cataloged fixtures from GDTF Share (needs a free account, §11)
 npm run bridge      # FOH Art-Net/sACN → WebSocket daemon (lands in Phase 4)
 ```
 
@@ -277,8 +294,11 @@ src/
              MemoryPool.ts             recycled Uint8Array(512) / Float32Array(512)
              EngineLoop.ts             one 60 FPS clock, four priority bands
   engine/    SocketSnappingEngine.ts   socket contract, proximity, detents, linking
+             GDTFParser.ts             GDTF (DIN SPEC 15800) XML/archive parsing + socket injection
+             GDTFAssetResolver.ts      runtime index; Object3D/SpotLight fixture instantiation
   assets/    ModularPrimitives.ts      procedural F34 truss + 4x8 deck
              SplatSceneLoader.ts       manifest-driven Gaussian splat loading
+             SampleGdtfProfile.ts      synthetic fixture profile, until a real one is fetched
   geo/       GeoAnchor.ts              site anchor, WGS84/ECEF/ENU, axis bridge
              CesiumGlobe.ts            basemap tiers + camera sync
              cesiumBaseUrl.ts          publishes CESIUM_BASE_URL before Cesium loads
@@ -417,3 +437,105 @@ ids and positions match exactly**.
 `.splat`, `.ply` and SAM-2 checkpoints are git-ignored. Captures are large and
 regenerable; real surveys belong in release assets or an external bucket. The
 synthetic stand-in regenerates with `--synthesize`.
+
+## 11. GDTF fixture library
+
+`.gdtf` files (DIN SPEC 15800) describe real moving lights: DMX channel maps,
+3D geometry, and photometrics, in one manufacturer-published archive.
+
+### GDTF Share needs a free account
+
+`scripts/fetch_gdtf_library.js` fetches cataloged profiles (Robe MegaPointe,
+Martin MAC Aura, Claypaky Sharpy, GLP JDC1) from `gdtf-share.com`. Its
+`getList.php`/`downloadFile.php` endpoints living under an `apis/public/` path
+read as anonymous GETs at a glance, but both require a logged-in session:
+`login.php` exchanges a username/password for a session cookie first. The
+account is **free to register, not a paid key**, but it is still a credential
+this repo cannot assume is present, so the script degrades the same way the
+basemap's keyed tiers do (§1.2, §4):
+
+```bash
+GDTF_SHARE_USER=you GDTF_SHARE_PASSWORD=... npm run fetch:gdtf
+node --env-file=.env.local scripts/fetch_gdtf_library.js   # Node 20.6+
+```
+
+Without credentials it prints registration instructions and exits `0` —
+never fails a build over a missing free account. Fetched archives land in
+`public/assets/fixtures/cache/`, git-ignored like every other binary (§10).
+
+### File format and parsing scope
+
+A `.gdtf` file is a ZIP: `description.xml` at its root plus 3D models under
+`models/gltf/` (GLB, preferred) or `models/3ds/`. `src/engine/GDTFParser.ts`
+only reads the glTF path — every Phase 3 target fixture ships one, and this
+project has no 3DS importer.
+
+`GdtfGeometryKind` gives first-class handling to `Geometry`, `Axis` and `Beam`
+only — this project's target fixtures are conventional moving-head washes and
+spots. Media server, laser and display geometry types still parse structurally
+(the tree walks through them) but fall back to a generic `'Other'` kind rather
+than guessed-at dedicated fields.
+
+`DMXValue` attributes (`Default`, `Highlight`, `ChannelFunction.Default`) are
+extracted as their raw DIN SPEC 15800 byte-mirroring strings (e.g. `"255/1"`),
+not decoded to a resolved numeric level — decoding needs the channel's byte
+resolution, a DMX-engine concern that lands with Phase 4, not a parsing one.
+
+### Coordinate bridge
+
+GDTF's `Position` matrices are right-handed, Z-up, with +Y away from the
+viewer — DIN SPEC 15800's own convention, unrelated to WGS84/ENU.
+`GDTFParser.gdtfSpaceToThreeSpace()` bridges this into Three's Y-up frame as a
+change of basis (`P · M · P⁻¹`), so a node's rotation transforms correctly,
+not just its translation. The resulting axis relationship is numerically
+identical in form to `SITE_FRAME`'s ENU bridge (`GeoAnchor.ts`) — both happen
+to be right-handed Z-up frames — but the two are kept as separate helpers:
+this is fixture-local geometry, not geodesy, so it does not borrow
+`EnuFrame`'s geodesy-specific types just because the formula matches.
+
+### Socket injection
+
+`GDTFParser.injectFixtureSockets()` derives a fixture's `extras.sockets`:
+
+- One **`PIPE_CLAMP_2IN`** socket at the fixture's own local origin — the
+  clamp that grips whatever truss the fixture hangs from. It reuses the
+  existing pipe-clamp type rather than inventing a fixture-specific one.
+- One **`FIXTURE_YOKE_AXIS`** socket per `Axis` geometry node (pan/tilt
+  articulation points), positioned by composing parent transforms down the
+  tree. This type never mates with anything (`can_parent`/`can_child` are
+  always `false`) — see the open parity divergence note in §1.1, since it is
+  a new type the UE5 socket vocabulary has not yet mirrored.
+
+### Runtime resolver and photometrics
+
+`src/engine/GDTFAssetResolver.ts` indexes parsed profiles by `FixtureTypeID`
+and instantiates each one as a `THREE.Group` hierarchy mirroring its
+`Geometries` tree exactly — pan/tilt is real scene-graph nesting, not a
+flattened mesh. Without a fetched archive, every node gets a dimensionally-
+scaled placeholder box: the same "dimensionally accurate, visually
+placeholder" contract the procedural modular assets use (§9).
+
+Each `Beam` node gets a `THREE.SpotLight` parameterized from the profile's
+photometric attributes — the runtime equivalent of embedding
+`KHR_lights_punctual` (constraint 3), since these fixtures are built
+procedurally rather than round-tripped through an authored glTF:
+
+- **Lumens → candela**: `LuminousFlux` (total output) divided by the beam
+  cone's solid angle (`2π(1 − cos(halfAngle))`), since Three's physically
+  correct lighting consumes candela (lm/sr), not total lumens.
+- **Kelvin → RGB**: Tanner Helland's curve-fit approximation of Mitchell
+  Charity's blackbody data — not a rigorous CIE calculation, which is more
+  precision than a previz beam tint needs.
+
+No fixture light casts a shadow: a build can carry a dozen-plus fixtures, and
+per-light shadow maps are not affordable on the phone fill-rate budget (§1.3).
+
+### Sample fixture
+
+Until a real archive is cached, the **"+ Wash Fixture"** palette button
+instantiates `src/assets/SampleGdtfProfile.ts` — a hand-authored two-axis
+(Yoke → Head → Beam) profile run through the real `parseDescriptionXml()`
+path, exactly as a fetched archive's `description.xml` would be. Same
+synthetic-stand-in contract as `cleanup_splat.py --synthesize` (§8) and the
+procedural modular assets (§9): exercise the real pipeline end to end rather
+than shortcut around the missing real asset.

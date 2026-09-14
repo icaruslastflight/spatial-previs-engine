@@ -3,10 +3,15 @@
  * Snapping Specification section 3.1 and consumed by SocketSnappingEngine.
  */
 
+// Mirrors SOCKET_TYPES in src/engine/SocketSnappingEngine.ts exactly -- this
+// build-time script cannot import the .ts runtime module, so the list is kept
+// in lockstep by hand. FIXTURE_YOKE_AXIS is authored only by GDTFParser, never
+// through the socket() helper below, but it must still validate here.
 export const SOCKET_TYPES = [
   'TRUSS_CONICAL_F34', 'TRUSS_CONICAL_F44', 'STAGE_COFFIN_LOCK', 'STAGE_LEG_RECEIVER',
   'LED_PANEL_FASTENER', 'LED_FLYBAR_PICKUP', 'PIPE_CLAMP_2IN', 'RIG_HOIST_HOOK',
   'SPEAKER_ARRAY_PIN', 'GROUND_SUPPORT_BASE', 'SFX_MOUNT', 'BARRICADE_HINGE',
+  'FIXTURE_YOKE_AXIS',
 ];
 
 export const GENDERS = ['MALE', 'FEMALE', 'NEUTRAL', 'UNIVERSAL'];
