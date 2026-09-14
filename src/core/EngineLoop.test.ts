@@ -373,3 +373,97 @@ describe('EngineLoop failure isolation', () => {
     expect(onTickError.mock.calls[0][1]).toBe(TICK_PRIORITY.PHYSICS);
   });
 });
+
+describe('EngineLoop registerTick', () => {
+  it('hands the clamped delta straight to the callback', () => {
+    const loop = makeLoop();
+    const deltas: number[] = [];
+
+    loop.registerTick(TICK_PRIORITY.PHYSICS, (dt) => deltas.push(dt));
+
+    loop.start();
+    scheduler.advance(FRAME_MS);
+    loop.stop();
+
+    expect(deltas).toHaveLength(1);
+    expect(deltas[0]).toBeCloseTo(FRAME_MS / 1000, 6);
+  });
+
+  it('applies the same stall clamp as register', () => {
+    const loop = makeLoop();
+    const deltas: number[] = [];
+
+    loop.registerTick(TICK_PRIORITY.PHYSICS, (dt) => deltas.push(dt));
+
+    loop.start();
+    scheduler.advance(5000);
+    loop.stop();
+
+    expect(deltas[0]).toBe(MAX_DELTA_SECONDS);
+  });
+
+  it('honours the priority band it was registered in', () => {
+    const loop = makeLoop();
+    const order: string[] = [];
+
+    loop.register(TICK_PRIORITY.RENDER, () => order.push('render'));
+    loop.registerTick(TICK_PRIORITY.TELEMETRY, () => order.push('telemetry'));
+
+    loop.start();
+    scheduler.advance(FRAME_MS);
+    loop.stop();
+
+    expect(order).toEqual(['telemetry', 'render']);
+  });
+
+  it('detaches the tick when the returned handle is called', () => {
+    const loop = makeLoop();
+    const tick = vi.fn();
+
+    const off = loop.registerTick(TICK_PRIORITY.PHYSICS, tick);
+
+    loop.start();
+    scheduler.advance(FRAME_MS);
+    off();
+    scheduler.advance(FRAME_MS);
+    loop.stop();
+
+    expect(tick).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('EngineLoop getMetrics', () => {
+  it('reads zero before the first sampling window closes', () => {
+    const loop = makeLoop();
+
+    loop.start();
+    scheduler.advanceFrames(2);
+
+    expect(loop.getMetrics()).toEqual({ fps: 0, frameTimeMs: 0 });
+    loop.stop();
+  });
+
+  it('reports the frame rate and frame time once a window closes', () => {
+    const loop = makeLoop();
+
+    loop.start();
+    // FPS_WINDOW_SECONDS is 0.5s; 31 frames at 60 FPS closes it.
+    scheduler.advanceFrames(31);
+    loop.stop();
+
+    const metrics = loop.getMetrics();
+    expect(metrics.fps).toBeCloseTo(60, 1);
+    expect(metrics.frameTimeMs).toBeCloseTo(FRAME_MS, 1);
+  });
+
+  it('reports frame time as the reciprocal of the frame rate', () => {
+    const loop = makeLoop();
+
+    loop.start();
+    scheduler.advanceFrames(31);
+    loop.stop();
+
+    const { fps, frameTimeMs } = loop.getMetrics();
+    expect(fps * frameTimeMs).toBeCloseTo(1000, 6);
+  });
+});

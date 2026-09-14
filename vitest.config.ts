@@ -22,7 +22,12 @@ export default defineConfig({
      * driven without a browser.
      */
     environment: 'node',
-    include: ['src/**/*.test.ts'],
+    /**
+     * Unit tests sit beside the code they cover; `tests/` holds the cross-module
+     * contract suite, which asserts the public API the specification names
+     * rather than any one module's internals.
+     */
+    include: ['src/**/*.test.ts', 'tests/**/*.test.ts', 'tests/**/*.test.js'],
     /**
      * The asset library check reads every GLB the build script emitted and
      * snaps real library assets together, which is slower than a unit test but
