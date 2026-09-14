@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0c1014" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <meta
+      name="description"
+      content="Festival Visualizer - spatial twin and live event pre-visualization for Point State Park, Pittsburgh."
+    />
+    <title>Festival Visualizer - Point State Park</title>
+  </head>
+  <body>
+    <!-- Cesium basemap sits underneath; the Three canvas composites over it. -->
+    <div id="cesium-container"></div>
+    <canvas id="three-canvas"></canvas>
+
+    <div id="hud-stack">
+      <header id="hud-top">
+      <h1>Festival Visualizer</h1>
+      <p class="site">Point State Park &middot; Pittsburgh, PA &middot; 40.4417&deg;N, 80.0075&deg;W</p>
+      <dl class="readout">
+        <dt>Basemap</dt>
+        <dd><span id="status-basemap">loading&hellip;</span></dd>
+        <dt>Renderer</dt>
+        <dd><span id="status-renderer">detecting&hellip;</span></dd>
+        <dt>Site</dt>
+        <dd><span id="status-site">loading&hellip;</span></dd>
+        <dt>Scans</dt>
+        <dd><span id="status-scans">checking&hellip;</span></dd>
+      </dl>
+      </header>
+
+      <div id="hud-snap">
+        <span class="label">Socket snap</span>
+        <span id="status-snap">no socket in range</span>
+      </div>
+    </div>
+
+    <footer id="hud-bottom">
+      <div class="palette">
+        <button id="add-truss" type="button">+ F34 Truss 2M</button>
+        <button id="add-deck" type="button">+ Deck 4&times;8</button>
+      </div>
+      <p class="hint">
+        Drag an asset with one finger to move it &middot; two fingers to pinch-zoom and pan &middot;
+        one finger on empty space to orbit. Assets snap within 150&nbsp;mm.
+      </p>
+      <!-- Tile attribution: a licensing requirement, so it lives in the HUD. -->
+      <div id="cesium-credits" class="cesium-credits"></div>
+    </footer>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

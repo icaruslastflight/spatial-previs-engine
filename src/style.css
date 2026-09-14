@@ -1,0 +1,234 @@
+:root {
+  --bg: #0c1014;
+  --panel: rgba(12, 18, 24, 0.82);
+  --border: rgba(120, 170, 220, 0.22);
+  --text: #dfe8f2;
+  --muted: #8ba0b6;
+  --accent: #35d6a0;
+  --armed: #4f9bff;
+  font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  /* Stop iOS rubber-banding the page while dragging an asset. */
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+}
+
+#cesium-container,
+#three-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#cesium-container {
+  z-index: 0;
+}
+
+#three-canvas {
+  z-index: 1;
+  /* The drag controller needs raw pointer events, not scroll gestures. */
+  touch-action: none;
+}
+
+/* Cesium injects its own widget styles; keep the canvas flush. */
+#cesium-container .cesium-widget,
+#cesium-container .cesium-widget canvas {
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+/* Attribution is a licensing requirement for Google and OSM tiles. */
+.cesium-credits {
+  flex: 1 1 100%;
+  font-size: 0.58rem;
+  line-height: 1.3;
+  color: var(--muted);
+  opacity: 0.7;
+  pointer-events: auto;
+}
+
+/* Cesium injects its own markup here; keep it inline and unobtrusive. */
+.cesium-credits .cesium-widget-credits {
+  display: inline;
+  font-size: inherit;
+}
+
+.cesium-credits a {
+  color: var(--muted);
+}
+
+/* ------------------------------------------------------------------ HUD --- */
+
+/*
+ * The two top panels share one flex container rather than each being pinned to
+ * a corner. Pinned panels overlap as soon as either one wraps to more lines --
+ * which the snap readout does constantly, since it prints live socket ids.
+ */
+#hud-stack {
+  position: fixed;
+  z-index: 3;
+  top: calc(0.7rem + env(safe-area-inset-top));
+  left: 0.7rem;
+  right: 0.7rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.6rem;
+  pointer-events: none;
+}
+
+#hud-top,
+#hud-snap,
+#hud-bottom {
+  pointer-events: none;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+#hud-top {
+  padding: 0.7rem 0.9rem;
+  max-width: 22rem;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+#hud-top h1 {
+  margin: 0;
+  font-size: 0.82rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+#hud-top .site {
+  margin: 0.3rem 0 0.6rem;
+  font-size: 0.66rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.readout {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.2rem 0.6rem;
+  margin: 0;
+  font-size: 0.66rem;
+}
+
+.readout dt {
+  color: var(--muted);
+}
+
+.readout dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+#hud-snap {
+  padding: 0.55rem 0.8rem;
+  max-width: 20rem;
+  flex: 0 1 auto;
+  min-width: 0;
+  font-size: 0.66rem;
+}
+
+#hud-snap .label {
+  display: block;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 0.58rem;
+  margin-bottom: 0.2rem;
+}
+
+#status-snap {
+  overflow-wrap: anywhere;
+}
+
+#status-snap.armed {
+  color: var(--armed);
+  font-weight: 600;
+}
+
+#hud-bottom {
+  position: fixed;
+  z-index: 3;
+  left: 0.7rem;
+  right: 0.7rem;
+  bottom: calc(0.7rem + env(safe-area-inset-bottom));
+  padding: 0.6rem 0.8rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.9rem;
+}
+
+.palette {
+  display: flex;
+  gap: 0.45rem;
+  pointer-events: auto;
+}
+
+.palette button {
+  pointer-events: auto;
+  font: inherit;
+  font-size: 0.68rem;
+  color: var(--text);
+  background: rgba(53, 214, 160, 0.12);
+  border: 1px solid rgba(53, 214, 160, 0.4);
+  border-radius: 7px;
+  /* Comfortable thumb target on a phone. */
+  padding: 0.55rem 0.8rem;
+  min-height: 2.4rem;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.palette button:hover,
+.palette button:focus-visible {
+  background: rgba(53, 214, 160, 0.22);
+}
+
+.palette button:active {
+  transform: translateY(1px);
+}
+
+.hint {
+  margin: 0;
+  flex: 1 1 14rem;
+  font-size: 0.62rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+@media (max-width: 34rem) {
+  /* Side by side does not fit; stack the snap readout under the header. */
+  #hud-stack {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  #hud-top,
+  #hud-snap {
+    max-width: none;
+  }
+}
