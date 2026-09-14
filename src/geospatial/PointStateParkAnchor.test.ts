@@ -1,18 +1,35 @@
 /**
  * CP-1 geospatial checkpoint verification. Run with `npm test`.
+ *
+ * The substance lives in `runCp1SelfTest()` so the same checkpoint can be run
+ * from the browser console on site, where the suite is not available. This file
+ * surfaces each of its checks as an individual test case so a failure names the
+ * check that broke rather than the whole checkpoint.
  */
+
+import { describe, expect, it } from 'vitest';
 
 import { runCp1SelfTest, WGS84_ORIGIN, ORIGIN_ELEVATION } from './PointStateParkAnchor.ts';
 
-console.log('\n[CP-1] Geospatial & Coordinate Origin Alignment');
-console.log(
-  `  anchor: ${WGS84_ORIGIN.latitude} N, ${WGS84_ORIGIN.longitude} E, ` +
-    `${ORIGIN_ELEVATION.orthometricMeters} m MSL -> ${WGS84_ORIGIN.height.toFixed(1)} m ellipsoidal`,
-);
-
 const report = runCp1SelfTest();
-for (const check of report.checks) {
-  console.log(`  ${check.passed ? 'PASS' : 'FAIL'}  ${check.name}  (${check.detail})`);
-}
-console.log(report.passed ? '\nCP-1 CHECKS PASSED\n' : '\nCP-1 CHECKS FAILED\n');
-process.exit(report.passed ? 0 : 1);
+
+describe('[CP-1] Geospatial & Coordinate Origin Alignment', () => {
+  it('anchors at Point State Park with an orthometric-to-ellipsoidal conversion', () => {
+    expect(WGS84_ORIGIN.latitude).toBe(40.4417);
+    expect(WGS84_ORIGIN.longitude).toBe(-80.0075);
+    expect(ORIGIN_ELEVATION.orthometricMeters).toBe(220.0);
+    // 220.0 m MSL + (-33.4 m EGM96 separation for western PA).
+    expect(WGS84_ORIGIN.height).toBeCloseTo(186.6, 6);
+  });
+
+  it.each(report.checks.map((check) => [check.name, check] as const))(
+    '%s',
+    (_name, check) => {
+      expect(check.passed, check.detail).toBe(true);
+    },
+  );
+
+  it('reports the checkpoint as passing overall', () => {
+    expect(report.passed).toBe(true);
+  });
+});

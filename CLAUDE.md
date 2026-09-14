@@ -204,9 +204,15 @@ npm run dev         # dev server, exposed on the LAN for phone testing
 npm run build       # tsc && vite build  — MUST be clean before committing
 npm run preview     # serve the production build locally
 npx tsc --noEmit    # typecheck only (also: npm run typecheck)
-npm test            # geodetic, CP-1, socket snapping + asset library checks
+npm test            # vitest: core engine, geodetic, CP-1, snapping, asset library
+npm run verify      # full foundation health check — structure + all three gates
 npm run build:assets # compile the modular asset library to GLB
+npm run bridge      # FOH Art-Net/sACN → WebSocket daemon (lands in Phase 4)
 ```
+
+`npm test` runs Vitest over every `src/**/*.test.ts`. Configuration lives in
+`vitest.config.ts`, kept separate from `vite.config.ts` so the suite loads
+neither the Cesium asset middleware nor the PWA service-worker generator.
 
 ### Deployment
 
@@ -240,18 +246,41 @@ assets resolve correctly under a subpath. Cesium's `Workers/`, `Assets/`,
 
 ```
 src/
+  core/      EventBus.ts               typed pub/sub; allocation-free dispatch
+             MemoryPool.ts             recycled Uint8Array(512) / Float32Array(512)
+             EngineLoop.ts             one 60 FPS clock, four priority bands
   engine/    SocketSnappingEngine.ts   socket contract, proximity, detents, linking
-             SocketSnappingEngine.test.ts
   assets/    ModularPrimitives.ts      procedural F34 truss + 4x8 deck
              SplatSceneLoader.ts       manifest-driven Gaussian splat loading
   geo/       GeoAnchor.ts              site anchor, WGS84/ECEF/ENU, axis bridge
              CesiumGlobe.ts            basemap tiers + camera sync
              cesiumBaseUrl.ts          publishes CESIUM_BASE_URL before Cesium loads
+  geospatial/PointStateParkAnchor.ts   CP-1 venue origin + landmark registration
   viewport/  DragSnapController.ts     touch drag-and-snap gesture contract
              SiteBounds.ts             GeoJSON site envelope → scene
+  render/    (Phase 6)                 WebGPU volumetric beams, laser MPE safety
+  network/   (Phase 4)                 Art-Net 4 / sACN telemetry ingest
+  ui/        (Phase 2, 4, 6)           operator HUD, DMX inspector, atmosphere
   main.ts                              composition root
 public/assets/scans/                   scan registry + placeholder site bounds
 ```
+
+Tests sit beside the module they cover as `<Module>.test.ts`. Each of
+`render/`, `network/` and `ui/` carries a `README.md` naming the phase that
+fills it and the constraints that already bind it.
+
+### Core engine invariants
+
+- **One frame clock.** Anything per-frame registers on `EngineLoop` at a
+  priority band — telemetry (0), physics (1), automation (2), render (3) —
+  rather than opening its own `requestAnimationFrame`. Independent rAF
+  callbacks make execution order an accident of import order.
+- **`FrameTiming` is reused.** The same object is mutated and handed to every
+  tick of every frame. Read it, never retain it.
+- **Pooled buffers are borrowed.** `DmxUpdatePayload.channels` is on loan from
+  `TypedArrayMemoryPool` and is recycled when dispatch returns. Copy to retain.
+- **The event vocabulary is mirrored in UE5.** Adding an event to
+  `EngineEventMap` without adding it to the desktop dispatcher breaks parity.
 
 ---
 

@@ -17,6 +17,7 @@ import { loadSiteBounds } from './viewport/SiteBounds.ts';
 import { loadRegisteredSplatScenes } from './assets/SplatSceneLoader.ts';
 import type { SplatLoadResult } from './assets/SplatSceneLoader.ts';
 import { DragSnapController } from './viewport/DragSnapController.ts';
+import { engineLoop, TICK_PRIORITY } from './core/EngineLoop.ts';
 import './style.css';
 
 /* -------------------------------------------------------------------------- */
@@ -293,8 +294,16 @@ window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', resize);
 resize();
 
-function frame(): void {
-  requestAnimationFrame(frame);
+/**
+ * Viewport submission, registered on the shared frame clock rather than on a
+ * private `requestAnimationFrame`.
+ *
+ * Priority 3 (RENDER) is the last band, so telemetry, physics and automation
+ * have all settled for the frame before anything draws. The clock also holds
+ * the loop to 60 FPS, which halves GPU submissions on the 120 Hz phone panels
+ * this is operated from.
+ */
+engineLoop.register(TICK_PRIORITY.RENDER, () => {
   controls.update();
   // Cesium is driven FROM the Three camera, so it must sync before it draws.
   globe.syncFromCamera(camera, window.innerWidth, window.innerHeight);
@@ -309,9 +318,9 @@ function frame(): void {
   } else {
     renderer.render(scene, camera);
   }
-}
+});
 
-frame();
+engineLoop.start();
 
 console.info(
   `[Festival Visualizer] Anchored at Point State Park ` +

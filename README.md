@@ -24,8 +24,10 @@ No API keys are required. The basemap degrades gracefully to a keyless tier.
 | `npm run dev` | Dev server, exposed on the LAN so you can open it on a phone |
 | `npm run build` | `tsc && vite build` — must be clean before committing |
 | `npm run preview` | Serve the production build locally |
-| `npm test` | Geodetic + socket-snapping regression checks |
+| `npm test` | Vitest: core engine, geodetic, CP-1, socket snapping, asset library |
+| `npm run verify` | Foundation health check — structure, typecheck, tests, build |
 | `npx tsc --noEmit` | Typecheck only |
+| `npm run build:assets` | Compile the modular asset library to GLB |
 
 ## Deploying (free tier only)
 
@@ -38,6 +40,11 @@ BASE_PATH=/custom/ npm run build       # explicit override
 Cesium's runtime asset trees are copied into `dist/cesium/` at build time and
 `CESIUM_BASE_URL` is derived from the chosen base path, so subpath deployments
 resolve correctly.
+
+The build also emits a PWA manifest and service worker, so the client installs
+to a phone home screen as a landscape standalone app and re-opens without an
+uplink. Cesium's runtime trees are deliberately left out of the precache — they
+run to tens of megabytes and are fetched on demand.
 
 ## Basemap tiers
 
@@ -58,6 +65,23 @@ Copy `.env.example` to `.env.local` to supply keys. Never commit one.
 - **Two fingers** — pinch-zoom and pan
 - Assets snap magnetically within **150 mm**, auto-aligning mating faces and
   quantizing roll to 0&deg; / 90&deg; / 180&deg; / 270&deg;
+
+## Architecture
+
+The client is layered under `src/`:
+
+| Layer | Holds |
+| --- | --- |
+| `core/` | Frame clock, typed event bus, zero-allocation typed-array pool |
+| `geo/`, `geospatial/` | WGS84 anchor, ENU tangent frame, CP-1 venue origin |
+| `engine/` | Magnetic socket contract, proximity, detents, kinematic linking |
+| `assets/` | Procedural primitives and Gaussian splat loading |
+| `viewport/` | Touch drag-and-snap gestures, site bounds |
+| `render/`, `network/`, `ui/` | Reserved; each carries a README naming its phase |
+
+Everything that runs per frame registers on the shared `EngineLoop` in a
+priority band — telemetry, then physics, then automation, then render — rather
+than opening a private `requestAnimationFrame`.
 
 ## Project guidelines
 
