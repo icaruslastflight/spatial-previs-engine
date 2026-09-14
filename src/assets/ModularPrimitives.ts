@@ -132,26 +132,35 @@ function buildF34Sockets(): SocketDefinition[] {
   // outward normal differ. Square symmetry means any 90 degree detent yields a
   // physically valid joint, which is exactly what the detent snapping relies on.
   const ends = [
-    { prefix: 'end_a', x: +halfLength, normal: [1, 0, 0] as Vec3Tuple, gender: 'male' },
-    { prefix: 'end_b', x: -halfLength, normal: [-1, 0, 0] as Vec3Tuple, gender: 'female' },
+    { prefix: 'end_a', x: +halfLength, normal: [1, 0, 0] as Vec3Tuple, gender: 'MALE' },
+    { prefix: 'end_b', x: -halfLength, normal: [-1, 0, 0] as Vec3Tuple, gender: 'FEMALE' },
   ] as const;
 
   for (const end of ends) {
     for (const chord of F34_CHORDS) {
       sockets.push({
         socket_id: `${end.prefix}_${chord.key}`,
-        socket_type: 'truss_f34_chord',
+        socket_type: 'TRUSS_CONICAL_F34',
         gender: end.gender,
-        position: [end.x, chord.y * half, chord.z * half],
-        normal: end.normal,
-        // The roll reference points RADIALLY OUTWARD from the truss centreline
-        // toward this chord. That is what encodes the chord's angular position
-        // around the axis, so aligning two sockets' up-vectors also puts the
-        // remaining three chord pairs in correspondence. A shared up of (0,1,0)
-        // would align one chord and leave the other three crossed.
-        up: [0, chord.y, chord.z],
+        transform: {
+          translation: [end.x, chord.y * half, chord.z * half],
+          normal: end.normal,
+          // The roll reference points RADIALLY OUTWARD from the truss
+          // centreline toward this chord. That is what encodes the chord's
+          // angular position around the axis, so aligning two sockets'
+          // up-vectors also puts the remaining three chord pairs in
+          // correspondence. A shared up of (0,1,0) would align one chord and
+          // leave the other three crossed.
+          up: [0, chord.y, chord.z],
+        },
+        tolerances: { snap_radius: 0.15, snap_angle: 15, detents_deg: [0, 90, 180, 270] },
+        kinematic_rules: {
+          can_parent: true,
+          can_child: true,
+          load_bearing: true,
+          max_load_kg: F34.CHORD_LOAD_RATING_KG,
+        },
         tags: [end.prefix, chord.key],
-        load_rating_kg: F34.CHORD_LOAD_RATING_KG,
       });
     }
   }
@@ -253,13 +262,17 @@ function buildDeck4x8Sockets(): SocketDefinition[] {
     for (const [index, x] of [-quarterLength, +quarterLength].entries()) {
       sockets.push({
         socket_id: `lock_${side.key}_${index + 1}`,
-        socket_type: 'deck_coffin_lock',
-        gender: 'neutral',
-        position: [x, lockY, side.z],
-        normal: side.normal,
-        up: [0, 1, 0],
+        socket_type: 'STAGE_COFFIN_LOCK',
+        gender: 'NEUTRAL',
+        transform: { translation: [x, lockY, side.z], normal: side.normal, up: [0, 1, 0] },
+        tolerances: { snap_radius: 0.15, snap_angle: 15, detents_deg: [0, 90, 180, 270] },
+        kinematic_rules: {
+          can_parent: true,
+          can_child: true,
+          load_bearing: true,
+          max_load_kg: DECK_4X8.LOCK_LOAD_RATING_KG,
+        },
         tags: ['perimeter', `side_${side.key}`],
-        load_rating_kg: DECK_4X8.LOCK_LOAD_RATING_KG,
       });
     }
   }
@@ -272,13 +285,17 @@ function buildDeck4x8Sockets(): SocketDefinition[] {
   for (const side of shortSides) {
     sockets.push({
       socket_id: `lock_${side.key}`,
-      socket_type: 'deck_coffin_lock',
-      gender: 'neutral',
-      position: [side.x, lockY, 0],
-      normal: side.normal,
-      up: [0, 1, 0],
+      socket_type: 'STAGE_COFFIN_LOCK',
+      gender: 'NEUTRAL',
+      transform: { translation: [side.x, lockY, 0], normal: side.normal, up: [0, 1, 0] },
+      tolerances: { snap_radius: 0.15, snap_angle: 15, detents_deg: [0, 90, 180, 270] },
+      kinematic_rules: {
+        can_parent: true,
+        can_child: true,
+        load_bearing: true,
+        max_load_kg: DECK_4X8.LOCK_LOAD_RATING_KG,
+      },
       tags: ['perimeter', `side_${side.key}`],
-      load_rating_kg: DECK_4X8.LOCK_LOAD_RATING_KG,
     });
   }
 
@@ -296,12 +313,17 @@ function buildDeck4x8Sockets(): SocketDefinition[] {
   for (const corner of corners) {
     sockets.push({
       socket_id: `leg_${corner.key}`,
-      socket_type: 'deck_leg',
-      gender: 'female',
-      position: [corner.x, -DECK_4X8.THICKNESS, corner.z],
-      normal: [0, -1, 0],
-      // The mating axis is vertical, so the roll reference must be horizontal.
-      up: [1, 0, 0],
+      socket_type: 'STAGE_LEG_RECEIVER',
+      gender: 'FEMALE',
+      transform: {
+        translation: [corner.x, -DECK_4X8.THICKNESS, corner.z],
+        normal: [0, -1, 0],
+        // The mating axis is vertical, so the roll reference must be horizontal.
+        up: [1, 0, 0],
+      },
+      tolerances: { snap_radius: 0.15, snap_angle: 15, detents_deg: [0, 90, 180, 270] },
+      // A leg carries the deck: it parents nothing, it is the child of the deck.
+      kinematic_rules: { can_parent: true, can_child: true, load_bearing: true },
       tags: ['leg_receiver', `corner_${corner.key}`],
     });
   }

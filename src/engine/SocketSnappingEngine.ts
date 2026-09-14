@@ -15,55 +15,122 @@
 import * as THREE from 'three';
 
 /* -------------------------------------------------------------------------- */
-/* Contract                                                                    */
+/* Contract -- Event Asset Library & Modular Snapping Specification, section 3 */
 /* -------------------------------------------------------------------------- */
 
 /**
- * The shared socket-type catalogue. This list is a contract with the UE5 build
- * and with any glTF authored for the project -- an asset carrying a type that is
- * not in this list is rejected at registration rather than silently ignored.
+ * The shared socket-type catalogue.
+ *
+ * This list is a contract with the UE5 build and with any glTF authored for the
+ * project. An asset carrying a type outside this list is rejected at
+ * registration rather than silently ignored -- a mistyped socket that merely
+ * never snaps is far more expensive to find on site than one that fails loudly
+ * at load.
  */
 export const SOCKET_TYPES = [
-  /** F34-series square box truss chord end (4 per truss end). */
-  'truss_f34_chord',
+  /** F34-series conical truss coupler (4 per truss end). */
+  'TRUSS_CONICAL_F34',
+  /** F44-series conical truss coupler. */
+  'TRUSS_CONICAL_F44',
   /** Hermaphroditic coffin lock on a deck perimeter. */
-  'deck_coffin_lock',
+  'STAGE_COFFIN_LOCK',
   /** Deck corner leg receiver. */
-  'deck_leg',
-  /** Generic vertical stacking interface (base plates, ballast). */
-  'ground_support_base',
+  'STAGE_LEG_RECEIVER',
+  /** LED tile edge fastener / locking latch. */
+  'LED_PANEL_FASTENER',
+  /** LED flybar pickup point. */
+  'LED_FLYBAR_PICKUP',
+  /** 2-inch pipe / truss-boom clamp interface. */
+  'PIPE_CLAMP_2IN',
+  /** Chain-hoist hook or shackle pickup. */
+  'RIG_HOIST_HOOK',
+  /** Line-array inter-cabinet rigging pin. */
+  'SPEAKER_ARRAY_PIN',
+  /** Ground-support base plate / ballast interface. */
+  'GROUND_SUPPORT_BASE',
+  /** Effects unit yoke or clamp mount. */
+  'SFX_MOUNT',
+  /** Barricade / fencing panel hinge. */
+  'BARRICADE_HINGE',
 ] as const;
 
 export type SocketType = (typeof SOCKET_TYPES)[number];
 
 /**
- * Mating polarity. `male` mates only with `female`; `neutral` mates only with
- * `neutral` (coffin locks are hermaphroditic -- two identical locks mate).
+ * Mating polarity.
+ *
+ *   MALE      mates only with FEMALE (and UNIVERSAL)
+ *   FEMALE    mates only with MALE (and UNIVERSAL)
+ *   NEUTRAL   mates only with NEUTRAL (and UNIVERSAL) -- coffin locks are
+ *             hermaphroditic, so two identical locks mate
+ *   UNIVERSAL mates with anything of the same socket_type
  */
-export type SocketGender = 'male' | 'female' | 'neutral';
+export type SocketGender = 'MALE' | 'FEMALE' | 'NEUTRAL' | 'UNIVERSAL';
 
 /** A 3-tuple in the owning object's LOCAL space. Snake_case matches glTF extras. */
 export type Vec3Tuple = [number, number, number];
 
+/** Where the socket sits and which way it faces, in the asset's local space. */
+export interface SocketTransform {
+  /** Local position, metres. */
+  translation: Vec3Tuple;
+  /** Forward normal: points OUTWARD from the mating face. Unit length. */
+  normal: Vec3Tuple;
+  /** Roll reference. Orthogonalized against `normal` on registration. */
+  up: Vec3Tuple;
+}
+
+/** Capture tolerances. Omitted fields fall back to the project defaults. */
+export interface SocketTolerances {
+  /** Capture radius between socket origins, metres. Spec default 0.15. */
+  snap_radius?: number;
+  /**
+   * Angular capture window in DEGREES: how far the mating axes may deviate
+   * from anti-parallel and still capture. Spec default 15.
+   *
+   * This is a tolerance, NOT the detent step -- see `detents_deg`.
+   */
+  snap_angle?: number;
+  /**
+   * Roll detents in degrees. Spec default [0, 90, 180, 270].
+   *
+   * Kept separate from `snap_angle` because conflating them is the classic
+   * misreading: the joint captures within 15 degrees, then locks onto a
+   * cardinal detent.
+   */
+  detents_deg?: number[];
+}
+
+/** How the joint behaves once mated. */
+export interface SocketKinematicRules {
+  /** May act as the parent of a kinematic chain. Default true. */
+  can_parent?: boolean;
+  /** May be reparented as a child. Default true. */
+  can_child?: boolean;
+  /** Transfers structural load across the joint (rigging analysis). */
+  load_bearing?: boolean;
+  /** Working load limit at this interface, kilograms. */
+  max_load_kg?: number;
+}
+
 /**
  * One socket, as embedded under `extras.sockets` in the asset.
  *
- * `normal` points OUTWARD from the mating face. Two sockets mate when their
- * normals are anti-parallel. `up` is the roll reference used to resolve the
- * remaining degree of freedom about the mating axis; it need not be exactly
- * perpendicular to `normal` (it is orthogonalized on registration).
+ * Two shapes are accepted on read. This nested form is the specification shape
+ * and what everything in this codebase now emits. The older flat form --
+ * position/normal/up as siblings of socket_id, with lowercase types and
+ * genders -- is still parsed so that assets authored before the schema
+ * migration keep loading; see `normalizeSocket`.
  */
 export interface SocketDefinition {
   socket_id: string;
   socket_type: SocketType;
   gender: SocketGender;
-  position: Vec3Tuple;
-  normal: Vec3Tuple;
-  up: Vec3Tuple;
+  transform: SocketTransform;
+  tolerances?: SocketTolerances;
+  kinematic_rules?: SocketKinematicRules;
   /** Free-form labels, e.g. ['end_a', 'chord_top_left']. */
   tags?: string[];
-  /** Working load limit at this interface, kilograms. Advisory only. */
-  load_rating_kg?: number;
 }
 
 /** The `extras` payload an asset carries. */
@@ -75,8 +142,16 @@ export interface SocketExtras {
 /* Tolerances -- keep in lockstep with CLAUDE.md and the UE5 build             */
 /* -------------------------------------------------------------------------- */
 
-/** Magnetic capture radius between two socket origins, meters. */
+/** Magnetic capture radius between two socket origins, metres. */
 export const SNAP_THRESHOLD_METERS = 0.15;
+
+/**
+ * Angular capture window, radians (15 degrees).
+ *
+ * A candidate pair whose mating axes deviate further than this from
+ * anti-parallel does not capture, however close the origins are.
+ */
+export const SNAP_ANGLE_RADIANS = (15 * Math.PI) / 180;
 
 /** Roll about the mating axis quantizes to 0 / 90 / 180 / 270 degrees. */
 export const DETENT_STEP_RADIANS = Math.PI / 2;
@@ -90,7 +165,7 @@ const EPSILON = 1e-6;
 
 /** A socket resolved into world space for the current frame. */
 export interface WorldSocket {
-  definition: SocketDefinition;
+  definition: NormalizedSocket;
   owner: THREE.Object3D;
   position: THREE.Vector3;
   normal: THREE.Vector3;
@@ -125,46 +200,147 @@ export interface KinematicLink {
 /* Metadata access                                                             */
 /* -------------------------------------------------------------------------- */
 
+/* -------------------------------------------------------------------------- */
+/* Normalized runtime form                                                     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A socket flattened into the form the engine actually works with.
+ *
+ * Normalizing once on registration means the hot path never has to branch on
+ * which schema an asset was authored against, nor re-apply defaults per frame.
+ */
+export interface NormalizedSocket {
+  socket_id: string;
+  socket_type: SocketType;
+  gender: SocketGender;
+  position: Vec3Tuple;
+  normal: Vec3Tuple;
+  up: Vec3Tuple;
+  snapRadius: number;
+  snapAngleRadians: number;
+  detentStepRadians: number;
+  canParent: boolean;
+  canChild: boolean;
+  loadBearing: boolean;
+  maxLoadKg: number | null;
+  tags: string[];
+}
+
+/** Legacy lowercase socket types, mapped onto the specification vocabulary. */
+const LEGACY_TYPE_ALIASES: Record<string, SocketType> = {
+  truss_f34_chord: 'TRUSS_CONICAL_F34',
+  truss_f44_chord: 'TRUSS_CONICAL_F44',
+  deck_coffin_lock: 'STAGE_COFFIN_LOCK',
+  deck_leg: 'STAGE_LEG_RECEIVER',
+  ground_support_base: 'GROUND_SUPPORT_BASE',
+};
+
+function coerceSocketType(raw: unknown): SocketType | null {
+  if (typeof raw !== 'string') return null;
+  if ((SOCKET_TYPES as readonly string[]).includes(raw)) return raw as SocketType;
+  const upper = raw.toUpperCase();
+  if ((SOCKET_TYPES as readonly string[]).includes(upper)) return upper as SocketType;
+  return LEGACY_TYPE_ALIASES[raw] ?? null;
+}
+
+function coerceGender(raw: unknown): SocketGender | null {
+  if (typeof raw !== 'string') return null;
+  const upper = raw.toUpperCase();
+  return upper === 'MALE' || upper === 'FEMALE' || upper === 'NEUTRAL' || upper === 'UNIVERSAL'
+    ? (upper as SocketGender)
+    : null;
+}
+
 function isVec3Tuple(v: unknown): v is Vec3Tuple {
   return (
     Array.isArray(v) && v.length === 3 && v.every((n) => typeof n === 'number' && Number.isFinite(n))
   );
 }
 
-/** Narrow an unknown value to a SocketDefinition, rejecting malformed entries. */
-export function isSocketDefinition(value: unknown): value is SocketDefinition {
-  if (typeof value !== 'object' || value === null) return false;
-  const s = value as Record<string, unknown>;
-  return (
-    typeof s['socket_id'] === 'string' &&
-    typeof s['socket_type'] === 'string' &&
-    (SOCKET_TYPES as readonly string[]).includes(s['socket_type']) &&
-    (s['gender'] === 'male' || s['gender'] === 'female' || s['gender'] === 'neutral') &&
-    isVec3Tuple(s['position']) &&
-    isVec3Tuple(s['normal']) &&
-    isVec3Tuple(s['up'])
-  );
+/**
+ * Normalize a raw socket record from either schema, or return null if it is
+ * not a usable socket.
+ */
+export function normalizeSocket(value: unknown): NormalizedSocket | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const raw = value as Record<string, unknown>;
+
+  const socketId = raw['socket_id'];
+  const socketType = coerceSocketType(raw['socket_type']);
+  const gender = coerceGender(raw['gender']);
+  if (typeof socketId !== 'string' || socketType === null || gender === null) return null;
+
+  // Spec shape nests the pose under `transform`; the legacy shape inlines it.
+  const transform = raw['transform'] as Record<string, unknown> | undefined;
+  const position = transform?.['translation'] ?? raw['position'];
+  const normal = transform?.['normal'] ?? raw['normal'];
+  const up = transform?.['up'] ?? raw['up'];
+  if (!isVec3Tuple(position) || !isVec3Tuple(normal) || !isVec3Tuple(up)) return null;
+
+  const tolerances = (raw['tolerances'] ?? {}) as SocketTolerances;
+  const rules = (raw['kinematic_rules'] ?? {}) as SocketKinematicRules;
+
+  const detents = tolerances.detents_deg;
+  // Detents are stored as a step. A uniform list (0/90/180/270) is the only
+  // shape the alignment maths supports, so derive the step from its spacing.
+  const detentStep =
+    Array.isArray(detents) && detents.length > 1
+      ? (Math.abs(detents[1]! - detents[0]!) * Math.PI) / 180
+      : DETENT_STEP_RADIANS;
+
+  const legacyLoad = raw['load_rating_kg'];
+
+  return {
+    socket_id: socketId,
+    socket_type: socketType,
+    gender,
+    position: [...position] as Vec3Tuple,
+    normal: [...normal] as Vec3Tuple,
+    up: [...up] as Vec3Tuple,
+    snapRadius: typeof tolerances.snap_radius === 'number' ? tolerances.snap_radius : SNAP_THRESHOLD_METERS,
+    snapAngleRadians:
+      typeof tolerances.snap_angle === 'number'
+        ? (tolerances.snap_angle * Math.PI) / 180
+        : SNAP_ANGLE_RADIANS,
+    detentStepRadians: detentStep > EPSILON ? detentStep : DETENT_STEP_RADIANS,
+    canParent: rules.can_parent !== false,
+    canChild: rules.can_child !== false,
+    loadBearing: rules.load_bearing === true,
+    maxLoadKg:
+      typeof rules.max_load_kg === 'number'
+        ? rules.max_load_kg
+        : typeof legacyLoad === 'number'
+          ? legacyLoad
+          : null,
+    tags: Array.isArray(raw['tags']) ? (raw['tags'] as string[]).filter((t) => typeof t === 'string') : [],
+  };
 }
 
+/* -------------------------------------------------------------------------- */
+/* Metadata access                                                             */
+/* -------------------------------------------------------------------------- */
+
 /**
- * Read socket definitions off an object.
+ * Read and normalize socket definitions off an object.
  *
- * Two shapes are accepted. Assets authored in this codebase write the literal
+ * Two container shapes are accepted. Assets authored here write the literal
  * spec shape `userData.extras.sockets`. Three's GLTFLoader, however, flattens a
- * glTF node's `extras` straight onto `userData` via Object.assign -- so an asset
- * round-tripped through glTF arrives as `userData.sockets`. Both are the same
- * `extras.sockets` contract, so both are read here.
+ * glTF node's `extras` straight onto `userData` via Object.assign -- so an
+ * asset round-tripped through glTF arrives as `userData.sockets`. Both are the
+ * same `extras.sockets` contract, so both are read here.
  */
-export function readSockets(object: THREE.Object3D): SocketDefinition[] {
+export function readSockets(object: THREE.Object3D): NormalizedSocket[] {
   const userData = object.userData as Record<string, unknown>;
   const extras = userData['extras'] as Record<string, unknown> | undefined;
   const raw = extras?.['sockets'] ?? userData['sockets'];
   if (!Array.isArray(raw)) return [];
 
-  const valid: SocketDefinition[] = [];
+  const valid: NormalizedSocket[] = [];
   for (const entry of raw) {
-    if (isSocketDefinition(entry)) {
-      valid.push(entry);
+    const normalized = normalizeSocket(entry);
+    if (normalized !== null) {
+      valid.push(normalized);
     } else {
       console.warn(
         `[SocketSnappingEngine] Discarding malformed socket on "${object.name || object.uuid}".`,
@@ -206,10 +382,12 @@ function signedAngleAbout(from: THREE.Vector3, to: THREE.Vector3, axis: THREE.Ve
 }
 
 /** Are these two sockets allowed to mate? */
-export function areSocketsCompatible(a: SocketDefinition, b: SocketDefinition): boolean {
+export function areSocketsCompatible(a: NormalizedSocket, b: NormalizedSocket): boolean {
   if (a.socket_type !== b.socket_type) return false;
-  if (a.gender === 'neutral' || b.gender === 'neutral') {
-    return a.gender === 'neutral' && b.gender === 'neutral';
+  // UNIVERSAL is the wildcard: it accepts any polarity of its own type.
+  if (a.gender === 'UNIVERSAL' || b.gender === 'UNIVERSAL') return true;
+  if (a.gender === 'NEUTRAL' || b.gender === 'NEUTRAL') {
+    return a.gender === 'NEUTRAL' && b.gender === 'NEUTRAL';
   }
   return a.gender !== b.gender;
 }
@@ -230,7 +408,7 @@ export interface SnapEngineOptions {
 
 export class SocketSnappingEngine {
   private readonly registry = new Map<string, THREE.Object3D>();
-  private readonly socketCache = new Map<string, SocketDefinition[]>();
+  private readonly socketCache = new Map<string, NormalizedSocket[]>();
   /** Keys of sockets already consumed by a snap: `${uuid}:${socket_id}`. */
   private readonly occupied = new Set<string>();
   private readonly links: KinematicLink[] = [];
@@ -364,6 +542,7 @@ export class SocketSnappingEngine {
     const toUp = projectOntoPlane(target.up, matingAxis);
 
     let detentIndex = 0;
+    let detentStepDegrees = (DETENT_STEP_RADIANS * 180) / Math.PI;
     const twist = new THREE.Quaternion();
     if (fromUp !== null && toUp !== null) {
       // `rawAngle` is the rotation that would drive the moving up-vector exactly
@@ -371,9 +550,11 @@ export class SocketSnappingEngine {
       // leftover fraction as error; instead rotate by the small correction that
       // removes it, landing the joint precisely on detent `detentIndex`.
       const rawAngle = signedAngleAbout(fromUp, toUp, matingAxis);
-      detentIndex = Math.round(rawAngle / DETENT_STEP_RADIANS);
-      const correction = rawAngle - detentIndex * DETENT_STEP_RADIANS;
+      const step = target.definition.detentStepRadians;
+      detentIndex = Math.round(rawAngle / step);
+      const correction = rawAngle - detentIndex * step;
       twist.setFromAxisAngle(matingAxis, correction);
+      detentStepDegrees = (step * 180) / Math.PI;
     }
 
     const delta = twist.clone().multiply(swing);
@@ -387,7 +568,7 @@ export class SocketSnappingEngine {
 
     // The residual offset between the mated up-vectors, which the correction
     // above has driven to exactly this multiple of 90 degrees.
-    const detentDegrees = (((detentIndex * 90) % 360) + 360) % 360;
+    const detentDegrees = (((detentIndex * detentStepDegrees) % 360) + 360) % 360;
 
     return {
       moving,
@@ -425,8 +606,35 @@ export class SocketSnappingEngine {
           if (!areSocketsCompatible(movingSocket.definition, targetSocket.definition)) continue;
 
           const distance = movingSocket.position.distanceTo(targetSocket.position);
-          if (distance > this.thresholdMeters) continue;
+          // Per-socket radius when the asset declares one; the tighter of the
+          // mating pair governs.
+          const radius = Math.min(
+            this.thresholdMeters,
+            movingSocket.definition.snapRadius,
+            targetSocket.definition.snapRadius,
+          );
+          if (distance > radius) continue;
           if (best !== null && distance >= best.distance) continue;
+
+          // Angular capture window. Sockets mate when their normals are
+          // ANTI-parallel, so deviation is measured against -1: a pair facing
+          // the same way is 180 degrees out of alignment, not 0.
+          const deviation = Math.acos(
+            THREE.MathUtils.clamp(-movingSocket.normal.dot(targetSocket.normal), -1, 1),
+          );
+          if (
+            deviation >
+            Math.min(movingSocket.definition.snapAngleRadians, targetSocket.definition.snapAngleRadians)
+          ) {
+            continue;
+          }
+
+          // Kinematic rules: the child must be reparentable, the target willing
+          // to act as a parent.
+          if (this.kinematicLinking) {
+            if (!movingSocket.definition.canChild) continue;
+            if (!targetSocket.definition.canParent) continue;
+          }
 
           best = this.resolveSnapTransform(movingSocket, targetSocket);
         }

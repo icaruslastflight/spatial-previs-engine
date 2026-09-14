@@ -1,8 +1,29 @@
 {
   "$comment": "Scan asset registry. Add real captures here as they land; the viewport reads this at startup.",
   "site": "Point State Park, Pittsburgh, PA",
-  "anchor": { "latitude": 40.4417, "longitude": -80.0075, "height_m": 186.0 },
-  "scans": [],
+  "anchor": {
+    "latitude": 40.4417,
+    "longitude": -80.0075,
+    "height_m": 186
+  },
+  "scans": [
+    {
+      "id": "point_state_park",
+      "venue": "Point State Park",
+      "url": "assets/scans/point_state_park_clean.splat",
+      "format": "splat",
+      "anchor": {
+        "latitude": 40.4417,
+        "longitude": -80.0075,
+        "height": 186.6
+      },
+      "enu_offset_m": [
+        0,
+        0,
+        0
+      ]
+    }
+  ],
   "placeholder": {
     "kind": "georeferenced_bounding_box",
     "url": "assets/scans/point-state-park-bounds.geojson",

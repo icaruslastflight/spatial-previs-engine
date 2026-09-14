@@ -94,64 +94,92 @@ math elsewhere.
 ## 3. `extras.sockets` schema
 
 Modular assets carry socket metadata under **`extras.sockets`**, matching the
-glTF `extras` convention so web and UE5 read the same asset file.
+glTF `extras` convention so web and UE5 read the same asset file. The shape
+below is *Event Asset Library and Modular Snapping Specification*, section 3.1.
 
 ```jsonc
 {
   "extras": {
     "sockets": [
       {
-        "socket_id": "end_a_top_near",   // unique within the asset
-        "socket_type": "truss_f34_chord", // must be in the shared catalogue
-        "gender": "male",                 // "male" | "female" | "neutral"
-        "position": [1.0, 0.145, 0.145],  // LOCAL space, meters
-        "normal":   [1.0, 0.0, 0.0],      // LOCAL, points OUTWARD from the face
-        "up":       [0.0, 1.0, 1.0],      // LOCAL, roll reference
-        "tags": ["end_a", "top_near"],    // optional
-        "load_rating_kg": 750             // optional, advisory
+        "socket_id": "end_a_top_near",       // unique within the asset
+        "socket_type": "TRUSS_CONICAL_F34",  // must be in SOCKET_TYPES
+        "gender": "MALE",                    // MALE | FEMALE | NEUTRAL | UNIVERSAL
+        "transform": {
+          "translation": [1.0, 0.145, 0.145],  // LOCAL space, metres
+          "normal":      [1.0, 0.0, 0.0],      // LOCAL, points OUTWARD
+          "up":          [0.0, 1.0, 1.0]       // LOCAL, roll reference
+        },
+        "tolerances": {
+          "snap_radius": 0.15,                 // metres
+          "snap_angle": 15,                    // DEGREES of angular tolerance
+          "detents_deg": [0, 90, 180, 270]     // roll locks onto these
+        },
+        "kinematic_rules": {
+          "can_parent": true,
+          "can_child": true,
+          "load_bearing": true,
+          "max_load_kg": 750
+        },
+        "tags": ["end_a", "top_near"]
       }
     ]
   }
 }
 ```
 
+### `snap_angle` is a TOLERANCE, not the detent step
+
+This is the single easiest thing in the schema to misread, so it is worth
+stating twice: **15 degrees is the angular capture window** — how far the two
+mating axes may deviate from anti-parallel and still snap. **The detents are
+0 / 90 / 180 / 270.** The joint captures within 15 degrees, then locks onto the
+nearest cardinal detent. They are separate numbers doing separate jobs.
+
 ### Field rules
 
 - **`normal`** points *outward* from the mating face. Two sockets mate when
   their normals are **anti-parallel**.
 - **`up`** resolves the remaining roll degree of freedom. It need not be exactly
-  perpendicular to `normal` — it is Gram-Schmidt orthogonalized on registration
-  — but it must not be *parallel* to it, or the socket is rejected.
+  perpendicular to `normal` (it is Gram-Schmidt orthogonalized on registration)
+  but it must not be *parallel* to it, or the socket is rejected.
 - **`up` must encode angular position for radially-arrayed sockets.** On the
   F34 truss the four chord sockets point their `up` vectors **radially outward
   toward their own chord**. Giving all four a shared `up` of `(0,1,0)` is a bug:
   it aligns the mated pair and leaves the other three chords crossed by up to
-  17 mm. Covered by a regression check in the test suite.
-- **`gender`:** `male` mates only with `female`. `neutral` mates only with
-  `neutral` — coffin locks are hermaphroditic, so they are `neutral`.
+  17 mm. Covered by a regression check.
+- **`gender`:** `MALE` mates only `FEMALE`; `NEUTRAL` mates only `NEUTRAL`
+  (coffin locks are hermaphroditic); `UNIVERSAL` mates anything of its own type.
 - **`socket_type`** must appear in `SOCKET_TYPES`. Unknown types are rejected at
   registration with a warning, never silently ignored.
+- **`kinematic_rules`** gate reparenting: a socket with `can_child: false`
+  (a hoist top hook, a fixture clamp) never becomes a child.
+
+### Legacy shape
+
+The pre-migration flat form — `position`/`normal`/`up` as siblings of
+`socket_id`, lowercase types and genders — is still parsed by
+`normalizeSocket()` and aliased onto the spec vocabulary, so older assets keep
+loading. Everything authored in this codebase emits the spec shape.
 
 ### glTF round-trip caveat
 
 Three's `GLTFLoader` flattens a node's `extras` straight onto `userData` via
 `Object.assign`, so `extras.sockets` in the file arrives as `userData.sockets`,
-not `userData.extras.sockets`. `readSockets()` accepts **both** shapes. Assets
-authored in this codebase write the literal spec shape.
+not `userData.extras.sockets`. `readSockets()` accepts **both** shapes.
 
 ### Snapping tolerances — mirrored in UE5
 
 | Constant | Value | Meaning |
 | --- | --- | --- |
 | `SNAP_THRESHOLD_METERS` | **0.15 m** | Magnetic capture radius between socket origins |
+| `SNAP_ANGLE_RADIANS` | **15°** | Angular capture window (mating-axis deviation) |
 | `DETENT_STEP_RADIANS` | **π/2 (90°)** | Roll quantizes to 0° / 90° / 180° / 270° |
 
 **Detent semantics (easy to get backwards):** rotate by the *small correction*
 `rawAngle − round(rawAngle / 90°) × 90°`, which drives the joint **onto** the
 nearest detent. Rotating *by* the quantized angle instead leaves up to 45° of
 residual error. There is a regression check for this.
-
----
 
 ## 4. Basemap tiers
 
@@ -176,7 +204,8 @@ npm run dev         # dev server, exposed on the LAN for phone testing
 npm run build       # tsc && vite build  — MUST be clean before committing
 npm run preview     # serve the production build locally
 npx tsc --noEmit    # typecheck only (also: npm run typecheck)
-npm test            # geodetic + socket snapping regression checks
+npm test            # geodetic, CP-1, socket snapping + asset library checks
+npm run build:assets # compile the modular asset library to GLB
 ```
 
 ### Deployment
@@ -223,3 +252,107 @@ src/
   main.ts                              composition root
 public/assets/scans/                   scan registry + placeholder site bounds
 ```
+
+---
+
+## 8. Geospatial splat pipeline (reusable, any venue)
+
+`scripts/workflows/run_geospatial_splat_pipeline.sh` is the standardized venue
+deployment workflow: ingest a capture, strip transients, georeference, register
+for the runtime, verify the build.
+
+```bash
+# Point State Park, from a real capture
+scripts/workflows/run_geospatial_splat_pipeline.sh \
+    --venue-name "Point State Park" \
+    --lat 40.4417 --long -80.0075 --elevation 220 \
+    --input-scan captures/psp_raw.ply \
+    --output-splat public/assets/scans/point_state_park_clean.splat
+
+# Any future venue
+scripts/workflows/run_geospatial_splat_pipeline.sh \
+    --venue-name "Hart Plaza" --lat 42.3286 --long -83.0456 --elevation 180 \
+    --input-scan captures/hart_plaza.ply
+
+# No capture yet: exercise the whole path on a labelled synthetic scene
+scripts/workflows/run_geospatial_splat_pipeline.sh \
+    --venue-name "Point State Park" \
+    --lat 40.4417 --long -80.0075 --elevation 220 --synthesize
+```
+
+| Flag | Meaning |
+| --- | --- |
+| `--venue-name` | Human-readable name; also produces the slug used for paths |
+| `--lat` | Latitude, signed decimal degrees (north positive) |
+| `--long` | Longitude, signed decimal degrees — **west is NEGATIVE** |
+| `--elevation` | Site elevation in metres above **mean sea level** (orthometric) |
+| `--input-scan` | Capture to ingest (`.ply` or `.splat`) |
+| `--output-splat` | Cleaned binary output |
+| `--geoid-separation` | Geoid height above the ellipsoid (default −33.4, western PA) |
+| `--detector` | `auto` \| `geometric` \| `sam2` |
+| `--synthesize` | Generate a labelled synthetic capture instead of ingesting |
+| `--skip-clean` / `--skip-build` | Partial runs |
+
+### ELEVATION IS ORTHOMETRIC — the pipeline converts it
+
+`--elevation` takes the number off the survey drawing (metres above sea level).
+WGS84, Cesium and Google 3D Tiles all consume **ellipsoidal** height. The script
+converts with the site's geoid separation:
+
+```
+h_ellipsoidal = H_orthometric + N_geoid
+186.6 m       = 220.0 m       + (−33.4 m)     # Point State Park
+```
+
+Passing a raw MSL figure straight into a WGS84 pipeline floats the venue tens of
+metres above the basemap. **`--geoid-separation` must be looked up per site** —
+it ranges roughly −105 m to +85 m worldwide; the −33.4 m default is western
+Pennsylvania only.
+
+### Splat clean-up on its own
+
+```bash
+python3 scripts/cleanup_splat.py --self-test           # synthetic verification
+python3 scripts/cleanup_splat.py --synthesize out.splat
+python3 scripts/cleanup_splat.py -i raw.ply -o clean.splat --detector auto
+```
+
+Two detectors, combined by union:
+
+- **`geometric`** — always available, deterministic, no weights or GPU. Voxel
+  connected-components classified by real-world dimensions (person / vehicle /
+  barricade / floater). Carries the result today.
+- **`sam2`** — Segment Anything 2 instance masks over rendered views,
+  back-projected with multi-view voting. Needs `pip install sam2` and a
+  checkpoint at `models/sam2/`. Contributes clean instance *boundaries* where
+  geometry welds a person to the wall behind them.
+
+Classification uses **width and length separately**, not a single footprint
+number — a barricade run is thin in cross-section and arbitrarily long, so a
+combined footprint cap rejects the whole line.
+
+## 9. Modular asset library
+
+```bash
+npm run build:assets                              # build all 37 assets
+node scripts/build-asset-library.js --only video  # one category
+node scripts/build-asset-library.js --verify      # validate without writing
+```
+
+Generates `public/assets/models/<category>/<id>.glb` plus
+`public/assets/manifest.json`. Every asset embeds `extras.sockets`, ships an
+in-GLB low-poly collision hull, and is validated against the 15,000-triangle
+LOD0 budget. Categories: `trussing`, `staging`, `video`, `lighting`, `audio`,
+`sfx`, `site`.
+
+These are **dimensionally accurate, visually placeholder**. Real dimensions and
+socket positions are the contract (Checkpoint CP-3); triangle counts sit far
+below the budget ceiling because procedural stock has no welds or grilles to
+model. Manufacturer CAD hot-swaps in without re-plotting **as long as socket
+ids and positions match exactly**.
+
+## 10. Binaries are not committed
+
+`.splat`, `.ply` and SAM-2 checkpoints are git-ignored. Captures are large and
+regenerable; real surveys belong in release assets or an external bucket. The
+synthetic stand-in regenerates with `--synthesize`.

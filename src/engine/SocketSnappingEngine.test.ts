@@ -149,5 +149,85 @@ console.log('\n[4] Socket reservation and unlink');
   }
 }
 
+// ---------------------------------------------------------------- test 5
+console.log('\n[5] Specification socket schema');
+{
+  const { normalizeSocket, areSocketsCompatible } = await import('./SocketSnappingEngine.ts');
+
+  // Spec shape: nested transform, uppercase enums, explicit tolerances.
+  const spec = normalizeSocket({
+    socket_id: 'led_left', socket_type: 'LED_PANEL_FASTENER', gender: 'MALE',
+    transform: { translation: [1, 0, 0], normal: [1, 0, 0], up: [0, 1, 0] },
+    tolerances: { snap_radius: 0.08, snap_angle: 10, detents_deg: [0, 90, 180, 270] },
+    kinematic_rules: { can_parent: true, can_child: false, load_bearing: true, max_load_kg: 40 },
+  });
+  check('spec-shape socket normalizes', spec !== null);
+  check('per-socket snap_radius honoured', spec?.snapRadius === 0.08, `(${spec?.snapRadius})`);
+  check('snap_angle converts to radians', approx(spec?.snapAngleRadians ?? 0, (10 * Math.PI) / 180, 1e-9));
+  check('detent step derived from list', approx(spec?.detentStepRadians ?? 0, Math.PI / 2, 1e-9));
+  check('kinematic can_child respected', spec?.canChild === false);
+  check('max_load_kg read', spec?.maxLoadKg === 40);
+
+  // Legacy flat shape must still load: assets predate the schema migration.
+  const legacy = normalizeSocket({
+    socket_id: 'old', socket_type: 'truss_f34_chord', gender: 'male',
+    position: [1, 0, 0], normal: [1, 0, 0], up: [0, 1, 0], load_rating_kg: 750,
+  });
+  check('legacy flat socket normalizes', legacy !== null);
+  check('legacy type aliases to spec enum', legacy?.socket_type === 'TRUSS_CONICAL_F34',
+        `(${legacy?.socket_type})`);
+  check('legacy gender uppercases', legacy?.gender === 'MALE', `(${legacy?.gender})`);
+  check('legacy load rating carried over', legacy?.maxLoadKg === 750);
+  check('legacy defaults to spec tolerances',
+    approx(legacy?.snapRadius ?? 0, 0.15, 1e-9) &&
+    approx(legacy?.snapAngleRadians ?? 0, (15 * Math.PI) / 180, 1e-9));
+
+  // Gender mating rules, including the UNIVERSAL wildcard.
+  const make = (gender: string, type = 'PIPE_CLAMP_2IN') => normalizeSocket({
+    socket_id: `s_${gender}`, socket_type: type, gender,
+    transform: { translation: [0, 0, 0], normal: [1, 0, 0], up: [0, 1, 0] },
+  })!;
+  check('MALE mates FEMALE', areSocketsCompatible(make('MALE'), make('FEMALE')));
+  check('MALE refuses MALE', !areSocketsCompatible(make('MALE'), make('MALE')));
+  check('NEUTRAL mates NEUTRAL', areSocketsCompatible(make('NEUTRAL'), make('NEUTRAL')));
+  check('NEUTRAL refuses MALE', !areSocketsCompatible(make('NEUTRAL'), make('MALE')));
+  check('UNIVERSAL mates MALE', areSocketsCompatible(make('UNIVERSAL'), make('MALE')));
+  check('UNIVERSAL mates NEUTRAL', areSocketsCompatible(make('UNIVERSAL'), make('NEUTRAL')));
+  check('type mismatch refused',
+    !areSocketsCompatible(make('MALE'), make('FEMALE', 'RIG_HOIST_HOOK')));
+
+  check('unknown socket_type rejected', normalizeSocket({
+    socket_id: 'x', socket_type: 'NOT_A_REAL_TYPE', gender: 'MALE',
+    transform: { translation: [0, 0, 0], normal: [1, 0, 0], up: [0, 1, 0] },
+  }) === null);
+}
+
+// ---------------------------------------------------------------- test 6
+console.log('\n[6] Angular capture window (15 deg tolerance)');
+{
+  const scene = new THREE.Scene();
+  const engine = new SocketSnappingEngine();
+  const anchor = createF34BoxTruss2M(); scene.add(anchor); engine.register(anchor);
+
+  // Well inside the window: mating axes ~6 deg apart.
+  const near = createF34BoxTruss2M();
+  near.position.set(-2.02, 0, 0);
+  near.rotation.z = THREE.MathUtils.degToRad(6);
+  scene.add(near); engine.register(near);
+  scene.updateMatrixWorld(true);
+  check('captures within the 15 deg window', engine.findSnapCandidate(near) !== null);
+  engine.unregister(near); scene.remove(near);
+
+  // Outside the window: 35 deg off, origins still well within 0.15 m.
+  const skew = createF34BoxTruss2M();
+  skew.position.set(-2.02, 0, 0);
+  skew.rotation.z = THREE.MathUtils.degToRad(35);
+  scene.add(skew); engine.register(skew);
+  scene.updateMatrixWorld(true);
+  const rejected = engine.findSnapCandidate(skew);
+  check('refuses beyond the 15 deg window', rejected === null,
+        rejected ? `(captured at ${rejected.distance.toFixed(3)} m)` : '');
+}
+
 console.log(failures === 0 ? '\nALL CHECKS PASSED\n' : `\n${failures} CHECK(S) FAILED\n`);
 process.exit(failures === 0 ? 0 : 1);

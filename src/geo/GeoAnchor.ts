@@ -32,7 +32,10 @@ export interface Geodetic {
   latitude: number;
   /** Longitude in degrees, positive east (Pittsburgh is negative). */
   longitude: number;
-  /** Height above the WGS84 ellipsoid, meters. */
+  /**
+   * Height above the WGS84 ELLIPSOID, meters -- not above sea level.
+   * See SITE_ELEVATION for converting an orthometric (MSL) figure.
+   */
   height: number;
 }
 
@@ -52,13 +55,46 @@ export const POINT_STATE_PARK: Geodetic = {
   latitude: 40.4417,
   longitude: -80.0075,
   /**
-   * Ellipsoidal height. Point State Park sits at roughly 219 m orthometric
-   * (the Ohio River pool elevation at the Point is ~710 ft / 216 m). The
-   * EGM96 geoid separation for western Pennsylvania is about -33 m, so the
-   * ellipsoidal height is ~186 m.
+   * Ellipsoidal height, DERIVED -- do not edit this number directly.
+   * See SITE_ELEVATION below for the datum arithmetic.
    */
-  height: 186.0,
+  height: 0, // replaced immediately below; see SITE_ELEVATION
 };
+
+/**
+ * SITE ELEVATION -- the datum distinction that makes or breaks basemap
+ * registration.
+ *
+ * The venue specification states the site elevation as 220 m. That is an
+ * ORTHOMETRIC height (metres above mean sea level / the geoid) -- the number
+ * that appears on survey drawings and topographic maps.
+ *
+ * Cesium, Google Photorealistic 3D Tiles and WGS84 all work in ELLIPSOIDAL
+ * height. For western Pennsylvania the EGM96 geoid sits about 33.4 m BELOW the
+ * ellipsoid, so:
+ *
+ *     h_ellipsoidal = H_orthometric + N_geoid = 220.0 + (-33.4) = 186.6 m
+ *
+ * Feeding the raw 220 m into a WGS84 pipeline floats the whole site 33.4 m
+ * above the basemap -- roughly an eleven-storey error, and exactly the kind of
+ * mistake that survives right up until the first on-site sightline check.
+ */
+export const SITE_ELEVATION = {
+  /** Metres above mean sea level, as stated in the venue specification. */
+  orthometricMeters: 220.0,
+  /**
+   * EGM96 geoid separation for western Pennsylvania (negative: the geoid lies
+   * below the ellipsoid here). Replace with a precise EGM96/GEOID18 lookup if
+   * survey-grade vertical accuracy is ever required.
+   */
+  geoidSeparationMeters: -33.4,
+  /** Metres above the WGS84 ellipsoid. This is what Cesium consumes. */
+  get ellipsoidalMeters(): number {
+    return this.orthometricMeters + this.geoidSeparationMeters;
+  },
+} as const;
+
+POINT_STATE_PARK.height = SITE_ELEVATION.ellipsoidalMeters;
 
 /** Convert geodetic coordinates to earth-centered, earth-fixed (ECEF) meters. */
 export function geodeticToEcef(geo: Geodetic): Vec3 {

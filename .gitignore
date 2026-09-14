@@ -22,3 +22,16 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Generated Gaussian splat binaries.
+# Captures are large and regenerable; real surveys belong in release assets or
+# an external bucket, per the $0 bandwidth rule in CLAUDE.md. Regenerate the
+# synthetic stand-in with:
+#   python3 scripts/cleanup_splat.py --synthesize <path>
+*.splat
+*.ply
+models/sam2/
+
+# Python
+__pycache__/
+*.py[cod]
