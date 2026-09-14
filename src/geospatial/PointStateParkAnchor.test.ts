@@ -18,8 +18,12 @@ describe('[CP-1] Geospatial & Coordinate Origin Alignment', () => {
     expect(WGS84_ORIGIN.latitude).toBe(40.4417);
     expect(WGS84_ORIGIN.longitude).toBe(-80.0075);
     expect(ORIGIN_ELEVATION.orthometricMeters).toBe(220.0);
-    // 220.0 m MSL + (-33.4 m EGM96 separation for western PA).
-    expect(WGS84_ORIGIN.height).toBeCloseTo(186.6, 6);
+    // 220.0 m NAVD88, then GEOID18 (-33.82 m) to reach the NAD83 ellipsoid,
+    // then the NAD83(2011) -> ITRF2014 frame offset (-1.217 m) to reach WGS84,
+    // which is the frame Cesium and Google 3D Tiles actually consume.
+    expect(ORIGIN_ELEVATION.geoidSeparationMeters).toBe(-33.82);
+    expect(ORIGIN_ELEVATION.frameOffsetMeters).toBe(-1.217);
+    expect(WGS84_ORIGIN.height).toBeCloseTo(184.963, 6);
   });
 
   it.each(report.checks.map((check) => [check.name, check] as const))(

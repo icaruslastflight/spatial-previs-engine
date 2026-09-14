@@ -30,8 +30,9 @@ import type { Geodetic } from '../geo/GeoAnchor.ts';
  * The venue's global WGS84 reference origin.
  *
  * Latitude 40.4417 N, Longitude 80.0075 W, elevation 220 m above mean sea
- * level. The elevation is stored ellipsoidally (186.6 m) because that is what
- * WGS84 and Cesium consume -- see SITE_ELEVATION for the geoid arithmetic.
+ * level. The elevation is stored ellipsoidally (184.963 m) because that is what
+ * WGS84 and Cesium consume -- see SITE_ELEVATION for the datum arithmetic, which
+ * takes both a geoid separation and a NAD83 -> WGS84 frame offset.
  */
 export const WGS84_ORIGIN: Readonly<Geodetic> = Object.freeze({
   latitude: POINT_STATE_PARK.latitude,
@@ -245,10 +246,22 @@ export function runCp1SelfTest(): Cp1Report {
   record('origin maps to (0,0,0)', originLocal.length() < 1e-6,
     `|p| = ${originLocal.length().toExponential(2)} m`);
 
-  // 3. Datum arithmetic: 220 m MSL must become 186.6 m ellipsoidal.
-  const expected = 220.0 - 33.4;
+  // 3. Datum arithmetic: 220 m MSL must become 184.963 m WGS84 ellipsoidal,
+  //    via the GEOID18 separation AND the NAD83 -> ITRF2014 frame offset.
+  //    Derived from the constants rather than hard-coded, so this checks the
+  //    arithmetic wiring; the numbers themselves are sourced in GeoAnchor.ts.
+  const expected =
+    ORIGIN_ELEVATION.orthometricMeters +
+    ORIGIN_ELEVATION.geoidSeparationMeters +
+    ORIGIN_ELEVATION.frameOffsetMeters;
   record('orthometric -> ellipsoidal', Math.abs(ORIGIN_ELEVATION.ellipsoidalMeters - expected) < 1e-9,
-    `${ORIGIN_ELEVATION.orthometricMeters} m MSL -> ${ORIGIN_ELEVATION.ellipsoidalMeters.toFixed(1)} m ellipsoidal`);
+    `${ORIGIN_ELEVATION.orthometricMeters} m MSL -> ${ORIGIN_ELEVATION.ellipsoidalMeters.toFixed(3)} m ellipsoidal`);
+
+  // 3b. Guard the absolute value too: a sign flip on either correction still
+  //     satisfies the check above, and both have been got backwards before.
+  record('ellipsoidal height is 184.963 m',
+    Math.abs(ORIGIN_ELEVATION.ellipsoidalMeters - 184.963) < 1e-3,
+    `${ORIGIN_ELEVATION.ellipsoidalMeters.toFixed(3)} m`);
 
   // 4. The fountain lies west of origin (-X) and its apex is 46 m up.
   const basin = wgs84ToLocal(FOUNTAIN.basin);

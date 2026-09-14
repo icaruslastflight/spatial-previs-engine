@@ -28,6 +28,14 @@ Every 3D feature, snapping kinematic, and protocol parser must behave
   `src/geo/GeoAnchor.ts` and `SNAP_THRESHOLD_METERS` / `DETENT_STEP_RADIANS` in
   `src/engine/SocketSnappingEngine.ts`.
 
+> **OPEN PARITY DIVERGENCE — site anchor height.** The web anchor's ellipsoidal
+> height was corrected from 186.6 m to **184.963 m** (§2): the geoid separation
+> was wrong by 0.42 m and the NAD83 → WGS84 frame offset was missing entirely.
+> The UE5 georeferencing actor has **not** taken the same change, so the two
+> platforms are currently **1.637 m apart vertically**. This is a correction,
+> not a capability gap — the desktop is not authoritative here. Port the same
+> number to UE5 and delete this note.
+
 ### 1.2 $0 financial budget
 
 This line is developed on a phone with no spend. That is a hard constraint, not
@@ -63,7 +71,7 @@ under touch before it is considered done.
 ```
 Latitude    40.4417° N        →  +40.4417
 Longitude    80.0075° W       →  -80.0075   (stored SIGNED)
-Height      186.0 m           →  WGS84 ellipsoidal
+Height      184.963 m         →  WGS84 ellipsoidal
 ```
 
 Defined once as `POINT_STATE_PARK` in `src/geo/GeoAnchor.ts`. **Never re-declare
@@ -71,9 +79,28 @@ these numbers anywhere else** — import the constant.
 
 - Longitude is always stored **signed**. Pittsburgh is negative. A positive
   80.0075 puts the site in Central Asia.
-- Height is **ellipsoidal**, not orthometric. The Point sits at roughly 216 m
-  MSL; the EGM96 geoid separation for western Pennsylvania is about −33 m, hence
-  ~186 m ellipsoidal.
+- Height is **ellipsoidal**, not orthometric, and reaching it takes **two**
+  corrections. Applying only the first is the easy mistake:
+
+```
+h_WGS84 = H_orthometric + N_geoid  + d_frame
+184.963 = 220.0         + (−33.82) + (−1.217)
+```
+
+| Term | Value | Why |
+| --- | --- | --- |
+| `H_orthometric` | 220.0 m | Metres above mean sea level (NAVD88) — the survey-drawing number. NGS marks around the Point read 219.5–222.3 m. |
+| `N_geoid` | −33.82 m | GEOID18 separation at the anchor. Gets from a geoid-referenced height to an ellipsoid-referenced one. Omit it and the site floats 33.8 m up. |
+| `d_frame` | −1.217 m | NAD83(2011) → ITRF2014. NAVD88 and GEOID18 are published against NAD83; Cesium and Google 3D Tiles use WGS84. Omit it and the site sits 1.2 m high — invisible to an eyeball check, 8× the snapping tolerance. |
+
+Sourced to **NGS PID KY3596 ("P 44")**, ~380 m west of the anchor, the nearest
+mark publishing both heights: `NAVD 88 ORTHO HEIGHT 219.5 m (720 ft)`,
+`NAD 83 ELLIP HT 185.678 m`, `GEOID HEIGHT −33.821 m (GEOID18)`. The frame
+offset is from PROJ 9.5.1, `EPSG:6319 → EPSG:7912`, evaluated at the anchor.
+
+Both corrections are **per-site**. The geoid ranges roughly −105 m to +85 m
+worldwide and the frame offset is position-dependent — re-derive both per venue,
+never copy these numbers forward.
 
 ### Coordinate frames
 
@@ -317,7 +344,8 @@ scripts/workflows/run_geospatial_splat_pipeline.sh \
 | `--elevation` | Site elevation in metres above **mean sea level** (orthometric) |
 | `--input-scan` | Capture to ingest (`.ply` or `.splat`) |
 | `--output-splat` | Cleaned binary output |
-| `--geoid-separation` | Geoid height above the ellipsoid (default −33.4, western PA) |
+| `--geoid-separation` | Geoid height above the ellipsoid (default −33.82, Point State Park) |
+| `--frame-offset` | National-datum → WGS84/ITRF frame offset (default 0.0; −1.217 for Point State Park) |
 | `--detector` | `auto` \| `geometric` \| `sam2` |
 | `--synthesize` | Generate a labelled synthetic capture instead of ingesting |
 | `--skip-clean` / `--skip-build` | Partial runs |
@@ -326,17 +354,19 @@ scripts/workflows/run_geospatial_splat_pipeline.sh \
 
 `--elevation` takes the number off the survey drawing (metres above sea level).
 WGS84, Cesium and Google 3D Tiles all consume **ellipsoidal** height. The script
-converts with the site's geoid separation:
+converts with the site's geoid separation and frame offset:
 
 ```
-h_ellipsoidal = H_orthometric + N_geoid
-186.6 m       = 220.0 m       + (−33.4 m)     # Point State Park
+h_ellipsoidal = H_orthometric + N_geoid    + d_frame
+184.963 m     = 220.0 m       + (−33.82 m) + (−1.217 m)   # Point State Park
 ```
 
 Passing a raw MSL figure straight into a WGS84 pipeline floats the venue tens of
-metres above the basemap. **`--geoid-separation` must be looked up per site** —
-it ranges roughly −105 m to +85 m worldwide; the −33.4 m default is western
-Pennsylvania only.
+metres above the basemap. **Both corrections must be looked up per site.**
+`--geoid-separation` ranges roughly −105 m to +85 m worldwide; the −33.82 m
+default is Point State Park. `--frame-offset` defaults to **0.0** — pass it
+whenever the elevation came from a national vertical datum (NAVD88 in the US is
+published against NAD83, which differs from WGS84 by 1–2 m in CONUS).
 
 ### Splat clean-up on its own
 

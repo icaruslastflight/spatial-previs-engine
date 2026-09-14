@@ -4,7 +4,7 @@
   "anchor": {
     "latitude": 40.4417,
     "longitude": -80.0075,
-    "height_m": 186
+    "height_m": 184.963
   },
   "scans": [
     {
@@ -15,7 +15,7 @@
       "anchor": {
         "latitude": 40.4417,
         "longitude": -80.0075,
-        "height": 186.6
+        "height": 184.963
       },
       "enu_offset_m": [
         0,
