@@ -33,9 +33,25 @@ import type { Vec3 } from '../geo/GeoAnchor.ts';
  * `set()` into its own storage) rather than retain the reference.
  */
 export interface DmxUpdatePayload {
-  /** Art-Net 4 / sACN universe, 0-32767. */
+  /**
+   * Universe number, as the source protocol addresses it.
+   *
+   * The two protocols do NOT share a range, so a receiver must not assume
+   * either one's bound:
+   *  - Art-Net 4 carries a 15-bit Port-Address, 0-32767
+   *    (`Net << 8 | SubUni`).
+   *  - sACN / ANSI E1.31 carries a 16-bit universe, 1-63999; 0 and
+   *    64000-65535 are reserved for discovery and future expansion.
+   *
+   * Clamping to the Art-Net bound would silently drop the upper half of the
+   * legal sACN space, so range checks belong in the protocol parser that knows
+   * which wire the frame arrived on -- not here.
+   */
   readonly universe: number;
-  /** Wire sequence byte, 0-255, wrapping. 0 means "sequencing disabled". */
+  /**
+   * Wire sequence byte, 0-255, wrapping. 0 means "sequencing disabled", in
+   * both Art-Net 4 (byte 12) and sACN (framing-layer byte 111).
+   */
   readonly sequence: number;
   /** Exactly 512 channel levels, 0-255. Borrowed -- copy to retain. */
   readonly channels: Uint8Array;
