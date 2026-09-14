@@ -1,0 +1,11 @@
+{
+  "$comment": "Scan asset registry. Add real captures here as they land; the viewport reads this at startup.",
+  "site": "Point State Park, Pittsburgh, PA",
+  "anchor": { "latitude": 40.4417, "longitude": -80.0075, "height_m": 186.0 },
+  "scans": [],
+  "placeholder": {
+    "kind": "georeferenced_bounding_box",
+    "url": "assets/scans/point-state-park-bounds.geojson",
+    "reason": "No .ply / .las / .laz / .splat / .spz asset found in aetherevents or icaruslastflight."
+  }
+}
