@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!--
+    Maskable variant of favicon.svg.
+
+    Android crops a maskable icon to whatever shape the launcher uses, and only
+    the centre 80% (the "safe zone", a circle of radius 12.8 on this 32-unit
+    grid) is guaranteed to survive. The artwork is therefore scaled to ~62% and
+    centred, and the background is a full bleed rather than a rounded rect --
+    the launcher supplies the corner radius.
+  -->
+  <rect width="32" height="32" fill="#0c1014"/>
+  <g transform="translate(16 16) scale(0.62) translate(-16 -16)">
+    <!-- The Point: confluence triangle -->
+    <path d="M4 22 L16 8 L28 22 Z" fill="none" stroke="#35d6a0" stroke-width="2.6" stroke-linejoin="round"/>
+    <!-- Truss chord with lacing -->
+    <path d="M8 26 L24 26 M8 26 L12 22 L16 26 L20 22 L24 26" fill="none" stroke="#4f9bff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

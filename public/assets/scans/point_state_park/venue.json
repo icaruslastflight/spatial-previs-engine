@@ -5,8 +5,9 @@
     "latitude": 40.4417,
     "longitude": -80.0075,
     "elevation_orthometric_m": 220,
-    "geoid_separation_m": -33.4,
-    "height_ellipsoidal_m": 186.600
+    "geoid_separation_m": -33.82,
+    "frame_offset_m": -1.217,
+    "height_ellipsoidal_m": 184.963
   },
   "clean_splat": "assets/scans/point_state_park_clean.splat",
   "generated_by": "scripts/workflows/run_geospatial_splat_pipeline.sh"

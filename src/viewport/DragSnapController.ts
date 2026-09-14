@@ -200,6 +200,12 @@ export class DragSnapController {
   }
 
   private readonly onPointerDown = (event: PointerEvent): void => {
+    // Primary button/contact only. Touch's primary contact is always button 0
+    // per spec, so this is a no-op for the touch contract above -- it only
+    // stops a desktop RMB (remapped to orbit by PlaytestController) or MMB
+    // from also starting a drag on whatever happens to be under the cursor.
+    if (event.button !== 0) return;
+
     this.activePointers.add(event.pointerId);
 
     // Second finger down: this is a camera gesture, not an asset drag.

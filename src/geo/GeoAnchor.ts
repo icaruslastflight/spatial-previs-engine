@@ -49,6 +49,13 @@ export type Vec3 = readonly [number, number, number];
  * mirrored verbatim in the UE5 georeferencing actor; changing it here without
  * changing it there breaks Strict Dual-Platform Parity.
  *
+ * PARITY DIVERGENCE, OPEN: the ellipsoidal height was corrected from 186.6 m to
+ * 184.963 m (see SITE_ELEVATION -- a wrong geoid separation, and a missing
+ * NAD83 -> WGS84 frame offset). The UE5 georeferencing actor has NOT yet taken
+ * the same change, so the two platforms currently sit 1.637 m apart vertically.
+ * The desktop is authoritative on nothing here -- this is a straight correction,
+ * not a capability gap -- so the fix is to port the same number, not to revert.
+ *
  * Longitude is stored SIGNED (80.0075 degrees WEST => -80.0075).
  */
 export const POINT_STATE_PARK: Geodetic = {
@@ -67,30 +74,62 @@ export const POINT_STATE_PARK: Geodetic = {
  *
  * The venue specification states the site elevation as 220 m. That is an
  * ORTHOMETRIC height (metres above mean sea level / the geoid) -- the number
- * that appears on survey drawings and topographic maps.
+ * that appears on survey drawings and topographic maps. Corroborated by NGS:
+ * the survey marks around the Point read 219.5 to 222.3 m NAVD88.
  *
- * Cesium, Google Photorealistic 3D Tiles and WGS84 all work in ELLIPSOIDAL
- * height. For western Pennsylvania the EGM96 geoid sits about 33.4 m BELOW the
- * ellipsoid, so:
+ * Cesium, Google Photorealistic 3D Tiles and WGS84 all consume ELLIPSOIDAL
+ * height, and getting there takes TWO corrections, not one. Skipping either is
+ * a silent vertical error that survives until the first on-site sightline
+ * check:
  *
- *     h_ellipsoidal = H_orthometric + N_geoid = 220.0 + (-33.4) = 186.6 m
+ *     h_WGS84 = H_orthometric + N_geoid + d_frame
+ *     184.963 = 220.0        + (-33.82) + (-1.217)
  *
- * Feeding the raw 220 m into a WGS84 pipeline floats the whole site 33.4 m
- * above the basemap -- roughly an eleven-storey error, and exactly the kind of
- * mistake that survives right up until the first on-site sightline check.
+ *  1. N_geoid converts the geoid-referenced height to an ELLIPSOID-referenced
+ *     one. Omitting it floats the site 33.8 m up -- an eleven-storey error.
+ *  2. d_frame converts NAD83, the frame the US vertical datum is published in,
+ *     to the global frame the basemaps actually use. Omitting it leaves the
+ *     site 1.2 m high, which is under the noise of a basemap eyeball but well
+ *     over the 0.15 m socket snapping tolerance.
+ *
+ * SOURCE: NGS PID KY3596 ("P 44"), 40 26 30.68387 N / 080 00 43.33272 W --
+ * about 380 m west of the anchor, the nearest mark publishing both heights:
+ *
+ *     NAVD 88 ORTHO HEIGHT -   219.5   (meters)      720.    (feet)
+ *     NAD 83(1992) ELLIP HT-   185.678 (meters)
+ *     GEOID HEIGHT         -   -33.821 (meters)      GEOID18
  */
 export const SITE_ELEVATION = {
-  /** Metres above mean sea level, as stated in the venue specification. */
+  /**
+   * Metres above mean sea level (NAVD88), as stated in the venue
+   * specification and consistent with the NGS marks around the Point.
+   */
   orthometricMeters: 220.0,
   /**
-   * EGM96 geoid separation for western Pennsylvania (negative: the geoid lies
-   * below the ellipsoid here). Replace with a precise EGM96/GEOID18 lookup if
-   * survey-grade vertical accuracy is ever required.
+   * GEOID18 separation at the anchor -- negative because the geoid lies below
+   * the ellipsoid here. The NGS marks bracketing the site all report -33.816
+   * to -33.821, so the value is flat to within 5 mm across the whole park.
+   *
+   * This is a PER-SITE lookup, not a regional constant: worldwide the geoid
+   * ranges roughly -105 m to +85 m.
    */
-  geoidSeparationMeters: -33.4,
+  geoidSeparationMeters: -33.82,
+  /**
+   * NAD83(2011) -> ITRF2014 frame offset at this location, metres.
+   *
+   * NAVD88 and GEOID18 are published against NAD83, which is fixed to the
+   * North American plate. Cesium and Google 3D Tiles are referenced to WGS84,
+   * which tracks the global frame and agrees with ITRF2014 to within a couple
+   * of centimetres. In CONUS the two frames differ by 1-2 m, so the offset
+   * cannot be ignored at previz tolerances.
+   *
+   * Computed with PROJ 9.5.1 (EPSG:6319 -> EPSG:7912) at the anchor. It is
+   * position-dependent -- re-derive it per venue, never copy this number.
+   */
+  frameOffsetMeters: -1.217,
   /** Metres above the WGS84 ellipsoid. This is what Cesium consumes. */
   get ellipsoidalMeters(): number {
-    return this.orthometricMeters + this.geoidSeparationMeters;
+    return this.orthometricMeters + this.geoidSeparationMeters + this.frameOffsetMeters;
   },
 } as const;
 

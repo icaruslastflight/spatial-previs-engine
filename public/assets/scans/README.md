@@ -24,7 +24,7 @@ apron, with 30 m of vertical headroom for ground-support towers.
      "id": "point_state_park_2026_survey",
      "url": "assets/scans/point_state_park.splat",
      "format": "splat",
-     "anchor": { "latitude": 40.4417, "longitude": -80.0075, "height_m": 186.0 },
+     "anchor": { "latitude": 40.4417, "longitude": -80.0075, "height_m": 184.963 },
      "enu_offset_m": [0, 0, 0]
    }
    ```

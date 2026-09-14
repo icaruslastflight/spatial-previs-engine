@@ -17,6 +17,12 @@
 # survey drawing. WGS84 and Cesium want ELLIPSOIDAL height, so the script
 # converts using the geoid separation for the site. Feeding a raw MSL figure
 # into a WGS84 pipeline floats the venue tens of metres off the basemap.
+#
+# Where the elevation came from a NATIONAL vertical datum (NAVD88 in the US,
+# published against NAD83), a second correction is needed: --frame-offset
+# carries the site from that national frame into the global one the basemaps
+# use. In CONUS that is 1-2 m -- under the noise of an eyeball check, well over
+# a snapping tolerance.
 
 set -euo pipefail
 
@@ -29,6 +35,7 @@ LAT=""
 LONG=""
 ELEVATION=""              # orthometric metres (MSL)
 GEOID_SEPARATION=""       # metres; negative where the geoid is below the ellipsoid
+FRAME_OFFSET=""           # metres; national datum frame -> global (WGS84/ITRF) frame
 INPUT_SCAN=""
 OUTPUT_SPLAT=""
 DETECTOR="auto"
@@ -55,7 +62,13 @@ Scan input (one of):
 
 Optional:
   --output-splat PATH    Cleaned output (default: public/assets/scans/<slug>_clean.splat)
-  --geoid-separation M   Geoid height above the ellipsoid (default: -33.4, western PA).
+  --frame-offset M       National-datum -> WGS84/ITRF frame offset (default: 0.0).
+                         Required when --elevation came from a national vertical
+                         datum: NAVD88/GEOID18 are published against NAD83, which
+                         differs from WGS84 by 1-2 m in CONUS. Point State Park is
+                         -1.217 (PROJ EPSG:6319 -> EPSG:7912). Re-derive per site.
+  --geoid-separation M   Geoid height above the ellipsoid (default: -33.82, at
+                         Point State Park, from NGS GEOID18).
                          Look this up per site; it varies by tens of metres globally.
   --detector     MODE    auto | geometric | sam2   (default: auto)
   --views        N       Rendered views for the SAM-2 pass (default: 8)
@@ -73,6 +86,7 @@ while [[ $# -gt 0 ]]; do
     --long|--lon)       LONG="$2"; shift 2 ;;
     --elevation)        ELEVATION="$2"; shift 2 ;;
     --geoid-separation) GEOID_SEPARATION="$2"; shift 2 ;;
+    --frame-offset)     FRAME_OFFSET="$2"; shift 2 ;;
     --input-scan)       INPUT_SCAN="$2"; shift 2 ;;
     --output-splat)     OUTPUT_SPLAT="$2"; shift 2 ;;
     --detector)         DETECTOR="$2"; shift 2 ;;
@@ -93,7 +107,10 @@ fail() { echo "ERROR: $*" >&2; exit 2; }
 [[ -n "$ELEVATION"  ]] || fail "--elevation is required"
 [[ -n "$INPUT_SCAN" || "$SYNTHESIZE" -eq 1 ]] || fail "one of --input-scan or --synthesize is required"
 
-GEOID_SEPARATION="${GEOID_SEPARATION:--33.4}"
+GEOID_SEPARATION="${GEOID_SEPARATION:--33.82}"
+# Defaults to 0 so a venue whose elevation is already WGS84-referenced needs no
+# flag; a NAVD88 figure without it leaves the site ~1.2 m high in CONUS.
+FRAME_OFFSET="${FRAME_OFFSET:-0.0}"
 
 # Numeric sanity. A latitude of 400 or a longitude of 800 is a typo, not a site.
 awk -v v="$LAT"  'BEGIN{ if (v+0 < -90  || v+0 > 90)  exit 1 }' || fail "--lat $LAT is outside [-90, 90]"
@@ -114,13 +131,14 @@ SLUG="$(printf '%s' "$VENUE_NAME" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9'
 SCAN_DIR="public/assets/scans/${SLUG}"
 OUTPUT_SPLAT="${OUTPUT_SPLAT:-public/assets/scans/${SLUG}_clean.splat}"
 
-ELLIPSOIDAL="$(awk -v h="$ELEVATION" -v n="$GEOID_SEPARATION" 'BEGIN{ printf "%.3f", h + n }')"
+ELLIPSOIDAL="$(awk -v h="$ELEVATION" -v n="$GEOID_SEPARATION" -v d="$FRAME_OFFSET" \
+  'BEGIN{ printf "%.3f", h + n + d }')"
 
 echo
 echo "=== Geospatial splat pipeline: ${VENUE_NAME} ==="
 echo "  slug            : ${SLUG}"
 echo "  WGS84 origin    : ${LAT}, ${LONG}"
-echo "  elevation       : ${ELEVATION} m MSL  +  ${GEOID_SEPARATION} m geoid  =  ${ELLIPSOIDAL} m ellipsoidal"
+echo "  elevation       : ${ELEVATION} m MSL  +  ${GEOID_SEPARATION} m geoid  +  ${FRAME_OFFSET} m frame  =  ${ELLIPSOIDAL} m ellipsoidal"
 echo "  output          : ${OUTPUT_SPLAT}"
 echo "  detector        : ${DETECTOR}"
 echo
@@ -176,6 +194,7 @@ cat > "$VENUE_CONFIG" <<JSON
     "longitude": ${LONG},
     "elevation_orthometric_m": ${ELEVATION},
     "geoid_separation_m": ${GEOID_SEPARATION},
+    "frame_offset_m": ${FRAME_OFFSET},
     "height_ellipsoidal_m": ${ELLIPSOIDAL}
   },
   "clean_splat": "$(printf '%s' "$OUTPUT_SPLAT" | sed 's#^public/##')",

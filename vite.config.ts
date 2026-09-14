@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import type { Plugin, ResolvedConfig } from 'vite';
+import { VitePWA } from 'vite-plugin-pwa';
 import { createRequire } from 'node:module';
 import { createReadStream } from 'node:fs';
 import { cp, stat } from 'node:fs/promises';
@@ -112,13 +113,79 @@ function cesiumAssets(): Plugin {
   };
 }
 
+/**
+ * Progressive Web App packaging.
+ *
+ * The viewport is operated on a phone, on site, on festival wifi -- which is to
+ * say: intermittently, or not at all. Installing the client to the home screen
+ * gets it out of the browser chrome (more vertical pixels for the site model)
+ * and lets the operator re-open a previz pass without a working uplink.
+ *
+ * `orientation: 'landscape'` is the deliberate one. A previz sightline is a
+ * wide frame; letting the OS hand the app a portrait window means the operator
+ * spends the walk-through rotating a device they are holding in one hand.
+ */
+function festivalPwa(): Plugin[] {
+  return VitePWA({
+    registerType: 'autoUpdate',
+    injectRegister: 'auto',
+    // A service worker in dev would shadow the Cesium asset middleware above
+    // and serve stale tiles during a hot reload.
+    devOptions: { enabled: false },
+    manifest: {
+      name: 'Festival Visualizer — Point State Park',
+      short_name: 'Festival Viz',
+      description:
+        'Browser-native spatial twin and live-event pre-visualization for Point State Park, Pittsburgh.',
+      lang: 'en',
+      // Both derive from the deploy base, so the installed app scopes correctly
+      // under the GitHub Pages subpath as well as at the domain root.
+      start_url: base,
+      scope: base,
+      display: 'standalone',
+      orientation: 'landscape',
+      background_color: '#0c1014',
+      theme_color: '#0c1014',
+      categories: ['productivity', 'utilities'],
+      icons: [
+        {
+          // Relative to the manifest, so it resolves under any deploy base.
+          src: 'favicon.svg',
+          sizes: 'any',
+          type: 'image/svg+xml',
+          purpose: 'any',
+        },
+        {
+          src: 'icon-maskable.svg',
+          sizes: 'any',
+          type: 'image/svg+xml',
+          purpose: 'maskable',
+        },
+      ],
+    },
+    workbox: {
+      globPatterns: ['**/*.{js,css,html,svg,json,geojson,glb,woff2}'],
+      // Cesium's Workers/Assets/Widgets/ThirdParty trees are copied in
+      // `closeBundle` and run to tens of megabytes. Precaching them would blow
+      // through any sane install budget; they are fetched on demand instead.
+      globIgnores: ['**/node_modules/**/*', `${cesiumBaseUrl}/**/*`],
+      // The Cesium and Three vendor chunks are individually large by nature and
+      // sit well above Workbox's 2 MiB default. They are the app -- precaching
+      // anything less means an "installed" client that cannot draw the site.
+      maximumFileSizeToCacheInBytes: 12 * 1024 * 1024,
+      navigateFallback: `${base}index.html`,
+      cleanupOutdatedCaches: true,
+    },
+  });
+}
+
 export default defineConfig({
   base,
   define: {
     // Base-aware so it resolves under a GitHub Pages subpath too.
     CESIUM_BASE_URL: JSON.stringify(`${base}${cesiumBaseUrl}/`),
   },
-  plugins: [cesiumAssets()],
+  plugins: [cesiumAssets(), ...festivalPwa()],
   optimizeDeps: {
     // Cesium is a large CJS-interop bundle; pre-bundling keeps dev reloads fast.
     include: ['cesium'],
