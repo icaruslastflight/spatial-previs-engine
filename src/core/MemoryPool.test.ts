@@ -103,20 +103,85 @@ describe('TypedArrayMemoryPool reuse', () => {
   });
 });
 
+describe('TypedArrayMemoryPool capacity scaling', () => {
+  it('reports the constructed capacity for both types', () => {
+    const pool = new TypedArrayMemoryPool({ uint8Capacity: 6, float32Capacity: 9 });
+    expect(pool.getCapacity()).toEqual({ uint8: 6, float32: 9 });
+  });
+
+  it('grows by a whole block rather than one buffer when exhausted', () => {
+    const pool = new TypedArrayMemoryPool({ uint8Capacity: 2, growthBlock: 4 });
+
+    pool.acquireUint8();
+    pool.acquireUint8();
+    expect(pool.getCapacity().uint8).toBe(2);
+
+    // The acquire that overruns capacity allocates the whole block, so three of
+    // the four new buffers land on the free list rather than being handed out.
+    pool.acquireUint8();
+    expect(pool.getCapacity().uint8).toBe(6);
+    expect(pool.availableUint8()).toBe(3);
+  });
+
+  it('grows each type independently', () => {
+    const pool = new TypedArrayMemoryPool({ uint8Capacity: 1, float32Capacity: 1, growthBlock: 2 });
+
+    pool.acquireUint8();
+    pool.acquireUint8();
+
+    expect(pool.getCapacity().uint8).toBe(3);
+    expect(pool.getCapacity().float32).toBe(1);
+  });
+
+  it('clamps the final growth block to maxCapacity', () => {
+    const pool = new TypedArrayMemoryPool({
+      uint8Capacity: 2,
+      float32Capacity: 2,
+      growthBlock: 8,
+      maxCapacity: 5,
+    });
+
+    pool.acquireUint8();
+    pool.acquireUint8();
+    pool.acquireUint8();
+
+    // 8 would overshoot the ceiling of 5, so only 3 buffers are added.
+    expect(pool.getCapacity().uint8).toBe(5);
+  });
+
+  it('keeps grown buffers on the free list after a reset', () => {
+    const pool = new TypedArrayMemoryPool({ uint8Capacity: 1, growthBlock: 4 });
+
+    pool.acquireUint8();
+    pool.acquireUint8();
+    expect(pool.getCapacity().uint8).toBe(5);
+
+    pool.reset();
+
+    expect(pool.getCapacity().uint8).toBe(5);
+    expect(pool.availableUint8()).toBe(5);
+  });
+});
+
 describe('TypedArrayMemoryPool misuse', () => {
-  it('throws PoolExhaustedError rather than quietly allocating past capacity', () => {
-    const pool = new TypedArrayMemoryPool({ uint8Capacity: 2, float32Capacity: 1 });
+  it('throws PoolExhaustedError once growth has reached maxCapacity', () => {
+    const pool = new TypedArrayMemoryPool({
+      uint8Capacity: 2,
+      float32Capacity: 2,
+      maxCapacity: 2,
+    });
 
     pool.acquireUint8();
     pool.acquireUint8();
     expect(() => pool.acquireUint8()).toThrow(PoolExhaustedError);
 
     pool.acquireFloat32();
+    pool.acquireFloat32();
     expect(() => pool.acquireFloat32()).toThrow(PoolExhaustedError);
   });
 
   it('names the exhausted type and capacity in the error', () => {
-    const pool = new TypedArrayMemoryPool({ uint8Capacity: 1 });
+    const pool = new TypedArrayMemoryPool({ uint8Capacity: 1, float32Capacity: 1, maxCapacity: 1 });
     pool.acquireUint8();
 
     try {
@@ -127,6 +192,11 @@ describe('TypedArrayMemoryPool misuse', () => {
       expect((error as PoolExhaustedError).kind).toBe('Uint8Array');
       expect((error as PoolExhaustedError).capacity).toBe(1);
     }
+  });
+
+  it('rejects a maxCapacity below the initial capacity', () => {
+    expect(() => new TypedArrayMemoryPool({ uint8Capacity: 8, maxCapacity: 4 })).toThrow(RangeError);
+    expect(() => new TypedArrayMemoryPool({ growthBlock: 0 })).toThrow(RangeError);
   });
 
   it('rejects a double release, which would alias one buffer to two owners', () => {

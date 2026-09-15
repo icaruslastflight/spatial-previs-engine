@@ -32,11 +32,18 @@ dist-ssr
 *.ply
 models/sam2/
 
-# Fetched GDTF Share fixture archives (needs a free account, CLAUDE.md §11).
-# Regenerate with: npm run fetch:gdtf
-*.gdtf
+# Downloaded GDTF fixture profiles.
+# Archives run to tens of megabytes each and are redistributable only under
+# GDTF Share's terms, so the cache is a local artifact rather than repository
+# content. Repopulate it with:
+#   GDTF_SHARE_USER=... GDTF_SHARE_PASSWORD=... npm run fetch:gdtf
 public/assets/fixtures/cache/
+*.gdtf
 
 # Python
 __pycache__/
 *.py[cod]
+# Local environment files and secrets
+.env
+.env.*
+!.env.example

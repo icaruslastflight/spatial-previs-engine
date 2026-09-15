@@ -20,8 +20,6 @@ function makeBus(): EventBus<EngineEventMap> {
 const CAMERA = {
   position: [0, 12, 30],
   target: [0, 1, 0],
-  fovDegrees: 55,
-  movedAt: 0,
 } as const;
 
 describe('EventBus dispatch', () => {
@@ -33,11 +31,9 @@ describe('EventBus dispatch', () => {
     bus.on('SOCKET_SNAP', () => order.push('second'));
 
     bus.emit('SOCKET_SNAP', {
-      movingSocketId: 'end_a_top_near',
-      targetSocketId: 'end_b_top_near',
-      distanceMeters: 0.08,
-      detentDegrees: 90,
-      loadBearing: true,
+      sourceId: 'end_a_top_near',
+      targetId: 'end_b_top_near',
+      offset: [0.08, 0, 0],
     });
 
     expect(order).toEqual(['first', 'second']);
@@ -153,15 +149,16 @@ describe('EventBus mutation during dispatch', () => {
     let depth = 0;
 
     bus.on('CAMERA_MOVE', (payload) => {
-      seen.push(payload.fovDegrees);
+      const height = payload.position[1];
+      seen.push(height);
       if (depth >= 2) return;
       depth++;
-      bus.emit('CAMERA_MOVE', { ...CAMERA, fovDegrees: payload.fovDegrees + 1 });
+      bus.emit('CAMERA_MOVE', { ...CAMERA, position: [0, height + 1, 30] });
     });
 
     bus.emit('CAMERA_MOVE', CAMERA);
 
-    expect(seen).toEqual([55, 56, 57]);
+    expect(seen).toEqual([12, 13, 14]);
     expect(bus.listenerCount('CAMERA_MOVE')).toBe(1);
   });
 });
@@ -196,13 +193,7 @@ describe('EventBus clear', () => {
 
     bus.clear('CAMERA_MOVE');
     bus.emit('CAMERA_MOVE', CAMERA);
-    bus.emit('SOCKET_SNAP', {
-      movingSocketId: 'a',
-      targetSocketId: 'b',
-      distanceMeters: 0.01,
-      detentDegrees: 0,
-      loadBearing: false,
-    });
+    bus.emit('SOCKET_SNAP', { sourceId: 'a', targetId: 'b', offset: [0.01, 0, 0] });
 
     expect(camera).not.toHaveBeenCalled();
     expect(snap).toHaveBeenCalledTimes(1);
@@ -244,10 +235,10 @@ describe('EventBus DMX payload contract', () => {
     // a `let x = null` to `null` when the only assignment is inside a callback.
     const received: Uint8Array[] = [];
     bus.on('DMX_UPDATE', (payload) => {
-      received.push(payload.channels);
+      received.push(payload.data);
     });
 
-    bus.emit('DMX_UPDATE', { universe: 3, sequence: 42, channels, receivedAt: 1234 });
+    bus.emit('DMX_UPDATE', { universe: 3, data: channels, timestamp: 1234 });
 
     expect(received).toHaveLength(1);
     expect(received[0]).toBe(channels);

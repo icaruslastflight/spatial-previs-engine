@@ -1,494 +1,740 @@
 /**
- * GDTF (General Device Type Format, DIN SPEC 15800) archive unpacking, XML
- * profile parsing, and `extras.sockets` injection.
+ * GDTF v1.2 archive unpacker and profile parser (DIN SPEC 15800:2022-02).
  *
- * A `.gdtf` file is a ZIP archive: `description.xml` at its root plus 3D
- * models under `models/gltf/` (GLB, preferred) and `models/3ds/`. This module
- * only reads the glTF path -- this project has no 3DS importer and does not
- * need one, since every fixture on the Phase 3 target list (Robe MegaPointe,
- * Martin MAC Aura, Claypaky Sharpy, GLP JDC1) ships glTF geometry on GDTF
- * Share.
+ * A `.gdtf` file is a ZIP container. At its root sits `description.xml`, the
+ * fixture's complete machine-readable definition: its kinematic tree, its
+ * photometric emitter, and every DMX mode the console can patch it in. The
+ * binary meshes live under `models/gltf/`, gobo and filter rasters under
+ * `wheels/`.
  *
- * SCOPE: this project's target fixtures are conventional moving-head washes
- * and spots, so `GdtfGeometryKind` gives first-class treatment to `Geometry`,
- * `Axis` and `Beam` only. Media server, laser and display geometry types
- * parse structurally (the tree still walks through them) but fall back to
- * `'Other'` rather than getting dedicated fields -- there is nothing in the
- * target list that needs them, and guessing at their semantics without a
- * fixture to test against would be worse than an honest fallback.
+ * This module turns that archive into a plain, immutable `GDTFProfile`. It does
+ * NOT touch Three.js -- `GDTFAssetResolver` does the scene assembly. Keeping
+ * the split means the parser runs identically in a browser, in Node under the
+ * test suite, and in a build script, and it can be tested without a renderer.
  *
- * `DMXValue` attributes (`Default`, `Highlight`, `ChannelFunction.Default`)
- * are extracted as their raw spec-format strings (e.g. `"255/1"`, the
- * byte-mirroring notation from DIN SPEC 15800), not decoded to a resolved
- * numeric level. Decoding needs the channel's byte resolution, which is a
- * DMX-engine concern (Phase 4), not a parsing one -- Task 3.2 asks this
- * module to extract those values, not interpret them.
+ * COORDINATE SYSTEMS DIFFER
+ * -------------------------
+ * GDTF is right-handed **Z-up** in metres (DIN SPEC 15800 section 6.1); Three.js
+ * is right-handed **Y-up**. Every position and matrix this parser emits has
+ * already been converted, once, by `gdtfToThree`. Downstream code must never
+ * re-apply the conversion.
  */
 
-import * as THREE from 'three';
+import JSZip from 'jszip';
 import { XMLParser } from 'fast-xml-parser';
-import { unzipSync } from 'fflate';
-import type { SocketDefinition } from './SocketSnappingEngine.ts';
 
 /* -------------------------------------------------------------------------- */
-/* Parsed profile shape                                                       */
+/* Constants                                                                  */
 /* -------------------------------------------------------------------------- */
 
-export interface GdtfModel {
-  name: string;
-  /** Metres. 0 when the profile omits a dimension. */
-  lengthMeters: number;
-  widthMeters: number;
-  heightMeters: number;
-  primitiveType: string;
-  /** Base filename (no extension, no subfolder) inside `models/gltf/`, or null. */
-  file: string | null;
-}
+/** Path of the profile definition inside every GDTF archive. */
+export const DESCRIPTION_PATH = 'description.xml';
 
-/** See the module header for why only these three get dedicated handling. */
-export type GdtfGeometryKind = 'Geometry' | 'Axis' | 'Beam' | 'Other';
-
-export interface GdtfBeamProperties {
-  lampType: string | null;
-  powerConsumptionWatts: number | null;
-  luminousFluxLumens: number | null;
-  colorTemperatureKelvin: number | null;
-  beamAngleDegrees: number | null;
-  fieldAngleDegrees: number | null;
-  beamType: string | null;
-}
-
-export interface GdtfGeometryNode {
-  kind: GdtfGeometryKind;
-  /** The XML tag name this node was read from, e.g. "Axis", "MediaServerLayer". */
-  tagName: string;
-  name: string;
-  /** Links to `GdtfModel.name`, or null (some Axis nodes carry no model). */
-  model: string | null;
-  /** LOCAL transform relative to the parent node, GDTF-space (Z-up), as authored. */
-  matrix: THREE.Matrix4;
-  /** Populated only when `kind === 'Beam'`. */
-  beam: GdtfBeamProperties | null;
-  children: GdtfGeometryNode[];
-}
-
-export interface GdtfChannelFunction {
-  name: string;
-  physicalFrom: number;
-  physicalTo: number;
-  /** Raw DMXValue string, e.g. "0" or "255/1". See module header. */
-  defaultValue: string;
-}
-
-export interface GdtfLogicalChannel {
-  attribute: string;
-  channelFunctions: GdtfChannelFunction[];
-}
-
-export interface GdtfDmxChannel {
-  geometry: string | null;
-  /** DMX universe offset(s); multi-byte channels list coarse-to-fine, e.g. [1, 2]. */
-  offset: number[];
-  dmxBreak: number | string;
-  defaultValue: string;
-  highlight: string | null;
-  logicalChannels: GdtfLogicalChannel[];
-}
-
-export interface GdtfDmxMode {
-  name: string;
-  geometry: string | null;
-  channels: GdtfDmxChannel[];
-  /** Highest DMX offset used by this mode. GDTF does not publish this directly. */
-  footprint: number;
-}
-
-export interface GdtfFixtureType {
-  name: string;
-  shortName: string;
-  manufacturer: string;
-  description: string;
-  fixtureTypeId: string;
-  thumbnail: string | null;
-  models: GdtfModel[];
-  geometries: GdtfGeometryNode[];
-  dmxModes: GdtfDmxMode[];
-}
-
-export interface GdtfArchive {
-  descriptionXml: string;
-  /** Keyed by base filename (no extension), matching `GdtfModel.file`. */
-  modelFiles: Map<string, Uint8Array>;
-}
-
-/* -------------------------------------------------------------------------- */
-/* Matrix parsing and the GDTF -> Three axis bridge                           */
-/* -------------------------------------------------------------------------- */
-
-const MATRIX_ROW_RE = /\{([^{}]*)\}/g;
+/** Where GDTF stores its binary glTF meshes. */
+export const GLTF_MODEL_DIR = 'models/gltf/';
 
 /**
- * Parse a GDTF `Matrix` attribute: four `{a,b,c,d}` groups, one per row, row-
- * major. Missing or malformed input falls back to identity with a warning --
- * a fixture that fails to parse should still stand somewhere sane, not throw
- * away every other geometry node in the same tree.
- */
-export function parseGdtfMatrix(text: string | null | undefined): THREE.Matrix4 {
-  const matrix = new THREE.Matrix4();
-  if (text === null || text === undefined || text.length === 0) return matrix;
-
-  const rows: number[][] = [];
-  for (const match of text.matchAll(MATRIX_ROW_RE)) {
-    rows.push(match[1]!.split(',').map(Number));
-  }
-  if (rows.length !== 4 || rows.some((row) => row.length !== 4 || row.some((n) => !Number.isFinite(n)))) {
-    console.warn(`[GDTFParser] Malformed Matrix "${text}"; using identity.`);
-    return matrix;
-  }
-
-  // GDTF serializes row-major (each {} group IS one row). THREE.Matrix4.set()
-  // also takes its 16 arguments in row-major reading order -- n11..n14 is row
-  // 1, and so on -- even though .elements is column-major internally, so the
-  // four groups transcribe directly with no transpose.
-  const [r0, r1, r2, r3] = rows as [number[], number[], number[], number[]];
-  matrix.set(
-    r0[0]!, r0[1]!, r0[2]!, r0[3]!,
-    r1[0]!, r1[1]!, r1[2]!, r1[3]!,
-    r2[0]!, r2[1]!, r2[2]!, r2[3]!,
-    r3[0]!, r3[1]!, r3[2]!, r3[3]!,
-  );
-  return matrix;
-}
-
-/**
- * Change of basis from GDTF's own coordinate convention -- right-handed,
- * Z-up, +Y away from the viewer (DIN SPEC 15800's own definition; nothing to
- * do with WGS84/ENU) -- into Three's right-handed Y-up convention.
+ * The GDTF standard attributes this engine acts on.
  *
- * Framed as `P * M * P^-1` rather than a per-point remap so a node's full
- * local transform -- rotation AND translation -- comes out right; remapping
- * only the translation would leave every fixture's internal rotations wrong.
- * `P` is a pure axis permutation (det +1, orthogonal), so `P^-1 = P^T` and no
- * matrix inversion is needed.
- *
- * The resulting axis relationship -- three.x=gdtf.x, three.y=gdtf.z,
- * three.z=-gdtf.y -- is numerically identical in form to `SITE_FRAME`'s ENU
- * bridge in `GeoAnchor.ts` (three.x=+East, three.y=+Up, three.z=-North).
- * That is a coincidence of two unrelated Z-up conventions, not a reason to
- * share code: this is fixture-local geometry, not geodesy, so it stays its
- * own helper rather than borrowing `EnuFrame`'s geodesy-specific types --
- * CLAUDE.md's "do not hand-roll geodetic math elsewhere," inverted, is "do
- * not borrow geodetic types elsewhere."
+ * GDTF defines several hundred; these are the ones with a kinematic or
+ * photometric consequence in previz. An attribute outside this list is still
+ * parsed and kept on the channel -- it is simply not wired to anything yet.
  */
-const GDTF_TO_THREE_BASIS = new THREE.Matrix4().set(
-  1, 0, 0, 0,
-  0, 0, 1, 0,
-  0, -1, 0, 0,
-  0, 0, 0, 1,
-);
-const GDTF_TO_THREE_BASIS_INVERSE = GDTF_TO_THREE_BASIS.clone().transpose();
-
-export function gdtfSpaceToThreeSpace(
-  gdtfMatrix: THREE.Matrix4,
-  target: THREE.Matrix4 = new THREE.Matrix4(),
-): THREE.Matrix4 {
-  return target.copy(GDTF_TO_THREE_BASIS).multiply(gdtfMatrix).multiply(GDTF_TO_THREE_BASIS_INVERSE);
-}
-
-/* -------------------------------------------------------------------------- */
-/* Archive unpacking                                                          */
-/* -------------------------------------------------------------------------- */
-
-const GLTF_MODEL_PATH_RE = /^models\/gltf\//i;
-
-/** Unzip a `.gdtf` archive into its description XML and glTF model payloads. */
-export function unpackGdtfArchive(bytes: Uint8Array): GdtfArchive {
-  const files = unzipSync(bytes);
-
-  const descriptionBytes = files['description.xml'];
-  if (descriptionBytes === undefined) {
-    throw new Error('[GDTFParser] Archive has no description.xml at its root.');
-  }
-  const descriptionXml = new TextDecoder('utf-8').decode(descriptionBytes);
-
-  const modelFiles = new Map<string, Uint8Array>();
-  for (const [path, data] of Object.entries(files)) {
-    if (!GLTF_MODEL_PATH_RE.test(path)) continue;
-    // Model.File in the XML has no extension and no subfolder -- keying on
-    // the bare basename here means a Geometry's `model` name looks it up
-    // directly, with no path reconstruction at the call site.
-    const baseName = path.slice(path.lastIndexOf('/') + 1).replace(/\.glb$/i, '');
-    modelFiles.set(baseName, data);
-  }
-  return { descriptionXml, modelFiles };
-}
-
-/* -------------------------------------------------------------------------- */
-/* XML parsing                                                                */
-/* -------------------------------------------------------------------------- */
-
-/**
- * Tag names that must always parse to an array, regardless of how many
- * siblings are present in a given file. fast-xml-parser collapses a single
- * repeated child to a bare object by default; every one of these can
- * legitimately appear exactly once (a fixture with one DMX mode, one Axis),
- * and code below assumes an array either way.
- */
-const GEOMETRY_TAG_NAMES = [
-  'Geometry', 'Axis', 'Beam',
-  'FilterBeam', 'FilterColor', 'FilterGobo', 'FilterShaper',
-  'MediaServerLayer', 'MediaServerCamera', 'MediaServerMaster', 'Display', 'Laser',
-  'GeometryReference', 'WiringObject', 'Inventory', 'Structure', 'Support', 'Magnet',
+export const ACTIONABLE_ATTRIBUTES = [
+  'Pan',
+  'Tilt',
+  'Dimmer',
+  'ColorAdd_R',
+  'ColorAdd_G',
+  'ColorAdd_B',
+  'Gobo1',
+  'Prism1',
+  'Focus',
+  'Zoom',
+  'Shutter1',
 ] as const;
 
-const FORCE_ARRAY_TAG_NAMES = new Set<string>([
-  ...GEOMETRY_TAG_NAMES,
-  'Model', 'DMXMode', 'DMXChannel', 'LogicalChannel', 'ChannelFunction', 'ChannelSet',
-]);
+export type ActionableAttribute = (typeof ACTIONABLE_ATTRIBUTES)[number];
 
-type XmlNode = Record<string, unknown>;
+/* -------------------------------------------------------------------------- */
+/* Parsed shapes                                                              */
+/* -------------------------------------------------------------------------- */
 
-function readString(value: unknown): string | null {
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-  return null;
+/** A 3-tuple in Three.js axes, metres. Already converted from GDTF Z-up. */
+export type Vec3Tuple = readonly [number, number, number];
+
+/**
+ * A GDTF `Matrix` reduced to what the resolver needs.
+ *
+ * GDTF writes a full 4x4, but fixture geometry transforms are rigid-body: the
+ * rotation basis plus a translation carries all of it, and keeping them apart
+ * means the resolver never has to decompose.
+ */
+export interface GDTFTransform {
+  /** Translation in Three.js axes, metres. */
+  readonly translation: Vec3Tuple;
+  /** Rotation basis, column-major, Three.js axes. Identity when absent. */
+  readonly basis: readonly number[];
 }
 
-function readNumber(value: unknown): number | null {
-  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
-  if (typeof value === 'string') {
-    const n = Number(value);
-    return Number.isFinite(n) ? n : null;
+/** One entry of `<AttributeDefinitions><Attributes>`. */
+export interface GDTFAttributeDefinition {
+  readonly name: string;
+  readonly pretty: string;
+  /** e.g. `Position.PanTilt`. Empty when the profile omits it. */
+  readonly feature: string;
+  /** GDTF `PhysicalUnit` enum name, e.g. `Angle`, `LuminousIntensity`. */
+  readonly physicalUnit: string;
+}
+
+/** The kinematic role a geometry node plays. */
+export type GDTFGeometryKind = 'Geometry' | 'Axis' | 'Beam' | 'Other';
+
+/**
+ * The photometric emitter, from a `<Beam>` geometry.
+ *
+ * These map onto `KHR_lights_punctual` and onto a Three.js `SpotLight`:
+ * `beamAngleDegrees` is the cone's inner hot spot, `fieldAngleDegrees` the
+ * outer edge where output has fallen to 50%.
+ */
+export interface GDTFBeam {
+  readonly lampType: string;
+  readonly powerConsumptionWatts: number;
+  readonly luminousFluxLumens: number;
+  readonly colorTemperatureKelvin: number;
+  readonly beamAngleDegrees: number;
+  readonly fieldAngleDegrees: number;
+  readonly beamRadiusMeters: number;
+  readonly colorRenderingIndex: number;
+}
+
+/** One node of the fixture's physical kinematic tree. */
+export interface GDTFGeometryNode {
+  readonly name: string;
+  readonly kind: GDTFGeometryKind;
+  /** `<Model>` name this node renders, or null for a pure pivot. */
+  readonly model: string | null;
+  /** Transform relative to the PARENT node. */
+  readonly transform: GDTFTransform;
+  /** Present only when `kind === 'Beam'`. */
+  readonly beam: GDTFBeam | null;
+  readonly children: readonly GDTFGeometryNode[];
+}
+
+/** A `<Model>` declaration: the mesh file and its bounding envelope. */
+export interface GDTFModel {
+  readonly name: string;
+  /** Basename without extension, as GDTF stores it. */
+  readonly file: string;
+  readonly lengthMeters: number;
+  readonly widthMeters: number;
+  readonly heightMeters: number;
+  readonly primitiveType: string;
+}
+
+/**
+ * A DMX value paired with the byte resolution it was written at.
+ *
+ * GDTF writes these as `value/resolution`, e.g. `32768/2` is 32768 at 16-bit.
+ * Keeping the resolution is what makes `toNormalized` exact rather than a guess
+ * about how wide the field was.
+ */
+export interface GDTFDmxValue {
+  readonly value: number;
+  /** Byte count: 1 = 8-bit, 2 = 16-bit, 3 = 24-bit, 4 = 32-bit. */
+  readonly resolution: number;
+}
+
+/** One `<ChannelFunction>`: a DMX sub-range mapped to a physical range. */
+export interface GDTFChannelFunction {
+  readonly name: string;
+  readonly attribute: string;
+  readonly dmxFrom: GDTFDmxValue;
+  readonly physicalFrom: number;
+  readonly physicalTo: number;
+  readonly defaultValue: GDTFDmxValue;
+}
+
+/** One `<DMXChannel>`, already resolved to absolute channel offsets. */
+export interface GDTFDmxChannel {
+  /** GDTF `DMXBreak`; 1 for a single-universe fixture. */
+  readonly dmxBreak: number;
+  /**
+   * 1-indexed offsets within the mode, coarse first.
+   * `[3]` is 8-bit at channel 3; `[1, 2]` is 16-bit with fine at 2.
+   */
+  readonly offsets: readonly number[];
+  /** Geometry this channel drives, e.g. `Yoke`. */
+  readonly geometry: string;
+  /** Primary attribute, taken from the first logical channel. */
+  readonly attribute: string;
+  readonly functions: readonly GDTFChannelFunction[];
+  readonly defaultValue: GDTFDmxValue;
+}
+
+/** One `<DMXMode>`: a complete patch footprint. */
+export interface GDTFDmxMode {
+  readonly name: string;
+  /** Root geometry the mode drives. */
+  readonly geometry: string;
+  readonly channels: readonly GDTFDmxChannel[];
+  /** Highest offset used -- the fixture's channel count in this mode. */
+  readonly footprint: number;
+}
+
+/** Binary payloads lifted out of the archive, keyed by archive-relative path. */
+export interface GDTFArchiveAssets {
+  /** `models/gltf/<name>.glb` contents, keyed by basename without extension. */
+  readonly models: ReadonlyMap<string, Uint8Array>;
+  /** `thumbnail.png`, when the archive ships one. */
+  readonly thumbnail: Uint8Array | null;
+  /** `wheels/gobos/*` and `wheels/filters/*`, keyed by full archive path. */
+  readonly wheels: ReadonlyMap<string, Uint8Array>;
+}
+
+/** A fully parsed GDTF fixture profile. */
+export interface GDTFProfile {
+  /** `DataVersion` from the `<GDTF>` root, e.g. `1.2`. */
+  readonly dataVersion: string;
+  readonly name: string;
+  readonly shortName: string;
+  readonly longName: string;
+  readonly manufacturer: string;
+  readonly description: string;
+  /** `FixtureTypeID` UUID -- the resolver's cache key. */
+  readonly fixtureTypeId: string;
+  readonly attributes: readonly GDTFAttributeDefinition[];
+  readonly models: readonly GDTFModel[];
+  /** Root of the kinematic tree. */
+  readonly geometry: GDTFGeometryNode | null;
+  readonly dmxModes: readonly GDTFDmxMode[];
+  readonly assets: GDTFArchiveAssets;
+}
+
+/** Thrown when an archive is not a readable GDTF profile. */
+export class GDTFParseError extends Error {
+  constructor(message: string) {
+    super(`[GDTFParser] ${message}`);
+    this.name = 'GDTFParseError';
   }
-  return null;
 }
 
-function parseOffset(raw: string | null): number[] {
-  if (raw === null || raw === 'None') return [];
-  return raw
-    .split(',')
-    .map((s) => Number(s.trim()))
-    .filter((n) => Number.isFinite(n));
+/* -------------------------------------------------------------------------- */
+/* Primitive parsing                                                          */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Convert a GDTF Z-up vector to Three.js Y-up.
+ *
+ * GDTF: +X right, +Y into the scene, +Z up. Three: +X right, +Y up, +Z toward
+ * the viewer. So Z becomes Y, and Y becomes -Z -- a -90 degree turn about X.
+ */
+export function gdtfToThree(x: number, y: number, z: number): Vec3Tuple {
+  return [x, z, -y];
 }
 
-function parseBeamProperties(node: XmlNode): GdtfBeamProperties {
+function toNumber(raw: unknown, fallback: number): number {
+  if (raw === undefined || raw === null || raw === '') return fallback;
+  const parsed = typeof raw === 'number' ? raw : Number(String(raw).trim());
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function toText(raw: unknown, fallback = ''): string {
+  if (raw === undefined || raw === null) return fallback;
+  return String(raw);
+}
+
+/**
+ * Parse a GDTF `Matrix` attribute.
+ *
+ * Written as four brace groups of four floats, ROW by row, with the fourth row
+ * carrying the translation (DIN SPEC 15800 section 6.2). An absent or malformed
+ * matrix yields identity, because a fixture with one unreadable joint is still
+ * worth rendering upright.
+ */
+export function parseMatrix(raw: unknown): GDTFTransform {
+  const identity: GDTFTransform = {
+    translation: [0, 0, 0],
+    basis: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+  };
+  if (raw === undefined || raw === null) return identity;
+
+  const groups = String(raw).match(/\{([^}]*)\}/g);
+  if (groups === null || groups.length < 4) return identity;
+
+  const rows = groups.map((group) =>
+    group
+      .slice(1, -1)
+      .split(',')
+      .map((cell) => toNumber(cell, 0)),
+  );
+  if (rows.some((row) => row.length < 4)) return identity;
+
+  // Rows 0-2 are the rotation basis in GDTF axes; row 3 is the translation.
+  const [rx, ry, rz, translation] = rows as [number[], number[], number[], number[]];
+
+  // Each basis ROW is an axis of the child frame expressed in the parent. Map
+  // each axis through the Z-up -> Y-up change, then emit column-major, which is
+  // what THREE.Matrix4.set consumers expect from `basis`.
+  const ax = gdtfToThree(rx[0], rx[1], rx[2]);
+  const ay = gdtfToThree(ry[0], ry[1], ry[2]);
+  const az = gdtfToThree(rz[0], rz[1], rz[2]);
+
+  // The image of GDTF's Y axis is -Z in Three, so the basis column order has to
+  // follow the same permutation or the frame comes out mirrored.
   return {
-    lampType: readString(node['@_LampType']),
-    powerConsumptionWatts: readNumber(node['@_PowerConsumption']),
-    luminousFluxLumens: readNumber(node['@_LuminousFlux']),
-    colorTemperatureKelvin: readNumber(node['@_ColorTemperature']),
-    beamAngleDegrees: readNumber(node['@_BeamAngle']),
-    fieldAngleDegrees: readNumber(node['@_FieldAngle']),
-    beamType: readString(node['@_BeamType']),
+    translation: gdtfToThree(translation[0], translation[1], translation[2]),
+    basis: [ax[0], ax[1], ax[2], az[0], az[1], az[2], -ay[0], -ay[1], -ay[2]],
   };
 }
 
-function parseGeometryNode(tagName: string, node: XmlNode): GdtfGeometryNode {
-  const kind: GdtfGeometryKind =
-    tagName === 'Geometry' || tagName === 'Axis' || tagName === 'Beam' ? tagName : 'Other';
+/**
+ * Parse a GDTF `DMXValue`, written `value/resolution` (e.g. `32768/2`).
+ *
+ * A bare number is 8-bit by GDTF's default. `None` -- which GDTF uses for an
+ * absent highlight -- yields zero at 8-bit rather than throwing, since it is a
+ * legitimate value in a well-formed profile.
+ */
+export function parseDmxValue(raw: unknown, fallback: GDTFDmxValue = { value: 0, resolution: 1 }): GDTFDmxValue {
+  if (raw === undefined || raw === null || raw === '') return fallback;
+
+  const text = String(raw).trim();
+  if (text === 'None') return { value: 0, resolution: 1 };
+
+  const slash = text.indexOf('/');
+  if (slash === -1) return { value: toNumber(text, fallback.value), resolution: 1 };
+
+  const value = toNumber(text.slice(0, slash), fallback.value);
+  const resolution = Math.min(4, Math.max(1, Math.round(toNumber(text.slice(slash + 1), 1))));
+  return { value, resolution };
+}
+
+/** Largest value representable at a byte resolution. */
+export function dmxMaxValue(resolution: number): number {
+  return 2 ** (8 * Math.min(4, Math.max(1, resolution))) - 1;
+}
+
+/**
+ * Normalize a DMX value to 0..1 at its own resolution.
+ *
+ * Division is by the maximum REPRESENTABLE value, not by the next power of two,
+ * so full-scale DMX maps to exactly 1.0. Getting this wrong leaves a fixture
+ * unable to reach its own end stops.
+ */
+export function normalizeDmx(value: number, resolution: number): number {
+  const max = dmxMaxValue(resolution);
+  if (max <= 0) return 0;
+  return Math.min(1, Math.max(0, value / max));
+}
+
+/** Map a normalized 0..1 reading onto a channel function's physical range. */
+export function physicalFromNormalized(fn: GDTFChannelFunction, normalized: number): number {
+  return fn.physicalFrom + (fn.physicalTo - fn.physicalFrom) * normalized;
+}
+
+/* -------------------------------------------------------------------------- */
+/* XML traversal                                                              */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * fast-xml-parser collapses a single child to an object and repeats to an
+ * array. Every call site wants an array, so normalize once here rather than
+ * branching at each one.
+ */
+function asArray(node: unknown): Record<string, unknown>[] {
+  if (node === undefined || node === null) return [];
+  if (Array.isArray(node)) return node as Record<string, unknown>[];
+  return [node as Record<string, unknown>];
+}
+
+/** Element names GDTF uses for geometry nodes that are not plain geometry. */
+const GEOMETRY_ELEMENTS = [
+  'Geometry',
+  'Axis',
+  'Beam',
+  'FilterBeam',
+  'FilterColor',
+  'FilterGobo',
+  'FilterShaper',
+  'MediaServerLayer',
+  'MediaServerCamera',
+  'MediaServerMaster',
+  'Display',
+  'GeometryReference',
+  'Laser',
+  'WiringObject',
+  'Inventory',
+  'Structure',
+  'Support',
+  'Magnet',
+] as const;
+
+function geometryKindOf(element: string): GDTFGeometryKind {
+  if (element === 'Geometry') return 'Geometry';
+  if (element === 'Axis') return 'Axis';
+  if (element === 'Beam') return 'Beam';
+  return 'Other';
+}
+
+function parseBeam(node: Record<string, unknown>): GDTFBeam {
   return {
+    lampType: toText(node['@_LampType'], 'Discharge'),
+    powerConsumptionWatts: toNumber(node['@_PowerConsumption'], 0),
+    luminousFluxLumens: toNumber(node['@_LuminousFlux'], 0),
+    colorTemperatureKelvin: toNumber(node['@_ColorTemperature'], 6000),
+    beamAngleDegrees: toNumber(node['@_BeamAngle'], 0),
+    fieldAngleDegrees: toNumber(node['@_FieldAngle'], 0),
+    beamRadiusMeters: toNumber(node['@_BeamRadius'], 0),
+    colorRenderingIndex: toNumber(node['@_ColorRenderingIndex'], 100),
+  };
+}
+
+/** Recursively build the kinematic tree from a geometry container element. */
+function parseGeometryNode(element: string, node: Record<string, unknown>): GDTFGeometryNode {
+  const kind = geometryKindOf(element);
+  const children: GDTFGeometryNode[] = [];
+
+  for (const childElement of GEOMETRY_ELEMENTS) {
+    for (const child of asArray(node[childElement])) {
+      children.push(parseGeometryNode(childElement, child));
+    }
+  }
+
+  const model = toText(node['@_Model'], '');
+
+  return {
+    name: toText(node['@_Name'], element),
     kind,
-    tagName,
-    name: readString(node['@_Name']) ?? 'Unnamed',
-    model: readString(node['@_Model']),
-    matrix: parseGdtfMatrix(readString(node['@_Position'])),
-    beam: kind === 'Beam' ? parseBeamProperties(node) : null,
-    children: collectGeometryChildren(node),
+    model: model === '' ? null : model,
+    transform: parseMatrix(node['@_Position']),
+    beam: kind === 'Beam' ? parseBeam(node) : null,
+    children,
   };
+}
+
+function parseAttributes(fixtureType: Record<string, unknown>): GDTFAttributeDefinition[] {
+  const definitions = fixtureType['AttributeDefinitions'] as Record<string, unknown> | undefined;
+  if (definitions === undefined) return [];
+
+  const container = definitions['Attributes'] as Record<string, unknown> | undefined;
+  if (container === undefined) return [];
+
+  return asArray(container['Attribute']).map((attribute) => ({
+    name: toText(attribute['@_Name']),
+    pretty: toText(attribute['@_Pretty']),
+    feature: toText(attribute['@_Feature']),
+    physicalUnit: toText(attribute['@_PhysicalUnit'], 'None'),
+  }));
+}
+
+function parseModels(fixtureType: Record<string, unknown>): GDTFModel[] {
+  const container = fixtureType['Models'] as Record<string, unknown> | undefined;
+  if (container === undefined) return [];
+
+  return asArray(container['Model']).map((model) => ({
+    name: toText(model['@_Name']),
+    file: toText(model['@_File']),
+    lengthMeters: toNumber(model['@_Length'], 0),
+    widthMeters: toNumber(model['@_Width'], 0),
+    heightMeters: toNumber(model['@_Height'], 0),
+    primitiveType: toText(model['@_PrimitiveType'], 'Undefined'),
+  }));
+}
+
+function parseChannelFunctions(logical: Record<string, unknown>): GDTFChannelFunction[] {
+  return asArray(logical['ChannelFunction']).map((fn) => ({
+    name: toText(fn['@_Name']),
+    attribute: toText(fn['@_Attribute']),
+    dmxFrom: parseDmxValue(fn['@_DMXFrom']),
+    physicalFrom: toNumber(fn['@_PhysicalFrom'], 0),
+    physicalTo: toNumber(fn['@_PhysicalTo'], 1),
+    defaultValue: parseDmxValue(fn['@_Default']),
+  }));
 }
 
 /**
- * Flatten every geometry-typed child of `node` across all known tag names
- * into one array. Order is grouped by tag name (all `Axis` children, then
- * all `Beam` children, ...) rather than strict document order across mixed
- * sibling tag names -- this project's target fixtures never interleave
- * different geometry tag names under one parent, so that distinction does
- * not arise in practice.
+ * Parse `Offset="1,2"` into 1-indexed channel offsets, coarse first.
+ *
+ * GDTF writes `None` for a virtual channel that occupies no DMX footprint;
+ * that yields an empty list rather than a zero, so footprint arithmetic stays
+ * correct.
  */
-function collectGeometryChildren(node: XmlNode): GdtfGeometryNode[] {
-  const children: GdtfGeometryNode[] = [];
-  for (const tagName of GEOMETRY_TAG_NAMES) {
-    const entries = node[tagName];
-    if (!Array.isArray(entries)) continue;
-    for (const entry of entries) {
-      children.push(parseGeometryNode(tagName, entry as XmlNode));
-    }
-  }
-  return children;
+function parseOffsets(raw: unknown): number[] {
+  const text = toText(raw, '').trim();
+  if (text === '' || text === 'None') return [];
+
+  return text
+    .split(',')
+    .map((part) => Math.round(toNumber(part, 0)))
+    .filter((offset) => offset > 0);
 }
 
-function parseModel(node: XmlNode): GdtfModel {
-  return {
-    name: readString(node['@_Name']) ?? '',
-    lengthMeters: readNumber(node['@_Length']) ?? 0,
-    widthMeters: readNumber(node['@_Width']) ?? 0,
-    heightMeters: readNumber(node['@_Height']) ?? 0,
-    primitiveType: readString(node['@_PrimitiveType']) ?? 'Cube',
-    file: readString(node['@_File']),
-  };
-}
+function parseDmxChannels(mode: Record<string, unknown>): GDTFDmxChannel[] {
+  const container = mode['DMXChannels'] as Record<string, unknown> | undefined;
+  if (container === undefined) return [];
 
-function parseChannelFunction(node: XmlNode): GdtfChannelFunction {
-  return {
-    name: readString(node['@_Name']) ?? '',
-    physicalFrom: readNumber(node['@_PhysicalFrom']) ?? 0,
-    physicalTo: readNumber(node['@_PhysicalTo']) ?? 1,
-    defaultValue: readString(node['@_Default']) ?? '0',
-  };
-}
+  return asArray(container['DMXChannel']).map((channel) => {
+    const logicals = asArray(channel['LogicalChannel']);
+    const functions = logicals.flatMap(parseChannelFunctions);
+    const attribute = logicals.length > 0 ? toText(logicals[0]['@_Attribute']) : '';
+    const offsets = parseOffsets(channel['@_Offset']);
 
-function parseLogicalChannel(node: XmlNode): GdtfLogicalChannel {
-  const functions = node['ChannelFunction'];
-  return {
-    attribute: readString(node['@_Attribute']) ?? '',
-    channelFunctions: Array.isArray(functions)
-      ? functions.map((f) => parseChannelFunction(f as XmlNode))
-      : [],
-  };
-}
+    // GDTF permits the default on either the channel or its first function.
+    // Preferring the channel keeps a profile that sets both self-consistent.
+    const channelDefault = channel['@_Default'];
+    const defaultValue =
+      channelDefault !== undefined
+        ? parseDmxValue(channelDefault)
+        : (functions[0]?.defaultValue ?? { value: 0, resolution: Math.max(1, offsets.length) });
 
-function parseDmxChannel(node: XmlNode): GdtfDmxChannel {
-  const logicalChannels = node['LogicalChannel'];
-  return {
-    geometry: readString(node['@_Geometry']),
-    offset: parseOffset(readString(node['@_Offset'])),
-    dmxBreak: (readNumber(node['@_DMXBreak']) ?? readString(node['@_DMXBreak'])) ?? 1,
-    defaultValue: readString(node['@_Default']) ?? '0',
-    highlight: readString(node['@_Highlight']),
-    logicalChannels: Array.isArray(logicalChannels)
-      ? logicalChannels.map((c) => parseLogicalChannel(c as XmlNode))
-      : [],
-  };
-}
-
-function parseDmxMode(node: XmlNode): GdtfDmxMode {
-  const channelsWrapper = node['DMXChannels'] as XmlNode | undefined;
-  const channelNodes = channelsWrapper?.['DMXChannel'];
-  const channels = Array.isArray(channelNodes) ? channelNodes.map((c) => parseDmxChannel(c as XmlNode)) : [];
-  const footprint = channels.reduce((max, ch) => Math.max(max, 0, ...ch.offset), 0);
-  return {
-    name: readString(node['@_Name']) ?? '',
-    geometry: readString(node['@_Geometry']),
-    channels,
-    footprint,
-  };
-}
-
-/** Parse a GDTF `description.xml` document into a typed fixture profile. */
-export function parseDescriptionXml(xml: string): GdtfFixtureType {
-  const parser = new XMLParser({
-    ignoreAttributes: false,
-    attributeNamePrefix: '@_',
-    parseAttributeValue: true,
-    isArray: (tagName) => FORCE_ARRAY_TAG_NAMES.has(tagName),
+    return {
+      dmxBreak: toNumber(channel['@_DMXBreak'], 1),
+      offsets,
+      geometry: toText(channel['@_Geometry']),
+      attribute,
+      functions,
+      defaultValue,
+    };
   });
-  const doc = parser.parse(xml) as XmlNode;
-  const gdtfRoot = doc['GDTF'] as XmlNode | undefined;
-  const fixtureType = gdtfRoot?.['FixtureType'] as XmlNode | undefined;
-  if (fixtureType === undefined) {
-    throw new Error('[GDTFParser] description.xml has no <GDTF><FixtureType> root.');
-  }
-
-  const modelsWrapper = fixtureType['Models'] as XmlNode | undefined;
-  const modelNodes = modelsWrapper?.['Model'];
-  const geometriesWrapper = fixtureType['Geometries'] as XmlNode | undefined;
-  const dmxModesWrapper = fixtureType['DMXModes'] as XmlNode | undefined;
-  const dmxModeNodes = dmxModesWrapper?.['DMXMode'];
-
-  return {
-    name: readString(fixtureType['@_Name']) ?? 'Unnamed Fixture',
-    shortName: readString(fixtureType['@_ShortName']) ?? '',
-    manufacturer: readString(fixtureType['@_Manufacturer']) ?? '',
-    description: readString(fixtureType['@_Description']) ?? '',
-    fixtureTypeId: readString(fixtureType['@_FixtureTypeID']) ?? '',
-    thumbnail: readString(fixtureType['@_Thumbnail']),
-    models: Array.isArray(modelNodes) ? modelNodes.map((m) => parseModel(m as XmlNode)) : [],
-    geometries: geometriesWrapper !== undefined ? collectGeometryChildren(geometriesWrapper) : [],
-    dmxModes: Array.isArray(dmxModeNodes) ? dmxModeNodes.map((m) => parseDmxMode(m as XmlNode)) : [],
-  };
 }
 
-/* -------------------------------------------------------------------------- */
-/* Socket injection -- Event Asset Library & Modular Snapping Specification   */
-/* -------------------------------------------------------------------------- */
+function parseDmxModes(fixtureType: Record<string, unknown>): GDTFDmxMode[] {
+  const container = fixtureType['DMXModes'] as Record<string, unknown> | undefined;
+  if (container === undefined) return [];
 
-/** Local-space roll reference used for both injected socket types. */
-const UP_REFERENCE: THREE.Vector3 = new THREE.Vector3(1, 0, 0);
-
-/**
- * Derive the fixture's `extras.sockets`: one `PIPE_CLAMP_2IN` at the
- * fixture's own origin (how it grips the truss it hangs from), plus one
- * `FIXTURE_YOKE_AXIS` per `Axis` geometry node (its pan/tilt articulation
- * points), positioned in the fixture ROOT's local space by composing parent
- * transforms down to each node -- matching the "LOCAL space" contract every
- * other socket in this codebase is authored against.
- */
-export function injectFixtureSockets(fixtureType: GdtfFixtureType): SocketDefinition[] {
-  const sockets: SocketDefinition[] = [];
-
-  // The clamp is the "grabbing" half of the interface (MALE), the same
-  // polarity convention STAGE_LEG_RECEIVER uses in reverse for its FEMALE
-  // spigot socket: the passive tube it clamps onto carries no socket at all
-  // today (ModularPrimitives' truss only sockets its two ends), so this pairs
-  // with nothing yet -- that is future work, not a Phase 3 gap.
-  sockets.push({
-    socket_id: 'fixture_clamp',
-    socket_type: 'PIPE_CLAMP_2IN',
-    gender: 'MALE',
-    transform: { translation: [0, 0, 0], normal: [0, 1, 0], up: [1, 0, 0] },
-    tolerances: { snap_radius: 0.15, snap_angle: 15, detents_deg: [0, 90, 180, 270] },
-    kinematic_rules: { can_parent: false, can_child: true, load_bearing: true },
-    tags: ['fixture_clamp'],
-  });
-
-  // A one-shot walk over a handful of nodes at fixture-registration time, not
-  // per-frame render-loop code, so this allocates a fresh matrix/vector per
-  // node rather than reusing scratch objects -- reusing a mutable "current
-  // world transform" across a recursive tree walk is exactly the kind of
-  // aliasing hazard (a child's mutation corrupting an unfinished sibling
-  // iteration higher up the stack) not worth risking for a negligible,
-  // one-time allocation saving. Matches ModularPrimitives.ts's own
-  // allocate-freely style for one-shot construction.
-  const usedIds = new Set<string>(['fixture_clamp']);
-
-  const walk = (nodes: GdtfGeometryNode[], parentMatrix: THREE.Matrix4): void => {
-    for (const node of nodes) {
-      const worldMatrix = parentMatrix.clone().multiply(gdtfSpaceToThreeSpace(node.matrix));
-
-      if (node.kind === 'Axis') {
-        const position = new THREE.Vector3().setFromMatrixPosition(worldMatrix);
-        const rotation = new THREE.Matrix4().extractRotation(worldMatrix);
-        const normal = new THREE.Vector3(0, 1, 0).applyMatrix4(rotation);
-        const up = UP_REFERENCE.clone().applyMatrix4(rotation);
-
-        let socketId = `yoke_axis_${node.name.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`;
-        // Disambiguate same-named axes (rare, but two "Head" nodes under
-        // different parents would otherwise collide).
-        if (usedIds.has(socketId)) socketId = `${socketId}_${usedIds.size}`;
-        usedIds.add(socketId);
-
-        sockets.push({
-          socket_id: socketId,
-          socket_type: 'FIXTURE_YOKE_AXIS',
-          // Never mates, so polarity is meaningless; NEUTRAL is the closest
-          // "no polarity" reading without inventing a fifth gender value.
-          gender: 'NEUTRAL',
-          transform: {
-            translation: [position.x, position.y, position.z],
-            normal: [normal.x, normal.y, normal.z],
-            up: [up.x, up.y, up.z],
-          },
-          // Pinned false, not defaulted: this is what makes the type inert
-          // for findSnapCandidate, not merely an authoring convention.
-          kinematic_rules: { can_parent: false, can_child: false },
-          tags: ['yoke_axis', node.name],
-        });
+  return asArray(container['DMXMode']).map((mode) => {
+    const channels = parseDmxChannels(mode);
+    let footprint = 0;
+    for (const channel of channels) {
+      for (const offset of channel.offsets) {
+        if (offset > footprint) footprint = offset;
       }
-
-      walk(node.children, worldMatrix);
     }
-  };
-  walk(fixtureType.geometries, new THREE.Matrix4());
 
-  return sockets;
+    return {
+      name: toText(mode['@_Name']),
+      geometry: toText(mode['@_Geometry']),
+      channels,
+      footprint,
+    };
+  });
+}
+
+/* -------------------------------------------------------------------------- */
+/* Archive handling                                                           */
+/* -------------------------------------------------------------------------- */
+
+/** Strip a directory prefix and file extension, leaving the GDTF model name. */
+function modelKeyOf(path: string): string {
+  const base = path.slice(GLTF_MODEL_DIR.length);
+  const dot = base.lastIndexOf('.');
+  return dot === -1 ? base : base.slice(0, dot);
+}
+
+async function readArchiveAssets(zip: JSZip): Promise<GDTFArchiveAssets> {
+  const models = new Map<string, Uint8Array>();
+  const wheels = new Map<string, Uint8Array>();
+  let thumbnail: Uint8Array | null = null;
+
+  const pending: Promise<void>[] = [];
+
+  zip.forEach((path, entry) => {
+    if (entry.dir) return;
+
+    // Archives in the wild use either separator, and some nest the tree under
+    // a leading './'. Normalize before matching or half the models go missing.
+    const normalized = path.replace(/\\/g, '/').replace(/^\.\//, '');
+
+    if (normalized.startsWith(GLTF_MODEL_DIR) && normalized.toLowerCase().endsWith('.glb')) {
+      pending.push(
+        entry.async('uint8array').then((bytes) => {
+          models.set(modelKeyOf(normalized), bytes);
+        }),
+      );
+      return;
+    }
+
+    if (normalized.startsWith('wheels/')) {
+      pending.push(
+        entry.async('uint8array').then((bytes) => {
+          wheels.set(normalized, bytes);
+        }),
+      );
+      return;
+    }
+
+    if (normalized === 'thumbnail.png') {
+      pending.push(
+        entry.async('uint8array').then((bytes) => {
+          thumbnail = bytes;
+        }),
+      );
+    }
+  });
+
+  await Promise.all(pending);
+  return { models, thumbnail, wheels };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Parser                                                                     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * `description.xml` reader.
+ *
+ * `ignoreAttributes: false` is the whole point -- GDTF carries essentially all
+ * of its data in XML attributes, so the default would discard the profile and
+ * leave a tree of empty elements.
+ */
+const xmlParser = new XMLParser({
+  ignoreAttributes: false,
+  attributeNamePrefix: '@_',
+  parseAttributeValue: false,
+  trimValues: true,
+});
+
+/** Unpack and parse a `.gdtf` archive. */
+export async function parseGDTF(archive: Uint8Array | ArrayBuffer): Promise<GDTFProfile> {
+  let zip: JSZip;
+  try {
+    zip = await JSZip.loadAsync(archive);
+  } catch (error) {
+    throw new GDTFParseError(
+      `Archive is not a readable ZIP container: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+
+  const descriptionEntry = zip.file(DESCRIPTION_PATH) ?? zip.file(`./${DESCRIPTION_PATH}`);
+  if (descriptionEntry === null) {
+    throw new GDTFParseError(
+      `Archive has no ${DESCRIPTION_PATH} at its root. Every GDTF package must carry one ` +
+        `(DIN SPEC 15800 section 5.1); a package without it is not a fixture profile.`,
+    );
+  }
+
+  const xml = await descriptionEntry.async('string');
+  const document = xmlParser.parse(xml) as Record<string, unknown>;
+
+  const root = document['GDTF'] as Record<string, unknown> | undefined;
+  if (root === undefined) {
+    throw new GDTFParseError(`${DESCRIPTION_PATH} has no <GDTF> root element.`);
+  }
+
+  const fixtureType = root['FixtureType'] as Record<string, unknown> | undefined;
+  if (fixtureType === undefined) {
+    throw new GDTFParseError(`${DESCRIPTION_PATH} has no <FixtureType> element.`);
+  }
+
+  const fixtureTypeId = toText(fixtureType['@_FixtureTypeID']);
+  if (fixtureTypeId === '') {
+    throw new GDTFParseError(
+      'FixtureType is missing its FixtureTypeID. That UUID is the resolver cache key, ' +
+        'so a profile without one cannot be indexed.',
+    );
+  }
+
+  // GDTF nests the tree under a <Geometries> container whose own children are
+  // the roots. Multi-root profiles exist; the first is the fixture body.
+  const geometries = fixtureType['Geometries'] as Record<string, unknown> | undefined;
+  let geometry: GDTFGeometryNode | null = null;
+  if (geometries !== undefined) {
+    for (const element of GEOMETRY_ELEMENTS) {
+      const found = asArray(geometries[element]);
+      if (found.length > 0) {
+        geometry = parseGeometryNode(element, found[0]);
+        break;
+      }
+    }
+  }
+
+  return {
+    dataVersion: toText(root['@_DataVersion'], '1.2'),
+    name: toText(fixtureType['@_Name']),
+    shortName: toText(fixtureType['@_ShortName']),
+    longName: toText(fixtureType['@_LongName']),
+    manufacturer: toText(fixtureType['@_Manufacturer']),
+    description: toText(fixtureType['@_Description']),
+    fixtureTypeId,
+    attributes: parseAttributes(fixtureType),
+    models: parseModels(fixtureType),
+    geometry,
+    dmxModes: parseDmxModes(fixtureType),
+    assets: await readArchiveAssets(zip),
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Queries                                                                    */
+/* -------------------------------------------------------------------------- */
+
+/** Depth-first walk of a geometry tree, parents before children. */
+export function* walkGeometry(node: GDTFGeometryNode): Generator<GDTFGeometryNode> {
+  yield node;
+  for (const child of node.children) yield* walkGeometry(child);
+}
+
+/** The first `<Beam>` in the tree -- the fixture's optical emitter. */
+export function findBeam(profile: GDTFProfile): GDTFGeometryNode | null {
+  if (profile.geometry === null) return null;
+  for (const node of walkGeometry(profile.geometry)) {
+    if (node.kind === 'Beam') return node;
+  }
+  return null;
+}
+
+/**
+ * The fixture's rotation axes, outermost first.
+ *
+ * On a moving head this is `[yoke, head]`: pan then tilt. Reading them off the
+ * tree rather than matching on names is what keeps this working for a fixture
+ * whose manufacturer called them something else.
+ */
+export function findAxes(profile: GDTFProfile): GDTFGeometryNode[] {
+  if (profile.geometry === null) return [];
+
+  const axes: GDTFGeometryNode[] = [];
+  for (const node of walkGeometry(profile.geometry)) {
+    if (node.kind === 'Axis') axes.push(node);
+  }
+  return axes;
+}
+
+/** Look up a mode by name, or the first mode when `name` is undefined. */
+export function findDmxMode(profile: GDTFProfile, name?: string): GDTFDmxMode | null {
+  if (profile.dmxModes.length === 0) return null;
+  if (name === undefined) return profile.dmxModes[0];
+
+  const wanted = name.toLowerCase();
+  return profile.dmxModes.find((mode) => mode.name.toLowerCase() === wanted) ?? null;
+}
+
+/** Every channel in a mode driving a given GDTF attribute. */
+export function channelsForAttribute(mode: GDTFDmxMode, attribute: string): GDTFDmxChannel[] {
+  return mode.channels.filter((channel) => channel.attribute === attribute);
+}
+
+/**
+ * Read one channel's current value out of a universe buffer.
+ *
+ * `offsets` are 1-indexed within the mode and `baseAddress` is the fixture's
+ * patch address, so slot zero of the buffer is DMX channel 1. Coarse byte
+ * first, each subsequent offset one byte less significant.
+ */
+export function readChannelValue(
+  channel: GDTFDmxChannel,
+  universe: Uint8Array,
+  baseAddress = 1,
+): GDTFDmxValue {
+  const resolution = channel.offsets.length;
+  if (resolution === 0) return { value: channel.defaultValue.value, resolution: 1 };
+
+  let value = 0;
+  for (const offset of channel.offsets) {
+    const index = baseAddress - 1 + offset - 1;
+    const byte = index >= 0 && index < universe.length ? universe[index] : 0;
+    value = value * 256 + byte;
+  }
+
+  return { value, resolution };
 }

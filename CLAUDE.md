@@ -36,17 +36,6 @@ Every 3D feature, snapping kinematic, and protocol parser must behave
 > not a capability gap — the desktop is not authoritative here. Port the same
 > number to UE5 and delete this note.
 
-> **OPEN PARITY DIVERGENCE — `FIXTURE_YOKE_AXIS` socket type.** Phase 3 added
-> `FIXTURE_YOKE_AXIS` to `SOCKET_TYPES` (§3, `src/engine/SocketSnappingEngine.ts`)
-> so a GDTF fixture's pan/tilt articulation points ride on the same
-> `extras.sockets` query mechanism as every other socket. It is a genuinely new
-> capability, not a correction, and it has **not** been mirrored into the UE5
-> socket vocabulary. It is deliberately inert for snapping purposes --
-> `can_parent`/`can_child` are always false wherever it is emitted -- so this
-> divergence cannot cause a web/desktop snapping mismatch; it can only make a
-> fixture's articulation point undiscoverable to UE5 tooling that queries
-> sockets. Add the type to the UE5 socket enum and delete this note.
-
 ### 1.2 $0 financial budget
 
 This line is developed on a phone with no spend. That is a hard constraint, not
@@ -58,10 +47,8 @@ a preference.
 - **No paid API keys are assumed.** Anything needing a key must degrade
   gracefully to a keyless path. The basemap does this across three tiers (§4).
 - **GDTF Share needs a free account, not a paid key** — but it still degrades
-  gracefully. `getList.php`/`downloadFile.php` require a login session, not an
-  anonymous GET; `scripts/fetch_gdtf_library.js` reads credentials from the
-  environment and, when they are absent, prints how to register a free account
-  and exits `0` rather than failing. See §11.
+  gracefully. Without credentials, `scripts/fetch_gdtf_library.js` verifies
+  the existing cache and exits `0` rather than failing. See §10.
 - **No cross-origin isolation.** Static free hosts cannot set COOP/COEP headers,
   so `sharedMemoryForWorkers` stays `false` in the splat loader. Do not turn it
   on without a host that can serve those headers.
@@ -250,13 +237,18 @@ npx tsc --noEmit    # typecheck only (also: npm run typecheck)
 npm test            # vitest: core engine, geodetic, CP-1, snapping, asset library
 npm run verify      # full foundation health check — structure + all three gates
 npm run build:assets # compile the modular asset library to GLB
-npm run fetch:gdtf  # fetch cataloged fixtures from GDTF Share (needs a free account, §11)
-npm run bridge      # FOH Art-Net/sACN → WebSocket daemon (lands in Phase 4)
+npm run fetch:gdtf  # sync GDTF fixture profiles into the local cache (needs a free account, §10)
+npm run showcase:capture -- --page <path>  # screenshot a real-pipeline showcase page (§12)
+npm run bridge      # FOH Art-Net/sACN → WebSocket daemon
 ```
 
-`npm test` runs Vitest over every `src/**/*.test.ts`. Configuration lives in
-`vitest.config.ts`, kept separate from `vite.config.ts` so the suite loads
-neither the Cesium asset middleware nor the PWA service-worker generator.
+`npm test` runs Vitest over every `src/**/*.test.ts` plus `tests/**/*.test.ts`
+and `tests/**/*.test.js`. Unit tests sit beside the module they cover under
+`src/`; `tests/` holds the cross-module contract suites (GDTF, the core
+engine, the FOH bridge) that assert a public API rather than one module's
+internals. Configuration lives in `vitest.config.ts`, kept separate from
+`vite.config.ts` so the suite loads neither the Cesium asset middleware nor
+the PWA service-worker generator.
 
 ### Deployment
 
@@ -294,8 +286,8 @@ src/
              MemoryPool.ts             recycled Uint8Array(512) / Float32Array(512)
              EngineLoop.ts             one 60 FPS clock, four priority bands
   engine/    SocketSnappingEngine.ts   socket contract, proximity, detents, linking
-             GDTFParser.ts             GDTF (DIN SPEC 15800) XML/archive parsing + socket injection
-             GDTFAssetResolver.ts      runtime index; Object3D/SpotLight fixture instantiation
+             GDTFParser.ts             .gdtf unpack + description.xml (DIN SPEC 15800)
+             GDTFAssetResolver.ts      GDTF -> Three kinematic chain + photometric light
   assets/    ModularPrimitives.ts      procedural F34 truss + 4x8 deck
              SplatSceneLoader.ts       manifest-driven Gaussian splat loading
              SampleGdtfProfile.ts      synthetic fixture profile, until a real one is fetched
@@ -326,7 +318,7 @@ fills it and the constraints that already bind it.
   callbacks make execution order an accident of import order.
 - **`FrameTiming` is reused.** The same object is mutated and handed to every
   tick of every frame. Read it, never retain it.
-- **Pooled buffers are borrowed.** `DmxUpdatePayload.channels` is on loan from
+- **Pooled buffers are borrowed.** `DmxUpdatePayload.data` is on loan from
   `TypedArrayMemoryPool` and is recycled when dispatch returns. Copy to retain.
 - **The event vocabulary is mirrored in UE5.** Adding an event to
   `EngineEventMap` without adding it to the desktop dispatcher breaks parity.
@@ -432,110 +424,130 @@ below the budget ceiling because procedural stock has no welds or grilles to
 model. Manufacturer CAD hot-swaps in without re-plotting **as long as socket
 ids and positions match exactly**.
 
-## 10. Binaries are not committed
+## 10. GDTF fixture profiles
 
-`.splat`, `.ply` and SAM-2 checkpoints are git-ignored. Captures are large and
-regenerable; real surveys belong in release assets or an external bucket. The
-synthetic stand-in regenerates with `--synthesize`.
-
-## 11. GDTF fixture library
-
-`.gdtf` files (DIN SPEC 15800) describe real moving lights: DMX channel maps,
-3D geometry, and photometrics, in one manufacturer-published archive.
-
-### GDTF Share needs a free account
-
-`scripts/fetch_gdtf_library.js` fetches cataloged profiles (Robe MegaPointe,
-Martin MAC Aura, Claypaky Sharpy, GLP JDC1) from `gdtf-share.com`. Its
-`getList.php`/`downloadFile.php` endpoints living under an `apis/public/` path
-read as anonymous GETs at a glance, but both require a logged-in session:
-`login.php` exchanges a username/password for a session cookie first. The
-account is **free to register, not a paid key**, but it is still a credential
-this repo cannot assume is present, so the script degrades the same way the
-basemap's keyed tiers do (§1.2, §4):
+Real lighting fixtures come from **GDTF** (General Device Type Format,
+DIN SPEC 15800:2022-02) rather than being modelled by hand. A `.gdtf` file is a
+ZIP holding `description.xml` — the fixture's kinematic tree, photometric
+emitter and every DMX mode a console can patch it in — plus GLB meshes under
+`models/gltf/` and wheel rasters under `wheels/`.
 
 ```bash
-GDTF_SHARE_USER=you GDTF_SHARE_PASSWORD=... npm run fetch:gdtf
-node --env-file=.env.local scripts/fetch_gdtf_library.js   # Node 20.6+
+npm run fetch:gdtf                       # sync profiles into the cache
+node scripts/fetch_gdtf_library.js --verify   # check the cache, never touch the network
+node scripts/fetch_gdtf_library.js --force    # re-download even if cached
 ```
 
-Without credentials it prints registration instructions and exits `0` —
-never fails a build over a missing free account. Fetched archives land in
-`public/assets/fixtures/cache/`, git-ignored like every other binary (§10).
+### GDTF Share needs an account
 
-### File format and parsing scope
+Despite the `/apis/public/` path, `getList.php` answers **401 Unauthorized** to
+an anonymous request. The fetcher logs in first, with credentials from the
+environment:
 
-A `.gdtf` file is a ZIP: `description.xml` at its root plus 3D models under
-`models/gltf/` (GLB, preferred) or `models/3ds/`. `src/engine/GDTFParser.ts`
-only reads the glTF path — every Phase 3 target fixture ships one, and this
-project has no 3DS importer.
+```bash
+GDTF_SHARE_USER=you@example.com GDTF_SHARE_PASSWORD=... npm run fetch:gdtf
+```
 
-`GdtfGeometryKind` gives first-class handling to `Geometry`, `Axis` and `Beam`
-only — this project's target fixtures are conventional moving-head washes and
-spots. Media server, laser and display geometry types still parse structurally
-(the tree walks through them) but fall back to a generic `'Other'` kind rather
-than guessed-at dedicated fields.
+A GDTF Share account is free, so this stays inside the $0 budget. **Without
+credentials the script verifies the cache and exits 0** — a build machine has no
+reason to hold vendor credentials, and an empty cache is a legitimate first-run
+state. It fails only when the cache *contradicts itself* (a manifest entry whose
+file is missing or whose bytes changed), because a corrupt archive fails much
+further downstream, inside the parser.
 
-`DMXValue` attributes (`Default`, `Highlight`, `ChannelFunction.Default`) are
-extracted as their raw DIN SPEC 15800 byte-mirroring strings (e.g. `"255/1"`),
-not decoded to a resolved numeric level — decoding needs the channel's byte
-resolution, a DMX-engine concern that lands with Phase 4, not a parsing one.
+The cache is **git-ignored** (§11): archives run to tens of megabytes and are
+redistributable only under GDTF Share's terms.
 
-### Coordinate bridge
+### Coordinate systems differ — the parser converts once
 
-GDTF's `Position` matrices are right-handed, Z-up, with +Y away from the
-viewer — DIN SPEC 15800's own convention, unrelated to WGS84/ENU.
-`GDTFParser.gdtfSpaceToThreeSpace()` bridges this into Three's Y-up frame as a
-change of basis (`P · M · P⁻¹`), so a node's rotation transforms correctly,
-not just its translation. The resulting axis relationship is numerically
-identical in form to `SITE_FRAME`'s ENU bridge (`GeoAnchor.ts`) — both happen
-to be right-handed Z-up frames — but the two are kept as separate helpers:
-this is fixture-local geometry, not geodesy, so it does not borrow
-`EnuFrame`'s geodesy-specific types just because the formula matches.
+GDTF is right-handed **Z-up** in metres; Three.js is **Y-up**. Every position
+and matrix `GDTFParser` emits has already been converted by `gdtfToThree`
+(`x, y, z → x, z, −y`). **Never re-apply the conversion downstream.**
 
-### Socket injection
+### Rotation axes come from the tree, not from names
 
-`GDTFParser.injectFixtureSockets()` derives a fixture's `extras.sockets`:
+A GDTF `<Axis>` rotates about its **own local X** (DIN SPEC 15800 §6.4); the
+node's `Position` matrix orients that axis. So the resolver rotates about X and
+nothing else. Matching on geometry names (`Yoke`, `Head`) instead would break on
+any fixture whose manufacturer named its parts differently.
 
-- One **`PIPE_CLAMP_2IN`** socket at the fixture's own local origin — the
-  clamp that grips whatever truss the fixture hangs from. It reuses the
-  existing pipe-clamp type rather than inventing a fixture-specific one.
-- One **`FIXTURE_YOKE_AXIS`** socket per `Axis` geometry node (pan/tilt
-  articulation points), positioned by composing parent transforms down the
-  tree. This type never mates with anything (`can_parent`/`can_child` are
-  always `false`) — see the open parity divergence note in §1.1, since it is
-  a new type the UE5 socket vocabulary has not yet mirrored.
+### Flux is not intensity
 
-### Runtime resolver and photometrics
+GDTF publishes total luminous flux in **lumens**; a Three.js `SpotLight` wants
+**candela**. `fluxToCandela` spreads the flux over the cone's solid angle:
 
-`src/engine/GDTFAssetResolver.ts` indexes parsed profiles by `FixtureTypeID`
-and instantiates each one as a `THREE.Group` hierarchy mirroring its
-`Geometries` tree exactly — pan/tilt is real scene-graph nesting, not a
-flattened mesh. Without a fetched archive, every node gets a dimensionally-
-scaled placeholder box: the same "dimensionally accurate, visually
-placeholder" contract the procedural modular assets use (§9).
+```
+omega = 2π(1 − cos(field_angle / 2))      steradians
+I     = flux / omega                      candela
+```
 
-Each `Beam` node gets a `THREE.SpotLight` parameterized from the profile's
-photometric attributes — the runtime equivalent of embedding
-`KHR_lights_punctual` (constraint 3), since these fixtures are built
-procedurally rather than round-tripped through an authored glTF:
+Handing the lumen figure to `intensity` directly makes a narrow-beam fixture
+read as dim as a wash of the same wattage — backwards, and the single easiest
+photometric mistake to make here.
 
-- **Lumens → candela**: `LuminousFlux` (total output) divided by the beam
-  cone's solid angle (`2π(1 − cos(halfAngle))`), since Three's physically
-  correct lighting consumes candela (lm/sr), not total lumens.
-- **Kelvin → RGB**: Tanner Helland's curve-fit approximation of Mitchell
-  Charity's blackbody data — not a rigorous CIE calculation, which is more
-  precision than a previz beam tint needs.
+### Sockets vs. kinematic references
 
-No fixture light casts a shadow: a build can carry a dozen-plus fixtures, and
-per-light shadow maps are not affordable on the phone fill-rate budget (§1.3).
+The resolver injects **one** `extras.sockets` entry — `fixture_clamp`
+(`PIPE_CLAMP_2IN`), the truss-mounting interface — in the §3 spec shape. It
+carries `can_child: true`, which is what makes a fixture attachable: the engine
+gates reparenting on the *moving* socket's `can_child`, and a fixture dragged
+onto truss is the moving side.
 
-### Sample fixture
+The pan pivot, tilt pivot and lens emitter go under **`extras.kinematics`**, not
+`extras.sockets`. Sockets are a mating vocabulary — every `socket_type` must
+appear in `SOCKET_TYPES` and the engine will try to mate anything it finds
+there. An internal rotation axis is not a place another asset connects, so
+putting it in the socket list would invite nonsense joints.
+
+### Sample fixture in the viewport
 
 Until a real archive is cached, the **"+ Wash Fixture"** palette button
-instantiates `src/assets/SampleGdtfProfile.ts` — a hand-authored two-axis
-(Yoke → Head → Beam) profile run through the real `parseDescriptionXml()`
-path, exactly as a fetched archive's `description.xml` would be. Same
+(`main.ts`) builds and registers `src/assets/SampleGdtfProfile.ts` — a
+synthetic profile run through the real `parseGDTF()` archive path, same
 synthetic-stand-in contract as `cleanup_splat.py --synthesize` (§8) and the
-procedural modular assets (§9): exercise the real pipeline end to end rather
-than shortcut around the missing real asset.
+procedural modular assets (§9). It does not re-derive the fixture's XML:
+`buildGdtfArchive` (`tests/helpers/gdtfFixture.ts`) already builds one, and
+its `YOKE_MATRIX`/`HEAD_MATRIX` encode a rotation basis that took a real bug
+fix to get right (`fe9dac9`) — reusing the proven archive builder avoids
+reintroducing that exact mistake by hand a second time. The sample carries
+its own `SAMPLE_FIXTURE_TYPE_ID`, distinct from any real cached profile, so
+the two can never collide in the same resolver's registry. Registration is
+lazy and memoized: the archive is built once, on first click, not at page
+load.
+
+## 11. Binaries are not committed
+
+`.splat`, `.ply`, `.gdtf` and SAM-2 checkpoints are git-ignored. Captures are
+large and regenerable; real surveys belong in release assets or an external
+bucket. The synthetic splat stand-in regenerates with `--synthesize`; the GDTF
+cache repopulates with `npm run fetch:gdtf`.
+
+Neither pipeline depends on a committed binary to be verifiable. The splat
+self-test builds a labelled synthetic capture, and the GDTF suite builds real
+`.gdtf` archives in memory (`tests/helpers/gdtfFixture.ts`) — genuine ZIPs
+holding genuine DIN SPEC 15800 XML, so the ZIP traversal, attribute names,
+matrix grammar and `value/resolution` DMX grammar are all under test even
+though CI cannot reach GDTF Share.
+
+## 12. Showcase renders
+
+`showcase/` holds standalone, real-pipeline demo pages — no mocked data, no
+stand-ins. `showcase/gdtf-fixture.html` runs the actual archive builder, the
+actual `parseGDTF`, and the actual `GDTFAssetResolver` in a browser tab and
+renders the result; it is not a hand-authored scene that merely looks similar.
+
+```bash
+npm run dev                                                    # serve the app
+npm run showcase:capture -- --page showcase/gdtf-fixture.html  # screenshot it
+```
+
+Each showcase page sets `document.body.dataset.ready = 'true'` once its scene
+has finished building (`'error'` if it threw) — `capture_showcase.mjs` waits on
+that flag rather than a fixed delay, so a slow parse or a silent failure shows
+up as a timeout, not a screenshot of a half-built scene.
+
+A render surfacing a real bug is the point, not a failure of the showcase: the
+straight-down beam sanity check in `tests/gdtf.test.ts` exists because this
+exact page first rendered with every beam pointing sideways, which is what
+found the fixed-vs-composed-quaternion bug in `GDTFAssetResolver`'s pan/tilt
+drive.

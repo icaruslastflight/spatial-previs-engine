@@ -377,6 +377,20 @@ describe('[5] Specification socket schema', () => {
     expect(legacy?.snapAngleRadians ?? 0).toBeCloseTo((15 * Math.PI) / 180, 9);
   });
 
+  // `transform.position` is neither shape: the spec nests `translation`, the
+  // legacy form inlines `position` as a sibling of socket_id. Rejecting it is
+  // deliberate -- the pose key is not an alias to be widened.
+  it('rejects a pose nested as transform.position', () => {
+    expect(
+      normalizeSocket({
+        socket_id: 'clamp_base_01',
+        socket_type: 'PIPE_CLAMP_2IN',
+        gender: 'FEMALE',
+        transform: { position: [0, 0.45, 0], normal: [0, 1, 0], up: [0, 0, 1] },
+      }),
+    ).toBeNull();
+  });
+
   // Gender mating rules, including the UNIVERSAL wildcard.
   const make = (gender: string, type = 'PIPE_CLAMP_2IN') =>
     normalizeSocket({

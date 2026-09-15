@@ -62,6 +62,20 @@ export interface FrameTiming {
 
 export type TickFn = (timing: FrameTiming) => void;
 
+/** Tick signature taken by `registerTick`: just the clamped delta, in seconds. */
+export type DeltaTickFn = (deltaSeconds: number) => void;
+
+/**
+ * Rolling performance counters, sampled over `FPS_WINDOW_SECONDS`.
+ *
+ * `frameTimeMs` is the mean interval between executed frames, which is what to
+ * compare against the 16.67 ms budget of a 60 FPS target.
+ */
+export interface EngineMetrics {
+  readonly fps: number;
+  readonly frameTimeMs: number;
+}
+
 /** Handle returned by `register`; calling it detaches that tick. */
 export type Unregister = () => void;
 
@@ -96,8 +110,13 @@ export interface FrameScheduler {
  * dynamic object; fed into an LFO it jumps the show state. Clamping trades
  * real-time accuracy across the stall -- which is already lost -- for a scene
  * that is still coherent when the operator comes back.
+ *
+ * 0.1 s is six frames at the 60 FPS budget: long enough that ordinary jitter
+ * and a dropped frame or two pass through unclamped, short enough that the
+ * snapping integrator cannot advance a dragged asset past a socket's 0.15 m
+ * capture radius in a single tick and miss the joint entirely.
  */
-export const MAX_DELTA_SECONDS = 0.25;
+export const MAX_DELTA_SECONDS = 0.1;
 
 /** Frame rate is recomputed once per this many seconds. */
 const FPS_WINDOW_SECONDS = 0.5;
@@ -196,6 +215,8 @@ export class EngineLoop {
 
   #fpsFrames = 0;
   #fpsAccumulatorSeconds = 0;
+  /** Mean inter-frame interval over the last closed window, ms. */
+  #frameTimeMs = 0;
 
   /** Mutated in place and handed to every tick. See `FrameTiming`. */
   readonly #timing: FrameTiming = {
@@ -224,6 +245,30 @@ export class EngineLoop {
   /** Live timing. The same object every frame -- read, do not retain. */
   get timing(): Readonly<FrameTiming> {
     return this.#timing;
+  }
+
+  /**
+   * Rolling frame rate and frame time.
+   *
+   * Both read 0 until the first sampling window closes, roughly half a second
+   * after `start()`. Allocates the report object, so read it on a HUD cadence
+   * rather than inside a tick.
+   */
+  getMetrics(): EngineMetrics {
+    return { fps: this.#timing.fps, frameTimeMs: this.#frameTimeMs };
+  }
+
+  /**
+   * Register a per-frame tick that receives only the clamped delta.
+   *
+   * The narrower counterpart to `register`, for subsystems that integrate
+   * against `dt` and need nothing else from `FrameTiming`. The adapter closure
+   * is built once here, not per frame.
+   */
+  registerTick(priority: TickPriority, callback: DeltaTickFn): Unregister {
+    return this.register(priority, (timing) => {
+      callback(timing.deltaSeconds);
+    });
   }
 
   /**
@@ -333,6 +378,7 @@ export class EngineLoop {
     this.#fpsAccumulatorSeconds += deltaSeconds;
     if (this.#fpsAccumulatorSeconds >= FPS_WINDOW_SECONDS) {
       this.#timing.fps = this.#fpsFrames / this.#fpsAccumulatorSeconds;
+      this.#frameTimeMs = (this.#fpsAccumulatorSeconds * 1000) / this.#fpsFrames;
       this.#fpsFrames = 0;
       this.#fpsAccumulatorSeconds = 0;
     }
