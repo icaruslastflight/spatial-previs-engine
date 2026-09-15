@@ -35,3 +35,7 @@ models/sam2/
 # Python
 __pycache__/
 *.py[cod]
+# Local environment files and secrets
+.env
+.env.*
+!.env.example
