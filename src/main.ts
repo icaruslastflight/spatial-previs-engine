@@ -10,6 +10,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 import { SocketSnappingEngine, SNAP_THRESHOLD_METERS } from './engine/SocketSnappingEngine.ts';
 import type { SnapCandidate } from './engine/SocketSnappingEngine.ts';
+import { SceneIndex } from './engine/SceneIndex.ts';
 import { createF34BoxTruss2M, createStageDeck4x8 } from './assets/ModularPrimitives.ts';
 import { CesiumGlobe } from './geo/CesiumGlobe.ts';
 import { POINT_STATE_PARK } from './geo/GeoAnchor.ts';
@@ -147,26 +148,52 @@ new PlaytestController({ domElement: canvas, camera, controls, engineLoop });
 /* -------------------------------------------------------------------------- */
 
 const engine = new SocketSnappingEngine();
+const sceneIndex = new SceneIndex(engine);
 const showLayer = new THREE.Group();
 showLayer.name = 'ShowLayer';
 scene.add(showLayer);
 
-function spawn(object: THREE.Object3D, position: THREE.Vector3): THREE.Object3D {
+/**
+ * Manifest labels for the procedural stand-ins.
+ *
+ * `ModularPrimitives` builds geometry but carries no catalogue identity, so the
+ * asset id and category are attached here. They match `public/assets/manifest.json`
+ * exactly, which is what lets a scene saved from procedural stock reopen against
+ * real GLB assets later.
+ */
+const ASSET_LABELS = {
+  truss: { assetId: 'truss_f34_box_2m', category: 'trussing' },
+  deck: { assetId: 'deck_4x8', category: 'staging' },
+} as const;
+
+type AssetKind = keyof typeof ASSET_LABELS;
+
+let instanceCounter = 0;
+
+function spawn(object: THREE.Object3D, kind: AssetKind, position: THREE.Vector3): THREE.Object3D {
+  const label = ASSET_LABELS[kind];
+  instanceCounter += 1;
+  // Stable across a save/load, unlike the per-session Three.js uuid.
+  object.userData['instance_id'] = `inst_${String(instanceCounter).padStart(4, '0')}`;
+  object.userData['asset_id'] = label.assetId;
+  object.userData['category'] = label.category;
+
   object.position.copy(position);
   showLayer.add(object);
   object.updateMatrixWorld(true);
   engine.register(object);
+  sceneIndex.invalidate();
   return object;
 }
 
 function buildStartingPlot(): void {
   // Two decks: one placed, one loose and a short drag from a clean butt joint.
-  spawn(createStageDeck4x8(), new THREE.Vector3(0, 0, 0));
-  spawn(createStageDeck4x8(), new THREE.Vector3(0.35, 0, 1.55));
+  spawn(createStageDeck4x8(), 'deck', new THREE.Vector3(0, 0, 0));
+  spawn(createStageDeck4x8(), 'deck', new THREE.Vector3(0.35, 0, 1.55));
 
   // Two truss sticks at working height, likewise a short drag from mating.
-  spawn(createF34BoxTruss2M(), new THREE.Vector3(0, 2.4, -2.5));
-  spawn(createF34BoxTruss2M(), new THREE.Vector3(-2.35, 2.4, -2.2));
+  spawn(createF34BoxTruss2M(), 'truss', new THREE.Vector3(0, 2.4, -2.5));
+  spawn(createF34BoxTruss2M(), 'truss', new THREE.Vector3(-2.35, 2.4, -2.2));
 }
 
 buildStartingPlot();
@@ -178,9 +205,9 @@ function spawnFromPalette(kind: 'truss' | 'deck'): void {
   const x = 5 + (spawnCursor % 4) * 2.6;
   const z = 4 + Math.floor(spawnCursor / 4) * 2.2;
   if (kind === 'truss') {
-    spawn(createF34BoxTruss2M(), new THREE.Vector3(x, 2.4, z));
+    spawn(createF34BoxTruss2M(), 'truss', new THREE.Vector3(x, 2.4, z));
   } else {
-    spawn(createStageDeck4x8(), new THREE.Vector3(x, 0, z));
+    spawn(createStageDeck4x8(), 'deck', new THREE.Vector3(x, 0, z));
   }
 }
 
