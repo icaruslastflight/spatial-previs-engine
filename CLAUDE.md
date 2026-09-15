@@ -46,6 +46,9 @@ a preference.
 - **Hosting:** free-tier static only — Vercel or GitHub Pages. See §5.
 - **No paid API keys are assumed.** Anything needing a key must degrade
   gracefully to a keyless path. The basemap does this across three tiers (§4).
+- **GDTF Share needs a free account, not a paid key** — but it still degrades
+  gracefully. Without credentials, `scripts/fetch_gdtf_library.js` verifies
+  the existing cache and exits `0` rather than failing. See §10.
 - **No cross-origin isolation.** Static free hosts cannot set COOP/COEP headers,
   so `sharedMemoryForWorkers` stays `false` in the splat loader. Do not turn it
   on without a host that can serve those headers.
@@ -234,13 +237,18 @@ npx tsc --noEmit    # typecheck only (also: npm run typecheck)
 npm test            # vitest: core engine, geodetic, CP-1, snapping, asset library
 npm run verify      # full foundation health check — structure + all three gates
 npm run build:assets # compile the modular asset library to GLB
-npm run bridge      # FOH Art-Net/sACN → WebSocket daemon (lands in Phase 4)
-npm run fetch:gdtf  # sync GDTF fixture profiles into the local cache
+npm run fetch:gdtf  # sync GDTF fixture profiles into the local cache (needs a free account, §10)
+npm run showcase:capture -- --page <path>  # screenshot a real-pipeline showcase page (§12)
+npm run bridge      # FOH Art-Net/sACN → WebSocket daemon
 ```
 
-`npm test` runs Vitest over every `src/**/*.test.ts`. Configuration lives in
-`vitest.config.ts`, kept separate from `vite.config.ts` so the suite loads
-neither the Cesium asset middleware nor the PWA service-worker generator.
+`npm test` runs Vitest over every `src/**/*.test.ts` plus `tests/**/*.test.ts`
+and `tests/**/*.test.js`. Unit tests sit beside the module they cover under
+`src/`; `tests/` holds the cross-module contract suites (GDTF, the core
+engine, the FOH bridge) that assert a public API rather than one module's
+internals. Configuration lives in `vitest.config.ts`, kept separate from
+`vite.config.ts` so the suite loads neither the Cesium asset middleware nor
+the PWA service-worker generator.
 
 ### Deployment
 
@@ -282,6 +290,7 @@ src/
              GDTFAssetResolver.ts      GDTF -> Three kinematic chain + photometric light
   assets/    ModularPrimitives.ts      procedural F34 truss + 4x8 deck
              SplatSceneLoader.ts       manifest-driven Gaussian splat loading
+             SampleGdtfProfile.ts      synthetic fixture profile, until a real one is fetched
   geo/       GeoAnchor.ts              site anchor, WGS84/ECEF/ENU, axis bridge
              CesiumGlobe.ts            basemap tiers + camera sync
              cesiumBaseUrl.ts          publishes CESIUM_BASE_URL before Cesium loads
@@ -489,6 +498,22 @@ The pan pivot, tilt pivot and lens emitter go under **`extras.kinematics`**, not
 appear in `SOCKET_TYPES` and the engine will try to mate anything it finds
 there. An internal rotation axis is not a place another asset connects, so
 putting it in the socket list would invite nonsense joints.
+
+### Sample fixture in the viewport
+
+Until a real archive is cached, the **"+ Wash Fixture"** palette button
+(`main.ts`) builds and registers `src/assets/SampleGdtfProfile.ts` — a
+synthetic profile run through the real `parseGDTF()` archive path, same
+synthetic-stand-in contract as `cleanup_splat.py --synthesize` (§8) and the
+procedural modular assets (§9). It does not re-derive the fixture's XML:
+`buildGdtfArchive` (`tests/helpers/gdtfFixture.ts`) already builds one, and
+its `YOKE_MATRIX`/`HEAD_MATRIX` encode a rotation basis that took a real bug
+fix to get right (`fe9dac9`) — reusing the proven archive builder avoids
+reintroducing that exact mistake by hand a second time. The sample carries
+its own `SAMPLE_FIXTURE_TYPE_ID`, distinct from any real cached profile, so
+the two can never collide in the same resolver's registry. Registration is
+lazy and memoized: the archive is built once, on first click, not at page
+load.
 
 ## 11. Binaries are not committed
 

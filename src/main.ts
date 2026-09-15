@@ -11,6 +11,9 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { SocketSnappingEngine, SNAP_THRESHOLD_METERS } from './engine/SocketSnappingEngine.ts';
 import type { SnapCandidate } from './engine/SocketSnappingEngine.ts';
 import { createF34BoxTruss2M, createStageDeck4x8 } from './assets/ModularPrimitives.ts';
+import { GDTFAssetResolver } from './engine/GDTFAssetResolver.ts';
+import { parseGDTF } from './engine/GDTFParser.ts';
+import { buildSampleFixtureArchive, SAMPLE_FIXTURE_TYPE_ID } from './assets/SampleGdtfProfile.ts';
 import { CesiumGlobe } from './geo/CesiumGlobe.ts';
 import { POINT_STATE_PARK } from './geo/GeoAnchor.ts';
 import { loadSiteBounds } from './viewport/SiteBounds.ts';
@@ -151,6 +154,21 @@ const showLayer = new THREE.Group();
 showLayer.name = 'ShowLayer';
 scene.add(showLayer);
 
+// Real manufacturer fixtures need a fetched-and-cached .gdtf archive (a free
+// GDTF Share account -- see CLAUDE.md §10). Until one is cached, the palette
+// spawns this synthetic profile, parsed through the real parseGDTF() archive
+// path a fetched archive would go through. Built and registered lazily, once,
+// on first use -- building the archive (ZIP + XML) has real cost that a page
+// load with no interest in fixtures should not pay.
+const gdtfResolver = new GDTFAssetResolver();
+let sampleFixtureRegistered: Promise<string> | null = null;
+function ensureSampleFixtureRegistered(): Promise<string> {
+  sampleFixtureRegistered ??= buildSampleFixtureArchive()
+    .then((archive) => parseGDTF(archive))
+    .then((profile) => gdtfResolver.register(profile));
+  return sampleFixtureRegistered;
+}
+
 function spawn(object: THREE.Object3D, position: THREE.Vector3): THREE.Object3D {
   object.position.copy(position);
   showLayer.add(object);
@@ -172,23 +190,30 @@ function buildStartingPlot(): void {
 buildStartingPlot();
 
 let spawnCursor = 0;
-function spawnFromPalette(kind: 'truss' | 'deck'): void {
+async function spawnFromPalette(kind: 'truss' | 'deck' | 'fixture'): Promise<void> {
   // Lay new stock out in a row off to the side of the build.
   spawnCursor += 1;
   const x = 5 + (spawnCursor % 4) * 2.6;
   const z = 4 + Math.floor(spawnCursor / 4) * 2.2;
   if (kind === 'truss') {
     spawn(createF34BoxTruss2M(), new THREE.Vector3(x, 2.4, z));
-  } else {
+  } else if (kind === 'deck') {
     spawn(createStageDeck4x8(), new THREE.Vector3(x, 0, z));
+  } else {
+    await ensureSampleFixtureRegistered();
+    const instance = gdtfResolver.instantiateFixture(SAMPLE_FIXTURE_TYPE_ID);
+    spawn(instance.root, new THREE.Vector3(x, 2.4, z));
   }
 }
 
 requireElement<HTMLButtonElement>('add-truss').addEventListener('click', () =>
-  spawnFromPalette('truss'),
+  void spawnFromPalette('truss'),
 );
 requireElement<HTMLButtonElement>('add-deck').addEventListener('click', () =>
-  spawnFromPalette('deck'),
+  void spawnFromPalette('deck'),
+);
+requireElement<HTMLButtonElement>('add-fixture').addEventListener('click', () =>
+  void spawnFromPalette('fixture'),
 );
 
 /* -------------------------------------------------------------------------- */
