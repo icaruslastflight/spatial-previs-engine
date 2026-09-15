@@ -235,6 +235,7 @@ npm test            # vitest: core engine, geodetic, CP-1, snapping, asset libra
 npm run verify      # full foundation health check — structure + all three gates
 npm run build:assets # compile the modular asset library to GLB
 npm run bridge      # FOH Art-Net/sACN → WebSocket daemon (lands in Phase 4)
+npm run fetch:gdtf  # sync GDTF fixture profiles into the local cache
 ```
 
 `npm test` runs Vitest over every `src/**/*.test.ts`. Configuration lives in
@@ -277,6 +278,8 @@ src/
              MemoryPool.ts             recycled Uint8Array(512) / Float32Array(512)
              EngineLoop.ts             one 60 FPS clock, four priority bands
   engine/    SocketSnappingEngine.ts   socket contract, proximity, detents, linking
+             GDTFParser.ts             .gdtf unpack + description.xml (DIN SPEC 15800)
+             GDTFAssetResolver.ts      GDTF -> Three kinematic chain + photometric light
   assets/    ModularPrimitives.ts      procedural F34 truss + 4x8 deck
              SplatSceneLoader.ts       manifest-driven Gaussian splat loading
   geo/       GeoAnchor.ts              site anchor, WGS84/ECEF/ENU, axis bridge
@@ -306,7 +309,7 @@ fills it and the constraints that already bind it.
   callbacks make execution order an accident of import order.
 - **`FrameTiming` is reused.** The same object is mutated and handed to every
   tick of every frame. Read it, never retain it.
-- **Pooled buffers are borrowed.** `DmxUpdatePayload.channels` is on loan from
+- **Pooled buffers are borrowed.** `DmxUpdatePayload.data` is on loan from
   `TypedArrayMemoryPool` and is recycled when dispatch returns. Copy to retain.
 - **The event vocabulary is mirrored in UE5.** Adding an event to
   `EngineEventMap` without adding it to the desktop dispatcher breaks parity.
@@ -412,8 +415,114 @@ below the budget ceiling because procedural stock has no welds or grilles to
 model. Manufacturer CAD hot-swaps in without re-plotting **as long as socket
 ids and positions match exactly**.
 
-## 10. Binaries are not committed
+## 10. GDTF fixture profiles
 
-`.splat`, `.ply` and SAM-2 checkpoints are git-ignored. Captures are large and
-regenerable; real surveys belong in release assets or an external bucket. The
-synthetic stand-in regenerates with `--synthesize`.
+Real lighting fixtures come from **GDTF** (General Device Type Format,
+DIN SPEC 15800:2022-02) rather than being modelled by hand. A `.gdtf` file is a
+ZIP holding `description.xml` — the fixture's kinematic tree, photometric
+emitter and every DMX mode a console can patch it in — plus GLB meshes under
+`models/gltf/` and wheel rasters under `wheels/`.
+
+```bash
+npm run fetch:gdtf                       # sync profiles into the cache
+node scripts/fetch_gdtf_library.js --verify   # check the cache, never touch the network
+node scripts/fetch_gdtf_library.js --force    # re-download even if cached
+```
+
+### GDTF Share needs an account
+
+Despite the `/apis/public/` path, `getList.php` answers **401 Unauthorized** to
+an anonymous request. The fetcher logs in first, with credentials from the
+environment:
+
+```bash
+GDTF_SHARE_USER=you@example.com GDTF_SHARE_PASSWORD=... npm run fetch:gdtf
+```
+
+A GDTF Share account is free, so this stays inside the $0 budget. **Without
+credentials the script verifies the cache and exits 0** — a build machine has no
+reason to hold vendor credentials, and an empty cache is a legitimate first-run
+state. It fails only when the cache *contradicts itself* (a manifest entry whose
+file is missing or whose bytes changed), because a corrupt archive fails much
+further downstream, inside the parser.
+
+The cache is **git-ignored** (§11): archives run to tens of megabytes and are
+redistributable only under GDTF Share's terms.
+
+### Coordinate systems differ — the parser converts once
+
+GDTF is right-handed **Z-up** in metres; Three.js is **Y-up**. Every position
+and matrix `GDTFParser` emits has already been converted by `gdtfToThree`
+(`x, y, z → x, z, −y`). **Never re-apply the conversion downstream.**
+
+### Rotation axes come from the tree, not from names
+
+A GDTF `<Axis>` rotates about its **own local X** (DIN SPEC 15800 §6.4); the
+node's `Position` matrix orients that axis. So the resolver rotates about X and
+nothing else. Matching on geometry names (`Yoke`, `Head`) instead would break on
+any fixture whose manufacturer named its parts differently.
+
+### Flux is not intensity
+
+GDTF publishes total luminous flux in **lumens**; a Three.js `SpotLight` wants
+**candela**. `fluxToCandela` spreads the flux over the cone's solid angle:
+
+```
+omega = 2π(1 − cos(field_angle / 2))      steradians
+I     = flux / omega                      candela
+```
+
+Handing the lumen figure to `intensity` directly makes a narrow-beam fixture
+read as dim as a wash of the same wattage — backwards, and the single easiest
+photometric mistake to make here.
+
+### Sockets vs. kinematic references
+
+The resolver injects **one** `extras.sockets` entry — `fixture_clamp`
+(`PIPE_CLAMP_2IN`), the truss-mounting interface — in the §3 spec shape. It
+carries `can_child: true`, which is what makes a fixture attachable: the engine
+gates reparenting on the *moving* socket's `can_child`, and a fixture dragged
+onto truss is the moving side.
+
+The pan pivot, tilt pivot and lens emitter go under **`extras.kinematics`**, not
+`extras.sockets`. Sockets are a mating vocabulary — every `socket_type` must
+appear in `SOCKET_TYPES` and the engine will try to mate anything it finds
+there. An internal rotation axis is not a place another asset connects, so
+putting it in the socket list would invite nonsense joints.
+
+## 11. Binaries are not committed
+
+`.splat`, `.ply`, `.gdtf` and SAM-2 checkpoints are git-ignored. Captures are
+large and regenerable; real surveys belong in release assets or an external
+bucket. The synthetic splat stand-in regenerates with `--synthesize`; the GDTF
+cache repopulates with `npm run fetch:gdtf`.
+
+Neither pipeline depends on a committed binary to be verifiable. The splat
+self-test builds a labelled synthetic capture, and the GDTF suite builds real
+`.gdtf` archives in memory (`tests/helpers/gdtfFixture.ts`) — genuine ZIPs
+holding genuine DIN SPEC 15800 XML, so the ZIP traversal, attribute names,
+matrix grammar and `value/resolution` DMX grammar are all under test even
+though CI cannot reach GDTF Share.
+
+## 12. Showcase renders
+
+`showcase/` holds standalone, real-pipeline demo pages — no mocked data, no
+stand-ins. `showcase/gdtf-fixture.html` runs the actual archive builder, the
+actual `parseGDTF`, and the actual `GDTFAssetResolver` in a browser tab and
+renders the result; it is not a hand-authored scene that merely looks similar.
+
+```bash
+npm run dev                                                    # serve the app
+npm run showcase:capture -- --page showcase/gdtf-fixture.html  # screenshot it
+```
+
+Each showcase page sets `document.body.dataset.ready = 'true'` once its scene
+has finished building (`'error'` if it threw) — `capture_showcase.mjs` waits on
+that flag rather than a fixed delay, so a slow parse or a silent failure shows
+up as a timeout, not a screenshot of a half-built scene.
+
+A render surfacing a real bug is the point, not a failure of the showcase: the
+straight-down beam sanity check in `tests/gdtf.test.ts` exists because this
+exact page first rendered with every beam pointing sideways, which is what
+found the fixed-vs-composed-quaternion bug in `GDTFAssetResolver`'s pan/tilt
+drive.
