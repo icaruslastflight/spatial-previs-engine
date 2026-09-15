@@ -503,3 +503,26 @@ self-test builds a labelled synthetic capture, and the GDTF suite builds real
 holding genuine DIN SPEC 15800 XML, so the ZIP traversal, attribute names,
 matrix grammar and `value/resolution` DMX grammar are all under test even
 though CI cannot reach GDTF Share.
+
+## 12. Showcase renders
+
+`showcase/` holds standalone, real-pipeline demo pages — no mocked data, no
+stand-ins. `showcase/gdtf-fixture.html` runs the actual archive builder, the
+actual `parseGDTF`, and the actual `GDTFAssetResolver` in a browser tab and
+renders the result; it is not a hand-authored scene that merely looks similar.
+
+```bash
+npm run dev                                                    # serve the app
+npm run showcase:capture -- --page showcase/gdtf-fixture.html  # screenshot it
+```
+
+Each showcase page sets `document.body.dataset.ready = 'true'` once its scene
+has finished building (`'error'` if it threw) — `capture_showcase.mjs` waits on
+that flag rather than a fixed delay, so a slow parse or a silent failure shows
+up as a timeout, not a screenshot of a half-built scene.
+
+A render surfacing a real bug is the point, not a failure of the showcase: the
+straight-down beam sanity check in `tests/gdtf.test.ts` exists because this
+exact page first rendered with every beam pointing sideways, which is what
+found the fixed-vs-composed-quaternion bug in `GDTFAssetResolver`'s pan/tilt
+drive.

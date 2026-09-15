@@ -12,6 +12,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
 
 import {
   channelsForAttribute,
@@ -38,6 +39,7 @@ import {
   kelvinToColor,
   penumbraFrom,
 } from '../src/engine/GDTFAssetResolver.ts';
+import type { ResolvedFixtureInstance } from '../src/engine/GDTFAssetResolver.ts';
 import { normalizeSocket } from '../src/engine/SocketSnappingEngine.ts';
 import {
   BEAM_ANGLE_DEG,
@@ -137,9 +139,42 @@ describe('parseGDTF', () => {
     const axes = findAxes(profile);
     expect(axes.map((axis) => axis.name)).toEqual(['Yoke', 'Head']);
 
-    // Each joint's transform is relative to its parent, converted to Y-up.
+    // Each joint's transform is relative to its PARENT's frame, so only the
+    // yoke's offset runs along world up. The head's runs along the yoke's own
+    // local X, which the yoke's basis has turned to vertical -- see the basis
+    // test below, and the world-space check in the resolver suite.
     expect(axes[0].transform.translation[1]).toBeCloseTo(YOKE_HEIGHT_M, 6);
-    expect(axes[1].transform.translation[1]).toBeCloseTo(HEAD_HEIGHT_M, 6);
+    expect(axes[1].transform.translation[0]).toBeCloseTo(HEAD_HEIGHT_M, 6);
+  });
+
+  it('turns the yoke local X onto world up, so pan rotates about vertical', async () => {
+    const profile = await parseGDTF(await buildGdtfArchive());
+    const yoke = findAxes(profile)[0];
+
+    // A GDTF <Axis> rotates about its own local X. A moving head pans about
+    // the vertical, so the profile orients the yoke's X onto up -- and the
+    // parser has to carry that basis through the Z-up -> Y-up change intact.
+    // The basis is column-major, so columns 0..2 are the local X, Y and Z axes.
+    const [x0, x1, x2] = yoke.transform.basis;
+    expect(x0).toBeCloseTo(0, 6);
+    expect(x1).toBeCloseTo(1, 6);
+    expect(x2).toBeCloseTo(0, 6);
+  });
+
+  it('keeps the yoke basis orthonormal through the axis conversion', async () => {
+    const profile = await parseGDTF(await buildGdtfArchive());
+    const b = findAxes(profile)[0].transform.basis;
+
+    const col = (i: number) => [b[i * 3], b[i * 3 + 1], b[i * 3 + 2]] as const;
+    const dot = (p: readonly number[], q: readonly number[]) =>
+      p[0] * q[0] + p[1] * q[1] + p[2] * q[2];
+
+    // A conversion that mirrored or skewed the frame would show up here rather
+    // than as a fixture that merely looks a little wrong on screen.
+    for (let i = 0; i < 3; i++) expect(dot(col(i), col(i))).toBeCloseTo(1, 6);
+    expect(dot(col(0), col(1))).toBeCloseTo(0, 6);
+    expect(dot(col(1), col(2))).toBeCloseTo(0, 6);
+    expect(dot(col(0), col(2))).toBeCloseTo(0, 6);
   });
 
   it('extracts the photometric beam', async () => {
@@ -151,6 +186,9 @@ describe('parseGDTF', () => {
     expect(beamNode!.beam!.colorTemperatureKelvin).toBe(COLOR_TEMPERATURE_K);
     expect(beamNode!.beam!.beamAngleDegrees).toBeCloseTo(BEAM_ANGLE_DEG, 4);
     expect(beamNode!.beam!.fieldAngleDegrees).toBeCloseTo(FIELD_ANGLE_DEG, 4);
+    // The lens offset is written along GDTF's Z axis so it lands on the
+    // HEAD's local Three-Y -- the same axis the aim direction uses. The
+    // resolver suite asserts where it actually lands once the chain composes.
     expect(beamNode!.transform.translation[1]).toBeCloseTo(BEAM_HEIGHT_M, 6);
   });
 
@@ -347,13 +385,14 @@ describe('GDTFAssetResolver', () => {
 
     fixture.root.updateMatrixWorld(true);
 
-    const headWorld = fixture.headGroup.getWorldPosition(new (await import('three')).Vector3());
+    const headWorld = fixture.headGroup.getWorldPosition(new THREE.Vector3());
     expect(headWorld.y).toBeCloseTo(YOKE_HEIGHT_M + HEAD_HEIGHT_M, 6);
 
-    const emitterWorld = fixture.emitterGroup.getWorldPosition(
-      new (await import('three')).Vector3(),
-    );
-    expect(emitterWorld.y).toBeCloseTo(YOKE_HEIGHT_M + HEAD_HEIGHT_M + BEAM_HEIGHT_M, 6);
+    // The beam sits BEAM_HEIGHT_M further along the head's local Y, which at
+    // this neutral, undriven pose is the fixture's aim direction -- straight
+    // down -- so the emitter lands BELOW the head, not above it.
+    const emitterWorld = fixture.emitterGroup.getWorldPosition(new THREE.Vector3());
+    expect(emitterWorld.y).toBeCloseTo(YOKE_HEIGHT_M + HEAD_HEIGHT_M - BEAM_HEIGHT_M, 6);
 
     fixture.dispose();
   });
@@ -490,15 +529,67 @@ describe('16-bit DMX to physical angle', () => {
     fixture.dispose();
   });
 
-  it('applies pan to the yoke and tilt to the head, not the other way round', async () => {
+  /**
+   * World-space beam direction for a given pan/tilt, via the resolver's own
+   * light/target pair -- not a re-derivation of the resolver's rotation
+   * maths, so these checks cannot pass by sharing a bug with the code under
+   * test.
+   */
+  function beamDirection(fixture: ResolvedFixtureInstance, pan16: number, tilt16: number): THREE.Vector3 {
+    fixture.updateDMXChannels(patchUniverse({ pan16, tilt16 }));
+    fixture.root.updateMatrixWorld(true);
+    const origin = fixture.emitterGroup.getWorldPosition(new THREE.Vector3());
+    const aim = fixture.light.target.getWorldPosition(new THREE.Vector3());
+    return aim.sub(origin).normalize();
+  }
+
+  it('sends the beam straight down when pan and tilt are both centred', async () => {
     const resolver = await makeResolver();
     const fixture = resolver.instantiateFixture(DEFAULT_FIXTURE_TYPE_ID);
 
-    fixture.updateDMXChannels(patchUniverse({ pan16: 65535, tilt16: 0 }));
+    // The fixture's neutral orientation is designed to fire straight down:
+    // the yoke's static basis puts "up" on its own local X, the head's static
+    // basis turns that to horizontal, and centred pan/tilt apply no further
+    // rotation on top of either. If the composition in updateDMXChannels ever
+    // regresses to overwriting the static basis instead of rotating on top of
+    // it, this is the cheapest place that shows it.
+    const direction = beamDirection(fixture, 32768, 32768);
 
-    // GDTF axes rotate about their own local X.
-    expect(fixture.yokeGroup.rotation.x).toBeCloseTo((PAN_TO_DEG * Math.PI) / 180, 6);
-    expect(fixture.headGroup.rotation.x).toBeCloseTo((TILT_FROM_DEG * Math.PI) / 180, 6);
+    expect(direction.y).toBeCloseTo(-1, 4);
+    expect(direction.x).toBeCloseTo(0, 4);
+    expect(direction.z).toBeCloseTo(0, 4);
+
+    fixture.dispose();
+  });
+
+  it('pans about world vertical: azimuth moves, elevation from tilt does not', async () => {
+    const resolver = await makeResolver();
+    const fixture = resolver.instantiateFixture(DEFAULT_FIXTURE_TYPE_ID);
+
+    // Held off-centre so there is a genuine elevation for pan to disturb if
+    // the two axes were ever cross-wired.
+    const a = beamDirection(fixture, 0, 50000);
+    const b = beamDirection(fixture, 65535, 50000);
+
+    // Pan rotates the whole downstream chain about the yoke's local X, which
+    // its static basis has already turned to world vertical -- so only the
+    // heading should move, not the angle off vertical.
+    expect(a.y).toBeCloseTo(b.y, 4);
+    // And it must actually have moved -- two very different pans are not
+    // just re-measuring the same direction.
+    expect(Math.hypot(a.x - b.x, a.z - b.z)).toBeGreaterThan(0.1);
+
+    fixture.dispose();
+  });
+
+  it('tilts elevation independently of whatever pan is set to', async () => {
+    const resolver = await makeResolver();
+    const fixture = resolver.instantiateFixture(DEFAULT_FIXTURE_TYPE_ID);
+
+    const centred = beamDirection(fixture, 20000, 32768);
+    const tilted = beamDirection(fixture, 20000, 0);
+
+    expect(Math.abs(centred.y - tilted.y)).toBeGreaterThan(0.1);
 
     fixture.dispose();
   });

@@ -13,6 +13,7 @@
     "bridge": "node scripts/foh_bridge_daemon.js",
     "build:assets": "node scripts/build-asset-library.js",
     "fetch:gdtf": "node scripts/fetch_gdtf_library.js",
+    "showcase:capture": "node scripts/capture_showcase.mjs",
     "verify": "scripts/workflows/verify_foundational_setup.sh"
   },
   "dependencies": {
@@ -32,6 +33,7 @@
     "@types/node": "^26.5.1",
     "@types/three": "^0.186.0",
     "@types/ws": "^8.18.1",
+    "playwright": "^1.63.0",
     "typescript": "~6.0.2",
     "vite": "^8.3.0",
     "vite-plugin-pwa": "^1.3.0",

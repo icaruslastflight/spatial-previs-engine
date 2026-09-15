@@ -65,6 +65,15 @@ export const LIGHT_DECAY = 2.0;
 /** Fallback field angle when a profile ships a beam with no cone, degrees. */
 const DEFAULT_FIELD_ANGLE_DEGREES = 15;
 
+/**
+ * The local X axis, as a shared constant.
+ *
+ * `Quaternion.setFromAxisAngle` only reads this -- never mutate it. One
+ * instance is safe to reuse across every fixture and every frame rather than
+ * allocating a `Vector3(1, 0, 0)` per call.
+ */
+const LOCAL_X_AXIS = new THREE.Vector3(1, 0, 0);
+
 /* -------------------------------------------------------------------------- */
 /* Types                                                                      */
 /* -------------------------------------------------------------------------- */
@@ -448,11 +457,21 @@ function assembleFixture(profile: GDTFProfile, mode: GDTFDmxMode): ResolvedFixtu
     }
   }
 
+  // Each pivot's orientation from its Position matrix, held aside from the
+  // live quaternion. GDTF's Axis rotates about its OWN local X -- the X axis
+  // of the frame this static basis establishes, not the parent's X axis -- so
+  // driving pan/tilt has to compose a rotation on top of this basis, never
+  // replace it. See the DMX composition note on `updateDMXChannels` below.
+  const yokeStaticQuaternion = new THREE.Quaternion();
+  const headStaticQuaternion = new THREE.Quaternion();
+  const staticQuaternions = [yokeStaticQuaternion, headStaticQuaternion];
+
   const pivotGroups = [yokeGroup, headGroup];
   axes.slice(0, 2).forEach((axis, index) => {
     const group = pivotGroups[index];
     applyTransform(group, axis);
     group.userData.gdtfAxisName = axis.name;
+    staticQuaternions[index].copy(group.quaternion);
 
     const mesh = placeholderMesh(profile, axis.model, housing);
     if (mesh !== null) {
@@ -516,16 +535,29 @@ function assembleFixture(profile: GDTFProfile, mode: GDTFDmxMode): ResolvedFixtu
 
   // Scratch instances, reused every frame. updateDMXChannels runs on the
   // telemetry tick for every patched fixture, so allocating here would put a
-  // fresh Color in front of the collector 44 times a second per fixture.
+  // fresh Color or Quaternion in front of the collector 44 times a second per
+  // fixture.
   const scratchColor = new THREE.Color();
+  const scratchAxisRotation = new THREE.Quaternion();
 
   function updateDMXChannels(universe: Uint8Array, baseAddress = 1): FixtureChannelState {
     const panDegrees = resolvePhysical(panChannels, universe, baseAddress, 0);
     const tiltDegrees = resolvePhysical(tiltChannels, universe, baseAddress, 0);
     const dimmer = resolveNormalized(dimmerChannels, universe, baseAddress, 1);
 
-    yokeGroup.rotation.x = THREE.MathUtils.degToRad(panDegrees);
-    headGroup.rotation.x = THREE.MathUtils.degToRad(tiltDegrees);
+    // Compose, never overwrite: `quaternion.x = angle` would stomp whatever
+    // Euler decomposition Three derived from the static basis on the first
+    // frame, which is only ever correct by accident (it happens to work when
+    // that basis is a bare rotation about world Z, and silently produces the
+    // wrong world-space orientation for anything else -- which is most real
+    // GDTF axes, since a fixture's pan axis is rarely the parent's raw X).
+    // Post-multiplying rotates about the pivot's OWN local X -- the axis DIN
+    // SPEC 15800 6.4 actually means -- and leaves the static basis intact.
+    scratchAxisRotation.setFromAxisAngle(LOCAL_X_AXIS, THREE.MathUtils.degToRad(panDegrees));
+    yokeGroup.quaternion.copy(yokeStaticQuaternion).multiply(scratchAxisRotation);
+
+    scratchAxisRotation.setFromAxisAngle(LOCAL_X_AXIS, THREE.MathUtils.degToRad(tiltDegrees));
+    headGroup.quaternion.copy(headStaticQuaternion).multiply(scratchAxisRotation);
 
     if (redChannels.length > 0 || greenChannels.length > 0 || blueChannels.length > 0) {
       scratchColor.setRGB(

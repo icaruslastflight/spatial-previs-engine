@@ -39,6 +39,65 @@ export function translationMatrix(x: number, y: number, z: number): string {
   );
 }
 
+/** A full GDTF matrix: three basis rows plus a translation row. */
+export function basisMatrix(
+  xAxis: readonly [number, number, number],
+  yAxis: readonly [number, number, number],
+  zAxis: readonly [number, number, number],
+  translation: readonly [number, number, number],
+): string {
+  const row = (v: readonly [number, number, number], w: number): string =>
+    `{${v[0].toFixed(6)},${v[1].toFixed(6)},${v[2].toFixed(6)},${w.toFixed(6)}}`;
+
+  return row(xAxis, 0) + row(yAxis, 0) + row(zAxis, 0) + row(translation, 1);
+}
+
+/** Height of each joint above its parent, GDTF metres. */
+export const YOKE_HEIGHT_M = 0.2;
+export const HEAD_HEIGHT_M = 0.25;
+export const BEAM_HEIGHT_M = 0.15;
+
+/**
+ * Yoke frame: local X turned to point UP (GDTF +Z).
+ *
+ * A GDTF `<Axis>` rotates about its own local X (DIN SPEC 15800 §6.4), and a
+ * moving head's yoke pans about the VERTICAL. So the profile has to orient the
+ * yoke's X onto the fixture's up axis -- that orientation is the profile's job,
+ * not the resolver's.
+ *
+ * This is a -90 degree turn about Y: X -> +Z, Y -> Y, Z -> -X.
+ */
+export const YOKE_MATRIX = basisMatrix([0, 0, 1], [0, 1, 0], [-1, 0, 0], [0, 0, YOKE_HEIGHT_M]);
+
+/**
+ * Head frame: local Y turned onto the yoke's local -X, so a neutral head
+ * (before any tilt) fires straight down -- and local X left horizontal, so
+ * tilt nods the beam through vertical rather than spinning it in place.
+ *
+ * Expressed in the YOKE's frame, where the fixture's up axis is the yoke's
+ * local X (see `YOKE_MATRIX`). The head's translation runs along that same
+ * axis, so it still sits above the yoke in world space.
+ *
+ * Verified numerically, not by hand: a rotation this small (two 90-degree
+ * turns composed) is exactly the kind of thing that is easy to get backwards
+ * on paper, which is what happened on the first attempt at this matrix --
+ * caught by the resolver's own "points straight down at centre" test.
+ */
+export const HEAD_MATRIX = basisMatrix([0, -1, 0], [0, 0, 1], [-1, 0, 0], [HEAD_HEIGHT_M, 0, 0]);
+
+/**
+ * Beam frame, in the HEAD's frame.
+ *
+ * Identity rotation: the emitter fires along the same axis the head's own
+ * local Y already points along. The offset is written in GDTF's Z slot, not
+ * its Y slot -- `gdtfToThree` maps GDTF Y to Three -Z and GDTF Z to Three Y,
+ * so a Three-local +Y offset (forward, along the aim direction) comes from
+ * the GDTF vector's Z component. Reusing the Y slot here, matching the
+ * rotation basis vectors above by habit rather than re-deriving it, is
+ * exactly the mistake `HEAD_MATRIX` made on its first pass.
+ */
+export const BEAM_MATRIX = basisMatrix([1, 0, 0], [0, 1, 0], [0, 0, 1], [0, 0, BEAM_HEIGHT_M]);
+
 export interface FixtureOptions {
   readonly name?: string;
   readonly manufacturer?: string;
@@ -52,11 +111,6 @@ export interface FixtureOptions {
 }
 
 export const DEFAULT_FIXTURE_TYPE_ID = '1F2E3D4C-5B6A-4798-8A9B-0C1D2E3F4A5B';
-
-/** Height of each joint above its parent, GDTF metres. */
-export const YOKE_HEIGHT_M = 0.2;
-export const HEAD_HEIGHT_M = 0.25;
-export const BEAM_HEIGHT_M = 0.15;
 
 /** Photometrics written into the `<Beam>`. */
 export const LUMINOUS_FLUX_LM = 20000;
@@ -82,7 +136,7 @@ export function buildDescriptionXml(options: FixtureOptions = {}): string {
   } = options;
 
   const beamElement = includeBeam
-    ? `            <Beam Name="Beam" Model="Beam" Position="${translationMatrix(0, 0, BEAM_HEIGHT_M)}"
+    ? `            <Beam Name="Beam" Model="Beam" Position="${BEAM_MATRIX}"
                   LampType="Discharge" PowerConsumption="670" LuminousFlux="${LUMINOUS_FLUX_LM}"
                   ColorTemperature="${COLOR_TEMPERATURE_K}" BeamAngle="${BEAM_ANGLE_DEG}"
                   FieldAngle="${FIELD_ANGLE_DEG}" BeamRadius="0.045" BeamType="Spot"
@@ -151,8 +205,8 @@ ${modelElements}
     </Models>
     <Geometries>
       <Geometry Name="Base" Model="Base" Position="${IDENTITY_MATRIX}">
-        <Axis Name="Yoke" Model="Yoke" Position="${translationMatrix(0, 0, YOKE_HEIGHT_M)}">
-          <Axis Name="Head" Model="Head" Position="${translationMatrix(0, 0, HEAD_HEIGHT_M)}">
+        <Axis Name="Yoke" Model="Yoke" Position="${YOKE_MATRIX}">
+          <Axis Name="Head" Model="Head" Position="${HEAD_MATRIX}">
 ${beamElement}
           </Axis>
         </Axis>
