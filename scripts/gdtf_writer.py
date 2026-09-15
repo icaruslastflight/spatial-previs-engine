@@ -22,6 +22,51 @@ import zipfile
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Iterable
+
+
+# ---------------------------------------------------------------------------
+# Shared XML-reading helpers
+# ---------------------------------------------------------------------------
+# Both format-specific parsers walk a proprietary, undocumented schema by
+# trying several plausible tag/attribute spellings per field. The lookup
+# mechanics are identical either way -- only the candidate lists differ -- so
+# they live here once rather than being copy-pasted per parser.
+def find_first_text(node: ET.Element, candidates: Iterable[str]) -> str | None:
+    """First matching XPath candidate's text or attribute value, or None."""
+    for path in candidates:
+        # ElementTree's XPath does not support @-attributes, so peel them off.
+        if "@" in path:
+            elem_path, _, attr = path.rpartition("@")
+            elem_path = elem_path.rstrip("/")
+            target = node if not elem_path or elem_path == "." else node.find(elem_path)
+            if target is not None and attr in target.attrib:
+                value = target.attrib[attr].strip()
+                if value:
+                    return value
+            continue
+        elem = node.find(path)
+        if elem is not None and elem.text and elem.text.strip():
+            return elem.text.strip()
+    return None
+
+
+def parse_int(value: str | None, default: int = 0) -> int:
+    if value is None:
+        return default
+    try:
+        return int(value.strip())
+    except ValueError:
+        return default
+
+
+def parse_float(value: str | None, default: float = 0.0) -> float:
+    if value is None:
+        return default
+    try:
+        return float(value.strip())
+    except ValueError:
+        return default
 
 
 # ---------------------------------------------------------------------------
@@ -61,6 +106,15 @@ ATTRIBUTE_KEYWORDS: tuple[tuple[str, str, str], ...] = (
     ("yellow", GDTF_ATTR_YELLOW, UNIT_NONE),
 )
 
+# Modifier words that mark a channel as a macro/speed/curve control rather
+# than the raw parameter itself. "Pan/Tilt Speed" contains "pan" as a whole
+# word but is not a position channel -- word-boundary matching alone doesn't
+# catch this, since "pan" genuinely is a whole word there. Any of these
+# anywhere in the name vetoes every keyword: dropping an ambiguous channel
+# (it falls through classification and is skipped by the caller) is cheaper
+# than silently mislabeling it.
+DISQUALIFYING_KEYWORDS = ("speed", "macro", "curve", "function", "mode")
+
 # Default physical ranges when the source file doesn't publish one. Pan/tilt
 # defaults follow the moving-head majority.
 DEFAULT_RANGES: dict[str, tuple[float, float, str]] = {
@@ -79,6 +133,8 @@ DEFAULT_RANGES: dict[str, tuple[float, float, str]] = {
 def classify_attribute(name: str) -> tuple[str, str] | None:
     """Map a raw vendor channel name to (GDTF attribute, physical unit)."""
     haystack = name.lower()
+    if any(word in haystack for word in DISQUALIFYING_KEYWORDS):
+        return None
     for needle, attr, unit in ATTRIBUTE_KEYWORDS:
         if needle in haystack:
             return attr, unit
@@ -215,11 +271,19 @@ def _identity_matrix() -> str:
 
 
 def _translation_matrix(x: float, y: float, z: float) -> str:
+    """Pure translation by (x, y, z) in the parent's local axes.
+
+    GDTFParser.ts's parseMatrix() reads position from ROW 3 only -- rows 0-2
+    are the rotation basis, and any value placed in their 4th column is never
+    read (DIN SPEC 15800 section 6.2). Earlier versions of this function put
+    x/y/z there instead of in row 3, so every dummy geometry node it built
+    silently collapsed onto its parent's origin.
+    """
     return (
-        f"{{1.000000,0.000000,0.000000,{x:.6f}}}"
-        f"{{0.000000,1.000000,0.000000,{y:.6f}}}"
-        f"{{0.000000,0.000000,1.000000,{z:.6f}}}"
-        f"{{0.000000,0.000000,0.000000,1.000000}}"
+        "{1.000000,0.000000,0.000000,0.000000}"
+        "{0.000000,1.000000,0.000000,0.000000}"
+        "{0.000000,0.000000,1.000000,0.000000}"
+        f"{{{x:.6f},{y:.6f},{z:.6f},1.000000}}"
     )
 
 
@@ -253,8 +317,17 @@ def _build_geometries(fixture: FixtureModel) -> ET.Element:
     """
     Base -> Yoke -> Head -> Beam chain. GDTF <Axis> nodes rotate about their
     own local X (DIN SPEC 15800 §6.4); each axis's Position matrix is what
-    orients that rotation in parent space -- so the yoke reads as vertical
-    and the head reads as horizontal.
+    orients that rotation in parent space -- so the yoke's rest matrix maps
+    its local X onto its parent's (the Base's) Z, which is vertical here
+    because the Base itself carries no rotation.
+
+    Every translation below has to be expressed in THAT axis, not in an
+    arbitrary one: a child geometry's Matrix is relative to its immediate
+    parent's local frame, and once the yoke's local X has been repointed to
+    vertical, "up" from the yoke's own point of view is (1, 0, 0), not
+    (0, 0, 1). Head and Beam inherit the yoke's rotation (their own Matrix
+    rotation is identity), so the same local-X-is-vertical convention holds
+    for them too.
     """
     used = {ch.attribute for ch in fixture.channels}
     geometries = ET.Element("Geometries")
@@ -262,30 +335,34 @@ def _build_geometries(fixture: FixtureModel) -> ET.Element:
         "Name": "Base", "Model": "BaseModel", "Matrix": _identity_matrix(),
     })
 
-    # Yoke: rotate local X onto world +Z so pan spins about vertical.
+    # Yoke: rotate local X onto the Base's +Z so pan spins about vertical.
+    # Rotation basis unchanged from before; only the translation (now in row
+    # 3, along the BASE's own Z since Base is unrotated) was the bug.
     yoke_matrix = (
         "{0.000000,0.000000,1.000000,0.000000}"
         "{1.000000,0.000000,0.000000,0.000000}"
-        "{0.000000,1.000000,0.000000," f"{DUMMY_BASE_HEIGHT_M:.6f}" "}"
-        "{0.000000,0.000000,0.000000,1.000000}"
+        "{0.000000,1.000000,0.000000,0.000000}"
+        f"{{0.000000,0.000000,{DUMMY_BASE_HEIGHT_M:.6f},1.000000}}"
     )
     yoke_attrs = {"Name": "Yoke", "Model": "YokeModel", "Matrix": yoke_matrix}
     yoke = ET.SubElement(base, "Axis" if GDTF_ATTR_PAN in used else "Geometry",
                          yoke_attrs)
 
-    # Head: tilt axis lies along local X; identity + Y translation is close
-    # enough for a stand-in.
-    head_matrix = _translation_matrix(0.0, DUMMY_YOKE_HEIGHT_M, 0.0)
+    # Head: identity rotation relative to the yoke, so "vertical" in the
+    # yoke's own frame (local X, per the basis above) is still the offset
+    # axis here.
+    head_matrix = _translation_matrix(DUMMY_YOKE_HEIGHT_M, 0.0, 0.0)
     head_attrs = {"Name": "Head", "Model": "HeadModel", "Matrix": head_matrix}
     head = ET.SubElement(yoke, "Axis" if GDTF_ATTR_TILT in used else "Geometry",
                          head_attrs)
 
     # Beam carries the photometry the previz engine reads to size its
-    # SpotLight (GDTFAssetResolver.fluxToCandela).
+    # SpotLight (GDTFAssetResolver.fluxToCandela). Identity rotation
+    # relative to Head, so the same local-X-is-vertical axis applies.
     ET.SubElement(head, "Beam", {
         "Name": "Beam",
         "Model": "BeamModel",
-        "Matrix": _translation_matrix(0.0, 0.0, DUMMY_HEAD_HEIGHT_M / 2.0),
+        "Matrix": _translation_matrix(DUMMY_HEAD_HEIGHT_M / 2.0, 0.0, 0.0),
         "LampType": "LED",
         "PowerConsumption": "300",
         "LuminousFlux": f"{DUMMY_BEAM_LUMINOUS_FLUX_LM}",

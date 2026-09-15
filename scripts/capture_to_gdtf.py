@@ -43,7 +43,6 @@ import sys
 import xml.etree.ElementTree as ET
 import zipfile
 from pathlib import Path
-from typing import Iterable
 
 # scripts/ is on sys.path[0] when this file runs as a script.
 from gdtf_writer import (
@@ -52,6 +51,9 @@ from gdtf_writer import (
     FixtureModel,
     build_description_xml,
     classify_attribute,
+    find_first_text,
+    parse_float,
+    parse_int,
     print_inspection,
     write_gdtf,
 )
@@ -72,19 +74,28 @@ def read_capture_xml(symbol_path: Path) -> bytes:
 
     raw = symbol_path.read_bytes()
     if raw[:4] == b"PK\x03\x04":
-        with zipfile.ZipFile(symbol_path) as zf:
-            # TODO(reverse-engineer): confirm the canonical XML entry name.
-            # "symbol.xml" is a plausible convention; falling back to the
-            # first XML keeps unusual archives working.
-            xml_names = [n for n in zf.namelist() if n.lower().endswith(".xml")]
-            if not xml_names:
-                raise ValueError(f"No XML entry inside {symbol_path}")
-            preferred = next(
-                (n for n in xml_names
-                 if n.lower().endswith(("symbol.xml", "fixture.xml", "definition.xml"))),
-                xml_names[0],
-            )
-            return zf.read(preferred)
+        try:
+            with zipfile.ZipFile(symbol_path) as zf:
+                # TODO(reverse-engineer): confirm the canonical XML entry name.
+                # "symbol.xml" is a plausible convention; falling back to the
+                # first XML keeps unusual archives working.
+                xml_names = [n for n in zf.namelist() if n.lower().endswith(".xml")]
+                if not xml_names:
+                    raise ValueError(f"No XML entry inside {symbol_path}")
+                preferred = next(
+                    (n for n in xml_names
+                     if n.lower().endswith(("symbol.xml", "fixture.xml", "definition.xml"))),
+                    xml_names[0],
+                )
+                return zf.read(preferred)
+        except zipfile.BadZipFile as exc:
+            # The PK magic bytes only prove the file STARTS like a ZIP; a
+            # truncated download or otherwise corrupted archive fails here
+            # instead. Surface it the same way as every other parse error
+            # rather than letting a raw traceback escape main().
+            raise ValueError(
+                f"{symbol_path} looks like a ZIP but is corrupted: {exc}"
+            ) from exc
     return raw
 
 
@@ -96,12 +107,15 @@ def read_capture_xml(symbol_path: Path) -> bytes:
 # real sample before shipping. The parser tries several spellings so small
 # dialect drift stays parseable.
 
+# Specific candidates first, "." (the document root itself) last: the loop
+# below stops on the first match, and "." always matches (symbol_node is
+# never None on that branch), so it must be the fallback, not the first try.
 _SYMBOL_ROOT_CANDIDATES = (
-    ".",
     "./Symbol",
     "./Fixture",
     "./FixtureDefinition",
     "./Definition",
+    ".",
 )
 _NAME_CANDIDATES = ("Name", "@Name", "FixtureName", "Model", "@Model")
 _MANUFACTURER_CANDIDATES = ("Manufacturer", "@Manufacturer", "Vendor", "Maker")
@@ -123,41 +137,6 @@ _CHANNEL_CONTAINER_CANDIDATES = (
     ".//Function",
     ".//Parameter",
 )
-
-
-def _find_first_text(node: ET.Element, candidates: Iterable[str]) -> str | None:
-    for path in candidates:
-        if "@" in path:
-            elem_path, _, attr = path.rpartition("@")
-            elem_path = elem_path.rstrip("/")
-            target = node if not elem_path or elem_path == "." else node.find(elem_path)
-            if target is not None and attr in target.attrib:
-                value = target.attrib[attr].strip()
-                if value:
-                    return value
-            continue
-        elem = node.find(path)
-        if elem is not None and elem.text and elem.text.strip():
-            return elem.text.strip()
-    return None
-
-
-def _parse_int(value: str | None, default: int = 0) -> int:
-    if value is None:
-        return default
-    try:
-        return int(value.strip())
-    except ValueError:
-        return default
-
-
-def _parse_float(value: str | None, default: float = 0.0) -> float:
-    if value is None:
-        return default
-    try:
-        return float(value.strip())
-    except ValueError:
-        return default
 
 
 def parse_capture(xml_bytes: bytes, mode_filter: str | None = None) -> FixtureModel:
@@ -182,12 +161,12 @@ def parse_capture(xml_bytes: bytes, mode_filter: str | None = None) -> FixtureMo
         symbol_node = root
 
     fixture = FixtureModel(source_format="Capture symbol")
-    fixture.name = _find_first_text(symbol_node, _NAME_CANDIDATES) or fixture.name
+    fixture.name = find_first_text(symbol_node, _NAME_CANDIDATES) or fixture.name
     fixture.manufacturer = (
-        _find_first_text(symbol_node, _MANUFACTURER_CANDIDATES) or fixture.manufacturer
+        find_first_text(symbol_node, _MANUFACTURER_CANDIDATES) or fixture.manufacturer
     )
     fixture.short_name = (
-        _find_first_text(symbol_node, _SHORT_NAME_CANDIDATES)
+        find_first_text(symbol_node, _SHORT_NAME_CANDIDATES)
         or fixture.name[:8].upper().replace(" ", "")
         or fixture.short_name
     )
@@ -210,7 +189,7 @@ def parse_capture(xml_bytes: bytes, mode_filter: str | None = None) -> FixtureMo
     if mode_filter:
         needle = mode_filter.lower()
         for m in mode_nodes:
-            mode_label = _find_first_text(m, _MODE_NAME_CANDIDATES) or ""
+            mode_label = find_first_text(m, _MODE_NAME_CANDIDATES) or ""
             if needle in mode_label.lower():
                 chosen_mode = m
                 break
@@ -218,7 +197,7 @@ def parse_capture(xml_bytes: bytes, mode_filter: str | None = None) -> FixtureMo
             raise ValueError(
                 f"No mode matching {mode_filter!r}; available: "
                 + ", ".join(
-                    _find_first_text(m, _MODE_NAME_CANDIDATES) or "(unnamed)"
+                    find_first_text(m, _MODE_NAME_CANDIDATES) or "(unnamed)"
                     for m in mode_nodes
                 )
             )
@@ -226,7 +205,7 @@ def parse_capture(xml_bytes: bytes, mode_filter: str | None = None) -> FixtureMo
         chosen_mode = mode_nodes[0]
 
     fixture.mode_name = (
-        _find_first_text(chosen_mode, _MODE_NAME_CANDIDATES) or fixture.mode_name
+        find_first_text(chosen_mode, _MODE_NAME_CANDIDATES) or fixture.mode_name
     )
 
     channel_nodes: list[ET.Element] = []
@@ -246,7 +225,7 @@ def parse_capture(xml_bytes: bytes, mode_filter: str | None = None) -> FixtureMo
         # Capture channels usually carry a "Parameter"/"Attribute"/"Name"
         # tag with the human name ("Pan", "Dimmer", "CyanCMY", ...).
         raw_name = (
-            _find_first_text(ch, ("Parameter", "@Parameter", "Attribute",
+            find_first_text(ch, ("Parameter", "@Parameter", "Attribute",
                                   "@Attribute", "Name", "@Name", "Function"))
             or f"Channel{idx}"
         )
@@ -258,31 +237,31 @@ def parse_capture(xml_bytes: bytes, mode_filter: str | None = None) -> FixtureMo
         # TODO(reverse-engineer): confirm Capture's offset naming. Public
         # samples have used "Offset", "Address", "Byte" for 8-bit and
         # "OffsetFine"/"ByteFine" for the 16-bit companion.
-        offset = _parse_int(
-            _find_first_text(ch, ("Offset", "@Offset", "Address", "@Address",
+        offset = parse_int(
+            find_first_text(ch, ("Offset", "@Offset", "Address", "@Address",
                                   "Byte", "@Byte")),
             default=idx,
         )
-        fine_offset_raw = _find_first_text(
+        fine_offset_raw = find_first_text(
             ch, ("OffsetFine", "@OffsetFine", "FineOffset", "@FineOffset",
                  "ByteFine", "@ByteFine")
         )
-        fine_offset = _parse_int(fine_offset_raw, default=0) or None
+        fine_offset = parse_int(fine_offset_raw, default=0) or None
 
         default_from, default_to, default_unit = DEFAULT_RANGES[attribute]
-        physical_from = _parse_float(
-            _find_first_text(ch, ("PhysicalFrom", "@PhysicalFrom", "Min",
+        physical_from = parse_float(
+            find_first_text(ch, ("PhysicalFrom", "@PhysicalFrom", "Min",
                                   "@Min", "MinValue")),
             default=default_from,
         )
-        physical_to = _parse_float(
-            _find_first_text(ch, ("PhysicalTo", "@PhysicalTo", "Max", "@Max",
+        physical_to = parse_float(
+            find_first_text(ch, ("PhysicalTo", "@PhysicalTo", "Max", "@Max",
                                   "MaxValue")),
             default=default_to,
         )
         physical_unit = unit or default_unit
-        default_dmx = _parse_int(
-            _find_first_text(ch, ("Default", "@Default", "Home", "@Home",
+        default_dmx = parse_int(
+            find_first_text(ch, ("Default", "@Default", "Home", "@Home",
                                   "InitialValue")),
             default=0,
         )

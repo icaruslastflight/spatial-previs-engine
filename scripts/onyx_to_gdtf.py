@@ -41,7 +41,6 @@ import sys
 import xml.etree.ElementTree as ET
 import zipfile
 from pathlib import Path
-from typing import Iterable
 
 # `python3 scripts/onyx_to_gdtf.py` puts scripts/ on sys.path[0], so this
 # resolves without a package or PYTHONPATH tweak.
@@ -51,6 +50,9 @@ from gdtf_writer import (
     FixtureModel,
     build_description_xml,
     classify_attribute,
+    find_first_text,
+    parse_float,
+    parse_int,
     print_inspection,
     write_gdtf,
 )
@@ -75,14 +77,21 @@ def read_onyx_xml(fixture_path: Path) -> bytes:
             f"{fixture_path} is not a ZIP archive -- is this really a "
             f".Fixture file?"
         )
-    with zipfile.ZipFile(fixture_path) as zf:
-        xml_names = [n for n in zf.namelist() if n.lower().endswith(".xml")]
-        if not xml_names:
-            raise ValueError(f"No XML entry inside {fixture_path}")
-        # TODO(reverse-engineer): if ONYX ever emits >1 XML, filter by root
-        # element name (probably "Fixture" or "AtlaBaseExport") instead of
-        # taking the first hit.
-        return zf.read(xml_names[0])
+    try:
+        with zipfile.ZipFile(fixture_path) as zf:
+            xml_names = [n for n in zf.namelist() if n.lower().endswith(".xml")]
+            if not xml_names:
+                raise ValueError(f"No XML entry inside {fixture_path}")
+            # TODO(reverse-engineer): if ONYX ever emits >1 XML, filter by root
+            # element name (probably "Fixture" or "AtlaBaseExport") instead of
+            # taking the first hit.
+            return zf.read(xml_names[0])
+    except zipfile.BadZipFile as exc:
+        # is_zipfile() only checks the End Of Central Directory record; a
+        # truncated or corrupted archive can still pass that check and fail
+        # here instead. Surface it the same way as every other parse error
+        # rather than letting a raw traceback escape main().
+        raise ValueError(f"{fixture_path} is a corrupted ZIP archive: {exc}") from exc
 
 
 # ---------------------------------------------------------------------------
@@ -93,11 +102,14 @@ def read_onyx_xml(fixture_path: Path) -> bytes:
 # sample before shipping. The parser reads several plausible tag spellings
 # so small dialect drift does not blow the run up.
 
+# Specific candidates first, "." (the document root itself) last: the loop
+# below stops on the first match, and "." always matches (fixture_node is
+# never None on that branch), so it must be the fallback, not the first try.
 _FIXTURE_ROOT_CANDIDATES = (
-    ".",
     "./Fixture",
     "./FixtureDefinition",
     "./Personality",
+    ".",
 )
 _NAME_CANDIDATES = ("Name", "FixtureName", "Model", "@Name", "@name")
 _MANUFACTURER_CANDIDATES = ("Manufacturer", "Vendor", "@Manufacturer")
@@ -109,43 +121,6 @@ _CHANNEL_CONTAINER_CANDIDATES = (
     ".//Channel",
     ".//Parameter",
 )
-
-
-def _find_first_text(node: ET.Element, candidates: Iterable[str]) -> str | None:
-    """First matching XPath candidate's text or attribute value, or None."""
-    for path in candidates:
-        # ElementTree's XPath does not support @-attributes, so peel them off.
-        if "@" in path:
-            elem_path, _, attr = path.rpartition("@")
-            elem_path = elem_path.rstrip("/")
-            target = node if not elem_path or elem_path == "." else node.find(elem_path)
-            if target is not None and attr in target.attrib:
-                value = target.attrib[attr].strip()
-                if value:
-                    return value
-            continue
-        elem = node.find(path)
-        if elem is not None and elem.text and elem.text.strip():
-            return elem.text.strip()
-    return None
-
-
-def _parse_int(value: str | None, default: int = 0) -> int:
-    if value is None:
-        return default
-    try:
-        return int(value.strip())
-    except ValueError:
-        return default
-
-
-def _parse_float(value: str | None, default: float = 0.0) -> float:
-    if value is None:
-        return default
-    try:
-        return float(value.strip())
-    except ValueError:
-        return default
 
 
 def parse_onyx(xml_bytes: bytes) -> FixtureModel:
@@ -164,17 +139,17 @@ def parse_onyx(xml_bytes: bytes) -> FixtureModel:
         fixture_node = root
 
     fixture = FixtureModel(source_format="ONYX .Fixture")
-    fixture.name = _find_first_text(fixture_node, _NAME_CANDIDATES) or fixture.name
+    fixture.name = find_first_text(fixture_node, _NAME_CANDIDATES) or fixture.name
     fixture.manufacturer = (
-        _find_first_text(fixture_node, _MANUFACTURER_CANDIDATES) or fixture.manufacturer
+        find_first_text(fixture_node, _MANUFACTURER_CANDIDATES) or fixture.manufacturer
     )
     fixture.short_name = (
-        _find_first_text(fixture_node, _SHORT_NAME_CANDIDATES)
+        find_first_text(fixture_node, _SHORT_NAME_CANDIDATES)
         or fixture.name[:8].upper().replace(" ", "")
         or fixture.short_name
     )
     fixture.mode_name = (
-        _find_first_text(fixture_node, _MODE_NAME_CANDIDATES) or fixture.mode_name
+        find_first_text(fixture_node, _MODE_NAME_CANDIDATES) or fixture.mode_name
     )
 
     channel_nodes: list[ET.Element] = []
@@ -192,7 +167,7 @@ def parse_onyx(xml_bytes: bytes) -> FixtureModel:
 
     for idx, ch in enumerate(channel_nodes, start=1):
         raw_name = (
-            _find_first_text(ch, ("Name", "@Name", "Function", "Attribute"))
+            find_first_text(ch, ("Name", "@Name", "Function", "Attribute"))
             or f"Channel{idx}"
         )
         classification = classify_attribute(raw_name)
@@ -204,27 +179,27 @@ def parse_onyx(xml_bytes: bytes) -> FixtureModel:
 
         # TODO(reverse-engineer): confirm offset attribute name. Public
         # samples have used "Offset", "DMX", "Address", "DMXOffset".
-        offset = _parse_int(
-            _find_first_text(ch, ("Offset", "@Offset", "DMX", "@DMX", "Address")),
+        offset = parse_int(
+            find_first_text(ch, ("Offset", "@Offset", "DMX", "@DMX", "Address")),
             default=idx,
         )
-        fine_offset_raw = _find_first_text(
+        fine_offset_raw = find_first_text(
             ch, ("FineOffset", "@FineOffset", "OffsetFine", "@OffsetFine")
         )
-        fine_offset = _parse_int(fine_offset_raw, default=0) or None
+        fine_offset = parse_int(fine_offset_raw, default=0) or None
 
         default_from, default_to, default_unit = DEFAULT_RANGES[attribute]
-        physical_from = _parse_float(
-            _find_first_text(ch, ("PhysicalFrom", "@PhysicalFrom", "MinPhysical")),
+        physical_from = parse_float(
+            find_first_text(ch, ("PhysicalFrom", "@PhysicalFrom", "MinPhysical")),
             default=default_from,
         )
-        physical_to = _parse_float(
-            _find_first_text(ch, ("PhysicalTo", "@PhysicalTo", "MaxPhysical")),
+        physical_to = parse_float(
+            find_first_text(ch, ("PhysicalTo", "@PhysicalTo", "MaxPhysical")),
             default=default_to,
         )
         physical_unit = unit or default_unit
-        default_dmx = _parse_int(
-            _find_first_text(ch, ("Default", "@Default", "Home")),
+        default_dmx = parse_int(
+            find_first_text(ch, ("Default", "@Default", "Home")),
             default=0,
         )
 
