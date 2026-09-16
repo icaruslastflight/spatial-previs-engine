@@ -1,14 +1,30 @@
 # Remote UE5 workstation plan
 
-User direction: rent a remote server for UE5 development. Monthly budget: under USD 50. Status: proposed configuration; no rental, payment, account access or UE5 installation has occurred.
+User direction: rent a remote server for UE5 development. Updated cash limit: USD 30 total including tax, in the United States. The user will perform the rental. Status: proposed configuration; no rental, payment, provider account access or UE5 installation has occurred.
 
-## Proposed first rental
+## Preferred provider after usability comparison
 
-AirGPU L4 with at least 8 vCPUs, 32 GB RAM and 250 GB persistent SSD. Start with a nearby available US region after a connection test. Use the provider's desktop streaming workflow from Chromebook or Android with keyboard and mouse for editor work. This is an interactive development workstation; the static web client remains a separate runtime.
+Recommendation: AirGPU prepaid for a short setup pilot. Target around USD 20 in initial credit, with a hard checkout ceiling of USD 30 including all taxes and fees. The public pricing page confirms prepaid credit, but the available top-up amounts and the user's final regional quote have not been verified. Do not assume an advertised hourly rate is the complete price.
 
-Advertised L4 pricing starts at USD 0.90 per running hour. SSD is USD 3.50 per 50 GB per month. At those rates, 250 GB is USD 17.50 per month and 30 running hours is USD 27.00: USD 44.50 before applicable tax. The USD 5.50 remainder is a planning reserve, not a guarantee. Installation, downloads, compilation and idle time while running consume the same hour budget. Storage continues to incur charges while retained. Verify region/configuration pricing, taxes, credits, billing increments and disk capacity at checkout; reduce hours to keep the total below USD 50. Do not assume closing a streaming client stops billing. Check the provider machine state after every session. Configure automatic shutdown only after confirming the provider supports it and its behavior.
+Preferred configuration to quote: NVIDIA L4, from 8 vCPUs and 32 GB RAM at USD 0.90/hour, with 200 GB SSD. At the listed USD 3.50 per 50 GB per month, a conservative full-month disk allowance is USD 14. Six running hours add USD 5.40, for USD 19.40 before tax. Installation, downloads and compilation consume the same paid hours. Storage billing granularity and available configurations still require confirmation in the provider console.
 
-Alternative reviewed: Paperspace advertises A4000 at USD 0.76/hour with 45 GB RAM and 8 vCPUs. The compatible desktop image, storage and account-specific total were not verified, so this is not a complete cheaper quote.
+This is a limited pilot, not a month of regular development. Use one binary UE version and small fixtures. Verify free disk before installing the engine, compiler and cache; 200 GB may need careful component selection. Avoid engine-source builds and large scans. Retained disk has a separate cost; verify the stopped state after each work session and preserve project source before any disk deletion.
+
+Shadow is excluded: the user reports that the actual checkout exceeds USD 30 after tax. The advertised Neo Lite promotion is not a verified usable quote for this user. Power Lite also exceeds the budget. Vagon's larger-disk plan leaves too little room for compute under the revised cash limit.
+
+Paperspace advertises A4000 at USD 0.76/hour with 45 GB RAM and 8 vCPUs, but a complete compatible desktop-image/storage quote was not verified. No claim that it is the cheapest usable option is made.
+
+User will perform the rental. No provider account or payment action is requested from the assistant.
+
+## Codex connection preference
+
+A current directory search found Remote Desktop Commander, which relays authorized file and terminal access from ChatGPT to a Windows or macOS machine. It can support source edits, Git and build commands on the rented workstation. Its connection to an actual AirGPU host has not been tested; it is not a UE5 editor-control or GPU-provisioning plugin. Install and link it from the rented Windows desktop, then verify a harmless file/terminal read before project work.
+
+DigitalOcean also has a plugin described as provisioning a Droplet for a remote Codex workspace. GPU provisioning, Windows desktop streaming and a complete UE5 configuration were not established by that description. Do not purchase a generic CPU Droplet as the UE5 workstation based only on the plugin name.
+
+Preferred candidate combination: AirGPU for the interactive desktop plus Remote Desktop Commander for authorized code/build access. Desktop Commander lists a free remote plan with 10,000 tool calls per month; use that plan within the cash limit. The plugin is installed in ChatGPT; its device commands have not surfaced in this session, so access to a rented machine and provider compatibility remain unverified.
+
+Setup reference: https://desktopcommander.app/mcp/chatgpt/
 
 ## Setup sequence after account and rental configuration are available
 
@@ -28,7 +44,12 @@ Provider account and checkout configuration; exact desktop repository; pinned UE
 
 - AirGPU pricing and supported client platforms: https://airgpu.com/
 - AirGPU desktop connection help: https://help.airgpu.com/
+- Shadow plan and session limits: https://shadow.tech/us/lp-new-lite/
+- Remote Desktop Commander pricing: https://desktopcommander.app/pricing/
+- Shadow hardware: https://support.shadow.tech/hc/en-us/articles/31001157820049-Shadow-PC-Gaming-Offers-Hardware-Specifications
+- Vagon pricing: https://vagon.io/cloud-computer/pricing
+- Vagon access: https://vagon.io/cloud-computer
 - Epic UE hardware/software guidance: https://dev.epicgames.com/documentation/en-us/unreal-engine/hardware-and-software-specifications-for-unreal-engine
 - Paperspace advertised compute: https://www.paperspace.com/pricing
 
-Epic's current general recommendation includes 32 GB RAM and at least 8 GB graphics memory. The 250 GB disk and 30-hour limit above are project planning choices, not Epic requirements or provider performance guarantees.
+Epic's current general recommendation includes 32 GB RAM and at least 8 GB graphics memory. The disk and usage configurations above are project planning choices, not Epic requirements or provider performance guarantees.
