@@ -1,0 +1,188 @@
+import { PROJECT_SCHEMA_VERSION } from './ProductionProject.ts';
+import type { ProductionProject, ProductionRecord } from './ProductionProject.ts';
+
+type ObjectValue = Record<string, unknown>;
+export class ProjectValidationError extends Error {
+  override name = 'ProjectValidationError';
+}
+function fail(path: string, message: string): never {
+  throw new ProjectValidationError(`${path}: ${message}`);
+}
+function object(value: unknown, path: string): ObjectValue {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) fail(path, 'expected object');
+  return value as ObjectValue;
+}
+function keys(value: ObjectValue, fields: string[], path: string): void {
+  for (const key of Object.keys(value)) if (!fields.includes(key)) fail(`${path}.${key}`, 'unsupported field');
+  for (const key of fields) if (!Object.hasOwn(value, key)) fail(`${path}.${key}`, 'missing field');
+}
+function text(value: unknown, path: string): asserts value is string {
+  if (typeof value !== 'string' || !value.trim()) fail(path, 'expected nonempty string');
+}
+function oneOf(value: unknown, options: readonly unknown[], path: string): void {
+  if (!options.includes(value)) fail(path, `expected one of ${options.join(', ')}`);
+}
+function natural(value: unknown, path: string): void {
+  if (!Number.isSafeInteger(value) || (value as number) < 0) fail(path, 'expected nonnegative safe integer');
+}
+function tuple(value: unknown, length: number, path: string): asserts value is number[] {
+  if (!Array.isArray(value) || value.length !== length || value.some(x => typeof x !== 'number' || !Number.isFinite(x))) {
+    fail(path, `expected ${length} finite numbers`);
+  }
+}
+function strings(value: unknown, path: string): asserts value is string[] {
+  if (!Array.isArray(value)) fail(path, 'expected array');
+  value.forEach((x, i) => text(x, `${path}[${i}]`));
+  if (new Set(value).size !== value.length) fail(path, 'duplicate reference');
+}
+function transform(value: unknown, path: string): void {
+  const v = object(value, path);
+  keys(v, ['position', 'rotation'], path);
+  tuple(v.position, 3, `${path}.position`);
+  tuple(v.rotation, 4, `${path}.rotation`);
+  if (Math.abs(Math.hypot(...v.rotation) - 1) > 1e-6) fail(`${path}.rotation`, 'expected unit quaternion');
+}
+function quantity(value: unknown, path: string): void {
+  const v = object(value, path);
+  oneOf(v.status, ['known', 'unknown'], `${path}.status`);
+  keys(v, v.status === 'known' ? ['status', 'unit', 'value', 'provenance', 'source'] : ['status', 'unit'], path);
+  text(v.unit, `${path}.unit`);
+  if (v.status === 'known') {
+    if (typeof v.value !== 'number' || !Number.isFinite(v.value)) fail(`${path}.value`, 'expected finite number');
+    oneOf(v.provenance, ['placeholder', 'user', 'manufacturer', 'measured', 'checked'], `${path}.provenance`);
+    text(v.source, `${path}.source`);
+  }
+}
+
+const fields: Record<ProductionRecord['kind'], string[]> = {
+  asset_definition: ['catalogId', 'category', 'specifications'],
+  inventory_item: ['definitionId', 'serialNumber', 'serviceStatus'],
+  stock_pool: ['definitionId', 'quantity'],
+  asset_instance: ['definitionId', 'inventoryItemId', 'transform'],
+  assembly: ['instanceIds'],
+  surface: ['shape', 'transform', 'width', 'height'],
+  zone: ['role', 'shape', 'transform', 'sizeMeters'],
+  port: ['instanceId', 'domain', 'direction', 'connector', 'protocol'],
+  connection: ['domain', 'sourcePortId', 'targetPortId'],
+  mechanical_attachment: ['parentInstanceId', 'childInstanceId', 'parentSocketId', 'childSocketId'],
+  document_snapshot: ['projectRevision', 'templateId', 'templateVersion', 'status', 'includedRecordIds'],
+};
+const domains = ['power', 'video', 'audio', 'data'];
+
+function record(value: unknown, path: string): void {
+  const v = object(value, path);
+  text(v.kind, `${path}.kind`);
+  if (!Object.hasOwn(fields, v.kind)) fail(`${path}.kind`, 'unsupported record kind');
+  const kind = v.kind as ProductionRecord['kind'];
+  keys(v, ['id', 'kind', 'label', 'locked', ...fields[kind]], path);
+  text(v.id, `${path}.id`);
+  text(v.label, `${path}.label`);
+  if (typeof v.locked !== 'boolean') fail(`${path}.locked`, 'expected boolean');
+  for (const field of fields[kind]) {
+    const p = `${path}.${field}`, val = v[field];
+    if (['transform'].includes(field)) transform(val, p);
+    else if (['instanceIds', 'includedRecordIds'].includes(field)) strings(val, p);
+    else if (['quantity', 'projectRevision'].includes(field)) natural(val, p);
+    else if (['width', 'height'].includes(field)) {
+      quantity(val, p);
+      const q = object(val, p);
+      if (q.unit !== 'm' || (q.status === 'known' && (q.value as number) <= 0)) fail(p, 'expected positive metres or unknown metres');
+    } else if (field === 'sizeMeters') {
+      tuple(val, 3, p);
+      if (val.some(x => x <= 0)) fail(p, 'expected positive dimensions');
+    } else if (field === 'specifications') {
+      const specs = object(val, p);
+      for (const [name, q] of Object.entries(specs)) { text(name, p); quantity(q, `${p}.${name}`); }
+    } else if (field === 'domain') oneOf(val, domains, p);
+    else if (field === 'direction') oneOf(val, ['input', 'output', 'bidirectional'], p);
+    else if (field === 'serviceStatus') oneOf(val, ['available', 'unavailable', 'unknown'], p);
+    else if (field === 'status') oneOf(val, ['draft', 'issued'], p);
+    else if (field === 'shape') oneOf(val, [kind === 'surface' ? 'plane' : 'box'], p);
+    else if (field === 'role') oneOf(val, ['audience', 'keep_out', 'listening', 'target', 'termination', 'routing'], p);
+    else if (['inventoryItemId', 'serialNumber', 'connector', 'protocol'].includes(field) && val === null) { /* Explicit unknown/unallocated. */ }
+    else text(val, p);
+  }
+}
+
+/** Validate the whole graph before returning any state to a caller. */
+export function validateProject(value: unknown): asserts value is ProductionProject {
+  const p = object(value, 'project');
+  if (p.schemaVersion !== PROJECT_SCHEMA_VERSION) fail('project.schemaVersion', 'unsupported version; migration required');
+  keys(p, ['schemaVersion', 'projectId', 'revision', 'coordinateFrame', 'records'], 'project');
+  text(p.projectId, 'project.projectId');
+  natural(p.revision, 'project.revision');
+  oneOf(p.coordinateFrame, ['right_handed_y_up_meters'], 'project.coordinateFrame');
+  if (!Array.isArray(p.records)) fail('project.records', 'expected array');
+  p.records.forEach((v, i) => record(v, `project.records[${i}]`));
+  const records = p.records as ProductionRecord[];
+  const byId = new Map<string, ProductionRecord>();
+  for (const r of records) {
+    if (byId.has(r.id)) fail(r.id, 'duplicate record ID');
+    byId.set(r.id, r);
+  }
+  function reference<K extends ProductionRecord['kind']>(id: string, kind: K, path: string): Extract<ProductionRecord, {kind: K}> {
+    const target = byId.get(id);
+    if (target?.kind !== kind) fail(path, `expected ${kind} reference: ${id}`);
+    return target as Extract<ProductionRecord, {kind: K}>;
+  }
+  const allocatedItems = new Set<string>();
+  const parentOf = new Map<string, string>();
+  const sockets = new Set<string>();
+  for (const r of records) {
+    if ('definitionId' in r) reference(r.definitionId, 'asset_definition', r.id);
+    if (r.kind === 'asset_instance' && r.inventoryItemId !== null) {
+      const item = reference(r.inventoryItemId, 'inventory_item', r.id);
+      if (item.definitionId !== r.definitionId) fail(r.id, 'inventory definition mismatch');
+      if (allocatedItems.has(item.id)) fail(r.id, 'inventory item already allocated');
+      allocatedItems.add(item.id);
+    }
+    if (r.kind === 'assembly') for (const id of r.instanceIds) reference(id, 'asset_instance', r.id);
+    if (r.kind === 'port') reference(r.instanceId, 'asset_instance', r.id);
+    if (r.kind === 'connection') {
+      const from = reference(r.sourcePortId, 'port', r.id);
+      const to = reference(r.targetPortId, 'port', r.id);
+      if (from.id === to.id) fail(r.id, 'cannot connect a port to itself');
+      if (from.domain !== r.domain || to.domain !== r.domain) fail(r.id, 'connection domain mismatch');
+      if (from.direction === 'input' || to.direction === 'output') fail(r.id, 'connection direction mismatch');
+      // Unknown metadata stays unknown. Matching domains alone is not compatibility approval.
+      if (from.protocol !== null && to.protocol !== null && from.protocol !== to.protocol) fail(r.id, 'protocol mismatch');
+    }
+    if (r.kind === 'mechanical_attachment') {
+      reference(r.parentInstanceId, 'asset_instance', r.id);
+      reference(r.childInstanceId, 'asset_instance', r.id);
+      if (parentOf.has(r.childInstanceId)) fail(r.id, 'child already attached');
+      parentOf.set(r.childInstanceId, r.parentInstanceId);
+      for (const endpoint of [[r.parentInstanceId, r.parentSocketId], [r.childInstanceId, r.childSocketId]]) {
+        const key = JSON.stringify(endpoint);
+        if (sockets.has(key)) fail(r.id, 'socket already occupied');
+        sockets.add(key);
+      }
+    }
+    if (r.kind === 'document_snapshot') {
+      if (r.projectRevision > (p.revision as number)) fail(r.id, 'snapshot references a future revision');
+      // Snapshot IDs describe the historical revision, so deleted records need not still exist.
+    }
+  }
+  for (const child of parentOf.keys()) {
+    const seen = new Set<string>();
+    let id: string | undefined = child;
+    while (id !== undefined) {
+      if (seen.has(id)) fail(child, 'mechanical attachment cycle');
+      seen.add(id);
+      id = parentOf.get(id);
+    }
+  }
+}
+
+/** Pure codec only: no storage, migration, scene restore or issuance side effects. */
+export function serializeProject(project: ProductionProject): string {
+  validateProject(project);
+  return JSON.stringify(project, null, 2);
+}
+
+export function parseProject(json: string): ProductionProject {
+  let value: unknown;
+  try { value = JSON.parse(json); } catch { fail('project', 'invalid JSON'); }
+  validateProject(value);
+  return value;
+}
