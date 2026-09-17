@@ -75,7 +75,7 @@ export interface Zone extends RecordBase {
 export interface Port extends RecordBase {
   kind: 'port';
   instanceId: string;
-  domain: 'power' | 'video' | 'audio' | 'data';
+  domain: 'power' | 'dmx' | 'video' | 'audio' | 'network' | 'laser' | 'comms' | 'structural' | 'optical';
   direction: 'input' | 'output' | 'bidirectional';
   connector: string | null;
   protocol: string | null;

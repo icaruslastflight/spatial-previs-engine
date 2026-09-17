@@ -345,6 +345,11 @@ function renderPanel(): void {
       <button id="export-patchsheet">Download Patch Sheet (CSV)</button>
       <button id="export-weightreport">Download Weight Report (CSV)</button>
     </div>
+    <div class="section-heading"><h4>Console / Show Control Handoff</h4></div>
+    <div class="export-actions" style="margin-bottom: 1rem">
+      <button id="export-mvr">Export MVR (Lighting/Laser/Audio Consoles)</button>
+      <button id="export-disguise">Export Disguise (CSV)</button>
+    </div>
     <p>${state.issued.length} immutable issued snapshots stored.</p>
     <div class="section-heading"><h4>Engine Artifacts</h4></div>
     <div class="export-actions"><button id="export-evidence">Export scene evidence</button><button id="export-diagnostics">Export diagnostics</button></div>
@@ -389,6 +394,31 @@ function renderPanel(): void {
         }
       }
       downloadCsv(csv, `weight-report-r${state.project.revision}.csv`);
+    });
+
+    el('export-mvr').onclick = () => run(async () => {
+      const { exportMVR } = await import('../io/MVRExporter.ts');
+      const blob = await exportMVR(store.project);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = `spatial-previs-r${state.project.revision}.mvr`; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000); notice('MVR Download prepared');
+    });
+
+    el('export-disguise').onclick = () => run(async () => {
+      const { Euler, Quaternion, MathUtils } = await import('three');
+      let csv = 'Name,X,Y,Z,Rx,Ry,Rz\n';
+      const instances = state.project.records.filter(r => r.kind === 'asset_instance');
+      for (const instance of instances) {
+        if (instance.kind !== 'asset_instance') continue;
+        const pos = instance.transform.position;
+        const q = instance.transform.rotation;
+        const euler = new Euler().setFromQuaternion(new Quaternion(q[0], q[1], q[2], q[3]), 'YXZ');
+        const rx = MathUtils.radToDeg(euler.x);
+        const ry = MathUtils.radToDeg(euler.y);
+        const rz = MathUtils.radToDeg(euler.z);
+        csv += `"${instance.label}",${pos[0].toFixed(3)},${pos[1].toFixed(3)},${pos[2].toFixed(3)},${rx.toFixed(3)},${ry.toFixed(3)},${rz.toFixed(3)}\n`;
+      }
+      downloadCsv(csv, `disguise-mapping-r${state.project.revision}.csv`);
     });
 
     el('export-evidence').onclick = () => run(async () => {
