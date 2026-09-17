@@ -21,7 +21,9 @@ try {
     }
     assert.ok(ready, 'Build the app before running browser tests');
   }
-  browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+  browser = await chromium.launch({ headless: true,
+    ...(process.env.R0_BROWSER_PATH ? { executablePath: process.env.R0_BROWSER_PATH } : {}),
+    args: ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   const context = await browser.newContext({ viewport: { width: 1440, height: 960 }, acceptDownloads: true });
   const page = await context.newPage(), errors = [];
   page.on('pageerror', e => errors.push(e.message));
@@ -93,6 +95,14 @@ try {
   await page.locator('#connect-ports button').click();
   await page.locator('#apply-proposal').click();
   assert.equal(await page.locator('[data-remove]').count(), 1);
+  // Capture each real workspace after the tested connection is committed.
+  for (const workspace of ['Build', 'Map', 'Connect', 'Check', 'Deliver']) {
+    await page.locator(`[data-workspace=${workspace}]`).click();
+    if (workspace === 'Check') await page.locator('#run-check').click();
+    // ResizeObserver clears the WebGL buffer; let the live render loop redraw it.
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve)))));
+    await page.screenshot({ path: `${output}/r0-${workspace.toLowerCase()}.png`, fullPage: true });
+  }
   const exported = await downloadJson(page, '#export');
   assert.equal(exported.project.records.filter(r => r.kind === 'connection').length, 1);
   const beforeInvalid = await page.locator('#revision').textContent();
@@ -124,6 +134,7 @@ try {
   assert.equal(await phone.locator('#inspector-content').isVisible(), true);
   await phone.locator('#position-form [name=X]').fill('2.5'); await phone.locator('#position-form button').tap();
   assert.equal(await phone.locator('#revision').textContent(), 'Revision 2');
+  await phone.screenshot({ path: `${output}/r0-phone-inspector.png` });
   await phone.locator('#inspector-toggle').tap();
   const overflow = await phone.evaluate(() => document.documentElement.scrollWidth > innerWidth);
   assert.equal(overflow, false);
@@ -168,7 +179,7 @@ try {
   const result = { status: 'passed', browser: browser.version(), desktop: '1440x960 Chromium', phone: '390x844 touch emulation',
     actualPhone: 'not_run', ue5: 'not_run',
     scenarios: ['placement', 'numeric edit', 'lock', 'check invalidation', 'cancel', 'delete and undo', 'save and reopen', 'shared selection', 'concurrent save conflict', 'logical connections', 'malformed import recovery', 'export/import roundtrip', 'last project recovery', 'read-only evidence', 'redacted diagnostics', 'phone controls', 'offline reopen', 'landscape and tablet overflow', 'socket preview cancel/apply', 'unlink and undo'],
-    screenshots: [`${output}/r0-desktop.png`, `${output}/r0-phone.png`] };
+    screenshots: ['desktop', 'build', 'map', 'connect', 'check', 'deliver', 'phone', 'phone-inspector'].map(name => `${output}/r0-${name}.png`) };
   await writeFile(`${output}/results.json`, JSON.stringify(result, null, 2));
   console.log(JSON.stringify(result, null, 2));
 } finally { await browser?.close(); server?.kill(); }

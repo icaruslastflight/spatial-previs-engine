@@ -1,6 +1,27 @@
 # Remote UE5 workstation plan
 
-User direction: rent a remote server for UE5 development. Updated cash limit: USD 30 total including tax, in the United States. The user will perform the rental. Status: proposed configuration; no rental, payment, provider account access or UE5 installation has occurred.
+## Verified workstation update on 17 September 2026
+
+The owner has provisioned the workstation and authorized administrative setup and
+development. Desktop Commander is online. Actual hardware differs from the original
+proposal: Windows 11 Pro, approximately 16 GiB RAM, AMD Radeon RX 9060 XT and a
+200 GiB system drive. Visual Studio Community 2026 and C++ tools are installed.
+Epic launcher installation succeeded after Windows elevation; the owner signed in
+and started UE5.8 installation. The engine build remains unverified.
+
+The native source checkout is `C:\Users\user\Documents\SpatialPrevisEngine`.
+The separate browser acceptance checkout is `C:\Users\user\Documents\SpatialPrevisWebEvidence\repo`.
+Both use the actual shared web baseline. Portable native coordinate checks pass with
+MSVC; the browser suite passes 20 scenarios. No new provider purchase was made.
+
+The total USD 30 budget remains a user constraint. Provider balance and billing were
+not accessed. Keep the machine running during the requested installation; stop it
+through the provider when work is finished and the owner no longer needs the stream.
+
+## Original rental proposal retained for context
+
+The following pricing and configuration were planning assumptions, not the actual
+rental receipt or machine specification.
 
 ## Preferred provider after usability comparison
 
@@ -36,9 +57,11 @@ Setup reference: https://desktopcommander.app/mcp/chatgpt/
 6. Build and open a small synthetic venue in UE5. Verify touch/remote input separately from the browser app and confirm render features against the actual GPU/driver. Do not claim UE parity from a successful remote login.
 7. Commit source, preserve test evidence, close the editor, stop the machine in the provider console and verify stopped state. Retained storage may still be billed.
 
-## Current blockers
+## Initial planning blockers
 
-Provider account and checkout configuration; exact desktop repository; pinned UE version; verified total including tax. No credentials should be pasted into project documents or Git.
+At planning time: provider account/checkout, desktop repository, pinned engine and
+verified total including tax. Current setup is recorded at the top of this document.
+No credentials should be pasted into project documents or Git.
 
 ## Sources checked on 2026-09-16
 

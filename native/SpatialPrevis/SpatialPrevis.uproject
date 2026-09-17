@@ -1,0 +1,10 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "5.8",
+  "Category": "Live Production",
+  "Description": "Spatial Previs R0 native project record inspection and conformance foundation",
+  "Modules": [
+    { "Name": "SpatialPrevisCore", "Type": "Runtime", "LoadingPhase": "Default" },
+    { "Name": "SpatialPrevisEditor", "Type": "Editor", "LoadingPhase": "PostEngineInit" }
+  ]
+}

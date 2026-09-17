@@ -1,12 +1,39 @@
 # R0 desktop conformance
 
-Status: not executed. The AirGPU device is registered but offline to this session.
-UE 5.8 and Visual Studio 2026 were reported ready by the owner. No native UE5
-project exists in this web repository. A passing web suite does not close this gate.
+Status: native CORE-01 source implemented; Unreal build and runtime conformance pending.
+The AirGPU workstation is online. Visual Studio 2026 and its C++ tools are verified.
+Epic Games Launcher installed successfully on 17 September 2026; UE5.8 setup is in
+progress. The engine was not installed during initial inspection.
+
+`native/SpatialPrevis/SpatialPrevis.uproject` is pinned to UE5.8. It contains the
+strict project codec, Tools > Spatial Previs R0 record inspector, coordinate adapter,
+and conformance commandlet. This milestone accepts bare project-v1 JSON only. It
+rejects workspace envelopes rather than silently dropping their history/evidence.
+No actors or engineering calculations are created by the inspection panel.
+
+The exact coordinate implementation passes 358 portable C++ assertions under Linux
+GCC and remote Windows MSVC. Those are not an Unreal build or render pass.
+
+```powershell
+powershell -NoProfile -File scripts/verify-r0-native.ps1 -CoordinatesOnly
+powershell -NoProfile -File scripts/verify-r0-native.ps1 -EngineRoot 'C:\Program Files\Epic Games\UE_5.8'
+```
+
+The full script builds the editor, executes the commandlet against 292 semantic cases
+and 26 malformed JSON cases, then compares exported records to the original values.
+Reports must include every case and pass the actual engine coordinate checks.
+Results go into a new `test-results/native/<timestamp>/` folder. A script existing
+on disk is not evidence of a successful run.
+
+Native CORE-02/03/04 command/history/check/review/persistence behavior and real scene
+reconciliation/snapping are still unimplemented. Web/UE release parity remains open.
 
 ## Shared contract
 
 - `tests/fixtures/r0/production-project.v1.json` is the original project fixture.
+- `tests/fixtures/r0/project-conformance.v1.json` is the generated shared corpus.
+  Regenerate with `node scripts/generate-r0-conformance.mjs`. The native runner uses
+  each case's exact `json` string to avoid numeric precision loss in a staging writer.
 - `src/domain/ProductionProject.ts` and `ProjectCodec.ts` define its strict record graph.
 - `WorkspaceState.ts` adds the versioned workspace envelope. Bare project v1 files
   migrate explicitly to envelope v1 without changing project IDs or quantities.
@@ -59,7 +86,6 @@ From this repository in PowerShell:
 powershell -NoProfile -File scripts/verify-r0-windows.ps1
 ```
 
-This verifies the web/domain toolchain and records host evidence. It does not
-compile a missing UE5 project or manufacture a desktop conformance pass. Supply
-the real native project and its automation suite before recording the desktop
-gate as passed.
+This verifies the web/domain toolchain and records host evidence. Use
+`verify-r0-native.ps1` for the new native project. Only a recorded engine build,
+conformance comparison and remaining desktop implementation can close that gate.

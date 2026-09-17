@@ -48,3 +48,13 @@ __pycache__/
 .env.*
 !.env.example
 test-results/
+
+# Unreal generated files and local build evidence
+native/**/Binaries/
+native/**/Intermediate/
+native/**/Saved/
+native/**/DerivedDataCache/
+native/**/.vs/
+native/**/Build/Windows/
+*.VC.db
+*.VC.opendb

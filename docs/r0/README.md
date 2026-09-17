@@ -83,8 +83,9 @@ R0 cannot be called complete until all of these are evidenced:
 
 1. Production browser acceptance passes and its actual screens are inspected, including
    interrupted gestures, offline reopen, malformed imports, concurrent saves and narrow controls.
-2. The actual UE5 implementation passes shared fixtures and rejection cases. No native
-   project was found in the inspected branches; see `UE5_CONFORMANCE.md`.
+2. The actual UE5 implementation passes shared fixtures and rejection cases. The native
+   CORE-01 project now lives under `native/SpatialPrevis`; its engine build and remaining
+   workspace implementation are still open. See `UE5_CONFORMANCE.md`.
 3. The actual Android device is tested and the owner/operator reviews the visual result.
 
 The root sample viewport remains intact; `/r0.html` is the experimental shared-state
