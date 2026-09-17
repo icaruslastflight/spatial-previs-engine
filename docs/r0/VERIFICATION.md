@@ -11,12 +11,12 @@ project round-trip landed on this branch's HEAD.
 | Unit/domain/scene tests | 659 passed across 17 files. Includes 324 shared corpus/reproducibility tests, plus existing commands, socket integration, evidence and recovery coverage. |
 | Production build/PWA | Passed; both entrypoints, service worker and Cesium runtime assets emitted. |
 | Browser test syntax | `node --check scripts/test-r0-browser.mjs`: passed. |
-| Production browser workflows | 23 scenarios passed on remote Windows Chrome 153.0.8010.48. Real desktop and phone-width screenshots captured and inspected; results retained with this record. |
+| Production browser workflows | **Re-run 17 Sept 2026 against branch HEAD `bfa309b`** — 23 scenarios passed on remote Windows Chromium 153.0.8010.12 (Playwright headless), desktop 1440×960 + phone 390×844 touch emulation, no page errors, 15 s wall-clock. Nine screenshots retained at `test-results/r0/r0-*.png`; the earlier 153.0.8010.48 evidence at Chromium's prior minor is superseded by this one against the current HEAD. Owner screen inspection walkthrough is at `docs/r0/ANDROID_AND_OWNER_ACCEPTANCE.md` Part 1. |
 | Native coordinate boundary | 358 portable C++ assertions passed with Linux GCC and remote Windows MSVC. Same header feeds the UE transform adapter. |
 | Native report comparator | 34 synthetic corruption tests passed. Synthetic reports are not native execution evidence. |
 | Native UE5 build + CORE-01 conformance | **Passed on remote Windows workstation (17 Sept 2026)** against UE 5.8.2-56702186 (Visual Studio 14.51.36257 toolchain, Windows 11 25H2, AMD Ryzen 9 9950X). 292 native CORE-01 semantic round-trip cases pass — including `valid.case-sensitive-ids-and-specification-keys`. 26 syntax-rejection cases pass with active-state preservation. Evidence retained at `test-results/native/20260917-023802-105/` (build.log, host.json, conformance.json, commandlet.log, comparison.log, workspace-*). |
 | Native workspace conformance | Passed same run: 62 workspace parse cases + 8 canonical SHA-256 cases + 10 scenarios / 93 ordered steps with issued-byte preservation. |
-| Actual Android / visual approval | Not run / not approved. |
+| Actual Android / visual approval | Not run / not approved. Owner checklist ready at `docs/r0/ANDROID_AND_OWNER_ACCEPTANCE.md` — 21-row touch pass with per-row screenshot names and a copy-paste sign-off block. |
 | Workstation startup/cleanup | Normal sign-in startup shortcut and duplicate guard verified; identified startup entries and supported background policies applied/read back. Eight Widgets-related processes closed. Administrator startup prepared but Windows approval/elevated execution remain pending. See `WORKSTATION_CONTROLS.md`. |
 
 ## Case-sensitive project round-trip

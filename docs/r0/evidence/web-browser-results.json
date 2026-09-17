@@ -1,6 +1,6 @@
 {
   "status": "passed",
-  "browser": "153.0.8010.48",
+  "browser": "153.0.8010.12",
   "desktop": "1440x960 Chromium",
   "phone": "390x844 touch emulation",
   "actualPhone": "not_run",
@@ -31,14 +31,14 @@
     "unlink and undo"
   ],
   "screenshots": [
-    "C:\\Users\\user\\Documents\\SpatialPrevisWebEvidence\\repo\\test-results\\r0/r0-desktop.png",
-    "C:\\Users\\user\\Documents\\SpatialPrevisWebEvidence\\repo\\test-results\\r0/r0-build.png",
-    "C:\\Users\\user\\Documents\\SpatialPrevisWebEvidence\\repo\\test-results\\r0/r0-map.png",
-    "C:\\Users\\user\\Documents\\SpatialPrevisWebEvidence\\repo\\test-results\\r0/r0-connect.png",
-    "C:\\Users\\user\\Documents\\SpatialPrevisWebEvidence\\repo\\test-results\\r0/r0-check.png",
-    "C:\\Users\\user\\Documents\\SpatialPrevisWebEvidence\\repo\\test-results\\r0/r0-deliver.png",
-    "C:\\Users\\user\\Documents\\SpatialPrevisWebEvidence\\repo\\test-results\\r0/r0-phone.png",
-    "C:\\Users\\user\\Documents\\SpatialPrevisWebEvidence\\repo\\test-results\\r0/r0-phone-inspector.png",
-    "C:\\Users\\user\\Documents\\SpatialPrevisWebEvidence\\repo\\test-results\\r0/r0-phone-handoff.png"
+    "test-results/r0/r0-desktop.png",
+    "test-results/r0/r0-build.png",
+    "test-results/r0/r0-map.png",
+    "test-results/r0/r0-connect.png",
+    "test-results/r0/r0-check.png",
+    "test-results/r0/r0-deliver.png",
+    "test-results/r0/r0-phone.png",
+    "test-results/r0/r0-phone-inspector.png",
+    "test-results/r0/r0-phone-handoff.png"
   ]
 }
