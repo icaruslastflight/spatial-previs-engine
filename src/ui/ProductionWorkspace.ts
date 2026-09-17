@@ -17,7 +17,7 @@ const root = document.querySelector<HTMLDivElement>('#workspace')!;
 root.innerHTML = `<header class="project-bar"><div class="wordmark"><span class="mark">SP</span><div><strong>Spatial Previs</strong><small>Production workspace</small></div></div>
   <div class="project-identity"><span id="project-name">Local production</span><span id="revision">Revision 0</span></div>
   <span class="mode">Design only</span></header>
-  <nav class="workspace-nav" aria-label="Workspace">${['Build', 'Map', 'Connect', 'Check', 'Deliver'].map((name, i) => `<button data-workspace="${name}" aria-pressed="${i === 0}"><span>0${i + 1}</span>${name}</button>`).join('')}</nav>
+  <nav class="workspace-nav" aria-label="Workspace">${['Build', 'Map', 'Connect', 'Check', 'Stock', 'Deliver'].map((name, i) => `<button data-workspace="${name}" aria-pressed="${i === 0}"><span>0${i + 1}</span>${name}</button>`).join('')}</nav>
   <div class="command-bar"><button id="save">Save project</button><button id="open">Open file</button><button id="export">Export project</button><span class="separator"></span><button id="undo" disabled>Undo</button><button id="redo" disabled>Redo</button><button id="equipment-toggle" aria-expanded="false">Equipment</button><button id="inspector-toggle" aria-expanded="false">Inspector</button><button id="continue-desktop" aria-haspopup="dialog">Continue on desktop</button></div>
   <main class="work-area"><aside class="equipment"><h2>Equipment</h2><label class="search-label">Search catalog<input id="search" type="search" placeholder="Truss, panel, speaker…"></label><label>Category<select id="category"><option value="">All categories</option></select></label><div id="catalog" class="catalog"></div><div class="section-heading"><h2>Scene</h2><span id="scene-count">0 objects</span></div><div id="scene-list" class="scene-list"></div></aside>
   <section class="center"><div class="view-heading"><div><h1 id="view-title">Build the production</h1><p id="view-subtitle">Local scene · metres · optional venue context</p></div><button id="frame">Frame all</button></div>
@@ -270,9 +270,75 @@ function renderPanel(): void {
       <p>Checks describe a named model and its inputs. Specialist approval is unavailable until a reviewer authority is configured.</p>` +
       (state.checks.length ? state.checks.map(c => `<button class="check-row" data-scope="${escape(c.scope[0])}"><strong class="check-status ${c.status}">${escape(c.status.replaceAll('_', ' '))}</strong><span>${escape(c.summary)}<small>${escape(c.model)} v${escape(c.modelVersion)} · input revision ${c.inputRevision}</small></span></button>`).join('') : '<p class="empty-copy">No checks yet. Select equipment and choose Check recorded data.</p>');
     panel.querySelectorAll<HTMLButtonElement>('[data-scope]').forEach(b => b.onclick = () => select(b.dataset['scope']!));
+  } else if (workspace === 'Stock') {
+    const record = selectedRecord();
+    if (!record || record.kind !== 'asset_instance') {
+      panel.innerHTML = `<h2>Inventory Reservations</h2><p>Select placed equipment to reserve a specific warehouse item or serial number against the theoretical stock pool.</p>`;
+    } else {
+      const def = state.project.records.find(r => r.id === record.definitionId);
+      const inventoryItem = record.inventoryItemId ? state.project.records.find(r => r.id === record.inventoryItemId) as any : null;
+      const pool = state.project.records.find(r => r.kind === 'stock_pool' && r.definitionId === record.definitionId) as any;
+      const totalPlaced = state.project.records.filter(r => r.kind === 'asset_instance' && r.definitionId === record.definitionId).length;
+      const allocated = state.project.records.filter(r => r.kind === 'asset_instance' && r.definitionId === record.definitionId && r.inventoryItemId).length;
+
+      panel.innerHTML = `<h2>Reserve inventory</h2>
+        <h3>${escape(record.label)}</h3>
+        <p class="muted">Definition: ${def ? escape(def.label) : 'Unknown'}</p>
+        
+        <div class="section-heading"><h4>Stock Pool</h4></div>
+        <form id="pool-form" style="margin-bottom: 2rem;">
+          <label>Theoretical Total Stock<input type="number" name="quantity" value="${pool?.quantity ?? 0}" min="0"></label>
+          <button type="submit">Update pool</button>
+          <p class="muted">Placed in scene: ${totalPlaced} | Allocated: ${allocated}</p>
+        </form>
+
+        <div class="section-heading"><h4>Specific Item Allocation</h4></div>
+        <form id="allocate-form">
+          <label>Assign Serial Number / Barcode<input name="serial" value="${escape(inventoryItem?.serialNumber || '')}" placeholder="Enter specific item ID or barcode"></label>
+          <button type="submit">Allocate item</button>
+          ${record.inventoryItemId ? `<button type="button" id="clear-allocation" class="danger" style="margin-left: 0.5rem">Clear</button>` : ''}
+        </form>`;
+
+      el('pool-form').onsubmit = (e) => {
+        e.preventDefault();
+        const qty = parseInt((new FormData(e.target as HTMLFormElement)).get('quantity') as string, 10);
+        if (isNaN(qty) || qty < 0) return;
+        run(() => {
+          const poolId = pool?.id || createRecordId('stock_pool');
+          transact('Stock pool updated', [{ type: 'put', record: { id: poolId, kind: 'stock_pool', label: `${def?.label || 'Item'} Pool`, locked: false, definitionId: record.definitionId, quantity: qty } }]);
+        });
+      };
+      
+      el('allocate-form').onsubmit = (e) => {
+        e.preventDefault();
+        const serial = (new FormData(e.target as HTMLFormElement)).get('serial') as string;
+        if (!serial.trim()) return;
+        run(() => {
+          const ops: Operation[] = [];
+          let itemId = record.inventoryItemId;
+          const existing = state.project.records.find(r => r.kind === 'inventory_item' && (r as any).serialNumber === serial.trim() && r.definitionId === record.definitionId);
+          if (existing) {
+             itemId = existing.id;
+          } else {
+             itemId = itemId || createRecordId('inventory_item');
+             ops.push({ type: 'put', record: { id: itemId, kind: 'inventory_item', label: `SN: ${serial.trim()}`, locked: false, definitionId: record.definitionId, serialNumber: serial.trim(), serviceStatus: 'available' } });
+          }
+          if (record.inventoryItemId !== itemId) {
+             ops.push({ type: 'put', record: { ...record, inventoryItemId: itemId } });
+          }
+          if (ops.length) transact('Inventory item allocated', ops);
+        });
+      };
+      if (record.inventoryItemId) {
+        el('clear-allocation').onclick = () => run(() => transact('Inventory allocation cleared', [{ type: 'put', record: { ...record, inventoryItemId: null } }]));
+      }
+    }
   } else {
     const rows = state.project.records.filter(r => r.kind === 'asset_instance');
-    panel.innerHTML = `<h2>Current draft · revision ${state.project.revision}</h2><p>Local design quantities, not warehouse availability. Export project includes the exact graph, checks, history and any previously issued snapshots.</p><table><thead><tr><th>Placed equipment</th><th>Inventory allocation</th></tr></thead><tbody>${rows.map(r => `<tr><td><button data-scope="${escape(r.id)}">${escape(r.label)}</button></td><td>${r.inventoryItemId ? escape(r.inventoryItemId) : 'Unallocated'}</td></tr>`).join('')}</tbody></table><p>${state.issued.length} immutable issued snapshots stored. Crew-pack generation is a later release.</p><div class="export-actions"><button id="export-evidence">Export scene evidence</button><button id="export-diagnostics">Export diagnostics</button></div><p>Diagnostics replace names, sources and identities with aliases; geometry and numeric values remain. Both exports download locally.</p>`;
+    panel.innerHTML = `<h2>Current draft · revision ${state.project.revision}</h2><p>Local design quantities, not warehouse availability. Export project includes the exact graph, checks, history and any previously issued snapshots.</p><table><thead><tr><th>Placed equipment</th><th>Inventory allocation</th></tr></thead><tbody>${rows.map(r => {
+      const item = r.inventoryItemId ? state.project.records.find(i => i.id === r.inventoryItemId) as any : null;
+      return `<tr><td><button data-scope="${escape(r.id)}">${escape(r.label)}</button></td><td>${item ? escape(item.serialNumber || item.id) : 'Unallocated'}</td></tr>`;
+    }).join('')}</tbody></table><p>${state.issued.length} immutable issued snapshots stored. Crew-pack generation is a later release.</p><div class="export-actions"><button id="export-evidence">Export scene evidence</button><button id="export-diagnostics">Export diagnostics</button></div><p>Diagnostics replace names, sources and identities with aliases; geometry and numeric values remain. Both exports download locally.</p>`;
     el('export-evidence').onclick = () => run(async () => {
       const evidence = await readSceneTool(store.state, { name: 'scene.summary' });
       downloadJson(JSON.stringify(evidence, null, 2), `spatial-evidence-r${evidence.revision}.json`);
@@ -294,7 +360,7 @@ function render(): void {
 function setWorkspace(name: string): void {
   workspace = name;
   document.querySelectorAll<HTMLButtonElement>('[data-workspace]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset['workspace'] === name)));
-  el('view-title').textContent = ({ Build: 'Build the production', Map: 'Inspect the plan', Connect: 'Connect equipment', Check: 'Review the inputs', Deliver: 'Prepare the handoff' } as Record<string, string>)[name]!;
+  el('view-title').textContent = ({ Build: 'Build the production', Map: 'Inspect the plan', Connect: 'Connect equipment', Check: 'Review the inputs', Stock: 'Reserve inventory', Deliver: 'Prepare the handoff' } as Record<string, string>)[name]!;
   root.dataset['workspace'] = name; viewport?.plan(name === 'Map'); renderPanel();
 }
 function downloadJson(content: string, filename: string): void {
