@@ -61,7 +61,10 @@ int32 USpatialPrevisConformanceCommandlet::Main(const FString& Params)
         SeenIds.Add(Id);
         FString Error;
         TSharedPtr<FJsonObject> Project;
-        const bool Accepted = FSpatialPrevisProjectCodec::Parse(Json, Project, Error);
+        // Extras preserve the case-sensitive records[N].specifications keys that
+        // Unreal's TMap<FString> hash+equality collapses inside FJsonObject.
+        TArray<TPair<FString, FString>> SpecificationsByRecordId;
+        const bool Accepted = FSpatialPrevisProjectCodec::ParseWithExtras(Json, Project, SpecificationsByRecordId, Error);
         const auto Result = MakeShared<FJsonObject>();
         Result->SetStringField(TEXT("id"), Id);
         Result->SetBoolField(TEXT("accepted"), Accepted);
@@ -70,7 +73,7 @@ int32 USpatialPrevisConformanceCommandlet::Main(const FString& Params)
         {
             FString Export;
             TSharedPtr<FJsonObject> Reopened;
-            Passed &= FSpatialPrevisProjectCodec::Serialize(Project, Export, Error)
+            Passed &= FSpatialPrevisProjectCodec::SerializeWithExtras(Project, SpecificationsByRecordId, Export, Error)
                 && FSpatialPrevisProjectCodec::Parse(Export, Reopened, Error);
             // Keep the codec's exact binary64 JSON in a string. The report writer
             // must not round numeric fields through its own formatting policy.
@@ -141,7 +144,7 @@ int32 USpatialPrevisConformanceCommandlet::Main(const FString& Params)
     Report->SetArrayField(TEXT("cases"), Results);
     Report->SetArrayField(TEXT("syntaxCases"), SyntaxResults);
     FString ReportJson;
-    FJsonSerializer::Serialize(Report.ToSharedRef(), TJsonWriterFactory<>::Create(&ReportJson));
+    FJsonSerializer::Serialize(Report, TJsonWriterFactory<>::Create(&ReportJson));
     IFileManager::Get().MakeDirectory(*FPaths::GetPath(ReportPath), true);
     if (!FFileHelper::SaveStringToFile(ReportJson, *ReportPath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM)) return 2;
     UE_LOG(LogTemp, Display, TEXT("Native CORE-01 cases: %d; failures: %d"), Cases->Num(), Failures);

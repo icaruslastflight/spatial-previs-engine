@@ -507,6 +507,222 @@ private:
     }
 };
 
+// Extracts (recordId -> raw specifications JSON) pairs from a project string
+// after FJsonSyntax::Check has proven the input is valid JSON. This is the
+// case-sensitive companion to FJsonObject::Values: it preserves the exact byte
+// range of records[N].specifications so case-collision keys survive the round
+// trip that Unreal's case-insensitive TMap<FString> would otherwise collapse.
+class FRecordSpecificationsExtractor
+{
+public:
+    explicit FRecordSpecificationsExtractor(const FString& InText) : Text(InText) {}
+
+    void Extract(TArray<TPair<FString, FString>>& OutEntries)
+    {
+        SkipWhitespace();
+        if (!Take(TEXT('{'))) return;
+        WalkTopObject(OutEntries);
+    }
+
+private:
+    const FString& Text;
+    int32 Offset = 0;
+
+    TCHAR Peek() const { return Offset < Text.Len() ? Text[Offset] : 0; }
+    bool Take(TCHAR C) { if (Offset < Text.Len() && Text[Offset] == C) { ++Offset; return true; } return false; }
+    void SkipWhitespace()
+    {
+        while (Offset < Text.Len() && (Peek() == TEXT(' ') || Peek() == TEXT('\t') || Peek() == TEXT('\r') || Peek() == TEXT('\n'))) ++Offset;
+    }
+
+    // Reads a JSON string, decoding common escapes so map lookups match the
+    // FJsonObject::AsString() values the codec exposes.
+    bool ReadString(FString& Out)
+    {
+        if (!Take(TEXT('"'))) return false;
+        while (Offset < Text.Len())
+        {
+            const TCHAR C = Text[Offset++];
+            if (C == TEXT('"')) return true;
+            if (C != TEXT('\\')) { Out.AppendChar(C); continue; }
+            if (Offset >= Text.Len()) return false;
+            const TCHAR E = Text[Offset++];
+            switch (E)
+            {
+            case TEXT('"'): Out.AppendChar(TEXT('"')); break;
+            case TEXT('\\'): Out.AppendChar(TEXT('\\')); break;
+            case TEXT('/'): Out.AppendChar(TEXT('/')); break;
+            case TEXT('b'): Out.AppendChar(TEXT('\b')); break;
+            case TEXT('f'): Out.AppendChar(TEXT('\f')); break;
+            case TEXT('n'): Out.AppendChar(TEXT('\n')); break;
+            case TEXT('r'): Out.AppendChar(TEXT('\r')); break;
+            case TEXT('t'): Out.AppendChar(TEXT('\t')); break;
+            case TEXT('u'):
+            {
+                if (Offset + 4 > Text.Len()) return false;
+                uint32 Code = 0;
+                for (int32 I = 0; I < 4; ++I)
+                {
+                    const TCHAR H = Text[Offset++];
+                    Code <<= 4;
+                    if (H >= TEXT('0') && H <= TEXT('9')) Code |= (H - TEXT('0'));
+                    else if (H >= TEXT('a') && H <= TEXT('f')) Code |= (H - TEXT('a') + 10);
+                    else if (H >= TEXT('A') && H <= TEXT('F')) Code |= (H - TEXT('A') + 10);
+                    else return false;
+                }
+                Out.AppendChar(static_cast<TCHAR>(Code));
+                break;
+            }
+            default: return false;
+            }
+        }
+        return false;
+    }
+
+    // Skips one JSON value. Assumes the syntax check already accepted the text.
+    void SkipValue()
+    {
+        SkipWhitespace();
+        const TCHAR C = Peek();
+        if (C == TEXT('{')) { ++Offset; SkipObject(); }
+        else if (C == TEXT('[')) { ++Offset; SkipArray(); }
+        else if (C == TEXT('"')) SkipStringRaw();
+        else if (C == TEXT('t') || C == TEXT('f') || C == TEXT('n')) SkipLiteral();
+        else SkipNumber();
+    }
+
+    void SkipObject()
+    {
+        SkipWhitespace();
+        if (Take(TEXT('}'))) return;
+        while (Offset < Text.Len())
+        {
+            SkipWhitespace(); SkipStringRaw();
+            SkipWhitespace(); Take(TEXT(':'));
+            SkipValue();
+            SkipWhitespace();
+            if (Take(TEXT('}'))) return;
+            if (!Take(TEXT(','))) return;
+        }
+    }
+
+    void SkipArray()
+    {
+        SkipWhitespace();
+        if (Take(TEXT(']'))) return;
+        while (Offset < Text.Len())
+        {
+            SkipValue();
+            SkipWhitespace();
+            if (Take(TEXT(']'))) return;
+            if (!Take(TEXT(','))) return;
+        }
+    }
+
+    void SkipStringRaw()
+    {
+        if (!Take(TEXT('"'))) return;
+        while (Offset < Text.Len())
+        {
+            const TCHAR C = Text[Offset++];
+            if (C == TEXT('"')) return;
+            if (C == TEXT('\\') && Offset < Text.Len())
+            {
+                const TCHAR E = Text[Offset++];
+                if (E == TEXT('u')) Offset += 4;
+            }
+        }
+    }
+
+    void SkipLiteral()
+    {
+        while (Offset < Text.Len())
+        {
+            const TCHAR C = Text[Offset];
+            if (C >= TEXT('a') && C <= TEXT('z')) ++Offset; else return;
+        }
+    }
+
+    void SkipNumber()
+    {
+        while (Offset < Text.Len())
+        {
+            const TCHAR C = Text[Offset];
+            const bool bDigit = C >= TEXT('0') && C <= TEXT('9');
+            if (bDigit || C == TEXT('-') || C == TEXT('+') || C == TEXT('.') || C == TEXT('e') || C == TEXT('E')) ++Offset; else return;
+        }
+    }
+
+    void WalkTopObject(TArray<TPair<FString, FString>>& OutEntries)
+    {
+        SkipWhitespace();
+        if (Take(TEXT('}'))) return;
+        while (Offset < Text.Len())
+        {
+            SkipWhitespace();
+            FString Key;
+            if (!ReadString(Key)) return;
+            SkipWhitespace(); Take(TEXT(':')); SkipWhitespace();
+            if (Same(Key, TEXT("records")) && Take(TEXT('['))) WalkRecordsArray(OutEntries);
+            else SkipValue();
+            SkipWhitespace();
+            if (Take(TEXT('}'))) return;
+            if (!Take(TEXT(','))) return;
+        }
+    }
+
+    void WalkRecordsArray(TArray<TPair<FString, FString>>& OutEntries)
+    {
+        SkipWhitespace();
+        if (Take(TEXT(']'))) return;
+        while (Offset < Text.Len())
+        {
+            SkipWhitespace();
+            if (Take(TEXT('{'))) WalkRecordObject(OutEntries);
+            else SkipValue();
+            SkipWhitespace();
+            if (Take(TEXT(']'))) return;
+            if (!Take(TEXT(','))) return;
+        }
+    }
+
+    void WalkRecordObject(TArray<TPair<FString, FString>>& OutEntries)
+    {
+        FString RecordId;
+        FString RawSpecifications;
+        SkipWhitespace();
+        if (Take(TEXT('}'))) return;
+        while (Offset < Text.Len())
+        {
+            SkipWhitespace();
+            FString Key;
+            if (!ReadString(Key)) return;
+            SkipWhitespace(); Take(TEXT(':')); SkipWhitespace();
+            if (Same(Key, TEXT("id")))
+            {
+                FString Value;
+                if (!ReadString(Value)) return;
+                RecordId = MoveTemp(Value);
+            }
+            else if (Same(Key, TEXT("specifications")))
+            {
+                const int32 Start = Offset;
+                SkipValue();
+                RawSpecifications = Text.Mid(Start, Offset - Start);
+            }
+            else SkipValue();
+            SkipWhitespace();
+            if (Take(TEXT('}')))
+            {
+                if (!RecordId.IsEmpty() && !RawSpecifications.IsEmpty())
+                    OutEntries.Emplace(MoveTemp(RecordId), MoveTemp(RawSpecifications));
+                return;
+            }
+            if (!Take(TEXT(','))) return;
+        }
+    }
+};
+
 void AppendQuoted(const FString& Value, FString& Out)
 {
     Out.AppendChar(TEXT('"'));
@@ -584,6 +800,81 @@ bool AppendJson(const FValue& Value, FString& Out, int32 Depth)
     default: return false;
     }
 }
+
+// Emits the records array with specifications blocks replaced by the raw
+// substrings ParseWithExtras captured. Falls back to AppendJson for any record
+// whose id was not in the stash (records without specifications, or records
+// whose parse tree the extractor could not correlate with a preserved block).
+bool AppendRecordsArrayWithExtras(
+    const FValue& RecordsValue,
+    const TArray<TPair<FString, FString>>& RawSpecsByRecordId,
+    FString& Out,
+    int32 Depth)
+{
+    if (!HasType(RecordsValue, EJson::Array)) return false;
+    Out.AppendChar(TEXT('['));
+    const FValues& Records = RecordsValue->AsArray();
+    for (int32 I = 0; I < Records.Num(); ++I)
+    {
+        if (I > 0) Out.AppendChar(TEXT(','));
+        Indent(Out, Depth + 1);
+        const FValue& RecordValue = Records[I];
+        if (!HasType(RecordValue, EJson::Object)) { if (!AppendJson(RecordValue, Out, Depth + 1)) return false; continue; }
+        const FObject Record = RecordValue->AsObject();
+        FString RecordId;
+        const FValue IdField = Field(Record, TEXT("id"));
+        if (IdField.IsValid() && IdField->Type == EJson::String) RecordId = IdField->AsString();
+        const FString* RawSpecifications = nullptr;
+        if (!RecordId.IsEmpty())
+        {
+            for (const auto& Pair : RawSpecsByRecordId)
+            {
+                if (Same(Pair.Key, RecordId)) { RawSpecifications = &Pair.Value; break; }
+            }
+        }
+        Out.AppendChar(TEXT('{'));
+        bool bFirst = true;
+        for (const auto& Entry : Record->Values)
+        {
+            if (!bFirst) Out.AppendChar(TEXT(','));
+            bFirst = false;
+            Indent(Out, Depth + 2);
+            const FString EntryKey(Entry.Key.Len(), *Entry.Key);
+            AppendQuoted(EntryKey, Out);
+            Out += TEXT(": ");
+            if (RawSpecifications && Same(EntryKey, TEXT("specifications"))) Out += *RawSpecifications;
+            else if (!AppendJson(Entry.Value, Out, Depth + 2)) return false;
+        }
+        if (!bFirst) Indent(Out, Depth + 1);
+        Out.AppendChar(TEXT('}'));
+    }
+    if (!Records.IsEmpty()) Indent(Out, Depth);
+    Out.AppendChar(TEXT(']'));
+    return true;
+}
+
+bool Serializable(const FValue& Value, TSet<const FJsonValue*>& Active)
+{
+    if (!Value.IsValid() || Active.Contains(Value.Get())) return false;
+    if (Value->Type == EJson::Number) return std::isfinite(Value->AsNumber());
+    if (Value->Type == EJson::String || Value->Type == EJson::Boolean || Value->Type == EJson::Null) return true;
+    if (Value->Type != EJson::Array && Value->Type != EJson::Object) return false;
+    Active.Add(Value.Get());
+    bool bValid = true;
+    if (Value->Type == EJson::Array)
+    {
+        for (const FValue& Item : Value->AsArray())
+            if (!Serializable(Item, Active)) { bValid = false; break; }
+    }
+    else
+    {
+        if (!Value->AsObject().IsValid()) bValid = false;
+        else for (const auto& Entry : Value->AsObject()->Values)
+            if (!Serializable(Entry.Value, Active)) { bValid = false; break; }
+    }
+    Active.Remove(Value.Get());
+    return bValid;
+}
 }
 
 bool FSpatialPrevisProjectCodec::Parse(const FString& Json, TSharedPtr<FJsonObject>& OutProject, FString& OutError)
@@ -622,5 +913,81 @@ bool FSpatialPrevisProjectCodec::Serialize(const TSharedPtr<FJsonObject>& Projec
         return false;
     }
     OutJson = MoveTemp(Candidate);
+    return true;
+}
+
+bool FSpatialPrevisProjectCodec::ParseJson(const FString& Json, TSharedPtr<FJsonValue>& OutValue, FString& OutError)
+{
+    if (!FJsonSyntax(Json).Check()) { OutError = TEXT("invalid JSON"); return false; }
+    FValue Candidate;
+    // A one-element wrapper also supports scalar roots on engine reader versions
+    // that only deserialize a document beginning with an array or object.
+    FValues Values;
+    const FString Wrapped = TEXT("[") + Json + TEXT("]");
+    const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Wrapped);
+    if (!FJsonSerializer::Deserialize(Reader, Values) || Values.Num() != 1 || !Values[0].IsValid())
+    { OutError = TEXT("invalid JSON"); return false; }
+    Candidate = Values[0];
+    OutValue = MoveTemp(Candidate);
+    OutError.Reset();
+    return true;
+}
+
+bool FSpatialPrevisProjectCodec::SerializeJson(const TSharedPtr<FJsonValue>& Value, FString& OutJson, FString& OutError)
+{
+    TSet<const FJsonValue*> Active;
+    FString Candidate;
+    if (!Serializable(Value, Active) || !AppendJson(Value, Candidate, 0))
+    { OutError = TEXT("expected finite, acyclic JSON data"); return false; }
+    OutJson = MoveTemp(Candidate);
+    OutError.Reset();
+    return true;
+}
+
+bool FSpatialPrevisProjectCodec::ParseWithExtras(
+    const FString& Json,
+    TSharedPtr<FJsonObject>& OutProject,
+    TArray<TPair<FString, FString>>& OutSpecificationsByRecordId,
+    FString& OutError)
+{
+    // Extras are only meaningful once the whole document is a valid project.
+    // Parsing before extraction keeps the stash consistent with OutProject.
+    if (!Parse(Json, OutProject, OutError)) return false;
+    OutSpecificationsByRecordId.Reset();
+    FRecordSpecificationsExtractor(Json).Extract(OutSpecificationsByRecordId);
+    return true;
+}
+
+bool FSpatialPrevisProjectCodec::SerializeWithExtras(
+    const TSharedPtr<FJsonObject>& Project,
+    const TArray<TPair<FString, FString>>& SpecificationsByRecordId,
+    FString& OutJson,
+    FString& OutError)
+{
+    if (!Validate(Project, OutError)) return false;
+    if (SpecificationsByRecordId.IsEmpty()) return Serialize(Project, OutJson, OutError);
+    FString Out;
+    Out.AppendChar(TEXT('{'));
+    bool bFirst = true;
+    for (const auto& Entry : Project->Values)
+    {
+        if (!bFirst) Out.AppendChar(TEXT(','));
+        bFirst = false;
+        Indent(Out, 1);
+        const FString EntryKey(Entry.Key.Len(), *Entry.Key);
+        AppendQuoted(EntryKey, Out);
+        Out += TEXT(": ");
+        if (Same(EntryKey, TEXT("records")))
+        {
+            if (!AppendRecordsArrayWithExtras(Entry.Value, SpecificationsByRecordId, Out, 1))
+            { OutError = TEXT("project: JSON serialization failed"); return false; }
+        }
+        else if (!AppendJson(Entry.Value, Out, 1))
+        { OutError = TEXT("project: JSON serialization failed"); return false; }
+    }
+    if (!bFirst) Indent(Out, 0);
+    Out.AppendChar(TEXT('}'));
+    OutJson = MoveTemp(Out);
+    OutError.Reset();
     return true;
 }

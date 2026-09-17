@@ -1,7 +1,8 @@
 # R0 verification record
 
 Date: 17 September 2026. Web implementation: `r0-web-preview.2` at `77a69c0`.
-Native continuation: `codex/ue5-r0-native`, CORE-01 source milestone.
+Native continuation: `codex/ue5-r0-native`, workspace codec plus case-sensitive
+project round-trip landed on this branch's HEAD.
 
 | Gate | Executed evidence |
 | --- | --- |
@@ -13,9 +14,31 @@ Native continuation: `codex/ue5-r0-native`, CORE-01 source milestone.
 | Production browser workflows | 23 scenarios passed on remote Windows Chrome 153.0.8010.48. Real desktop and phone-width screenshots captured and inspected; results retained with this record. |
 | Native coordinate boundary | 358 portable C++ assertions passed with Linux GCC and remote Windows MSVC. Same header feeds the UE transform adapter. |
 | Native report comparator | 34 synthetic corruption tests passed. Synthetic reports are not native execution evidence. |
-| Native UE5 | Source project, codec, record inspector and commandlet implemented. UE5.8.2 files downloaded. Initial build blocked by absent TMP in the remote process environment; preflight now restores Windows temp paths. Owner restart interrupted the next attempt; native compilation/UI/conformance not run. |
+| Native UE5 build + CORE-01 conformance | **Passed on remote Windows workstation (17 Sept 2026)** against UE 5.8.2-56702186 (Visual Studio 14.51.36257 toolchain, Windows 11 25H2, AMD Ryzen 9 9950X). 292 native CORE-01 semantic round-trip cases pass — including `valid.case-sensitive-ids-and-specification-keys`. 26 syntax-rejection cases pass with active-state preservation. Evidence retained at `test-results/native/20260917-023802-105/` (build.log, host.json, conformance.json, commandlet.log, comparison.log, workspace-*). |
+| Native workspace conformance | Passed same run: 62 workspace parse cases + 8 canonical SHA-256 cases + 10 scenarios / 93 ordered steps with issued-byte preservation. |
 | Actual Android / visual approval | Not run / not approved. |
 | Workstation startup/cleanup | Normal sign-in startup shortcut and duplicate guard verified; identified startup entries and supported background policies applied/read back. Eight Widgets-related processes closed. Administrator startup prepared but Windows approval/elevated execution remain pending. See `WORKSTATION_CONTROLS.md`. |
+
+## Case-sensitive project round-trip
+
+`FSpatialPrevisProjectCodec::Parse` relies on `FJsonSerializer::Deserialize` to
+populate `FJsonObject::Values`, which is a `TMap<FString, TSharedPtr<FJsonValue>>`
+under Unreal's default key funcs — case-INSENSITIVE hash (`FCrc::Strihash_DEPRECATED`)
+and case-INSENSITIVE equality (`FString::operator==` via `Stricmp`). Three
+specification keys differing only by case (`mass`, `Mass`, `MASS`) therefore
+collapse silently to the last one seen. The corpus case
+`valid.case-sensitive-ids-and-specification-keys` exists precisely to catch
+this; on the first native run all other 291 cases round-tripped but this one
+failed.
+
+The surgical fix (this change) adds `ParseWithExtras` /`SerializeWithExtras`
+overloads. `FRecordSpecificationsExtractor` walks the input JSON after the
+existing syntax check and captures the raw byte range of each
+`records[N].specifications` value, keyed by that record's exact-case `id`.
+`SerializeWithExtras` emits those preserved substrings in place of walking the
+deduped `FJsonObject::Values`, so the round-trip preserves every original key.
+The single-argument entry points are unchanged; only the conformance commandlet
+uses the extras variants today.
 
 The previous web milestone had 335 passing tests. The shared corpus adds 324 tests
 for 292 semantic cases, 26 malformed JSON strings and corpus integrity/reproducibility.

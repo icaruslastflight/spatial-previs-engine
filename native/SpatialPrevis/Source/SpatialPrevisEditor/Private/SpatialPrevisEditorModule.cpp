@@ -17,7 +17,7 @@
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 #include "SpatialPrevisProjectCodec.h"
-#include "Styling/SlateIcon.h"
+#include "Textures/SlateIcon.h"
 #include "ToolMenus.h"
 #include "Widgets/Docking/SDockTab.h"
 #include "Widgets/Input/SButton.h"

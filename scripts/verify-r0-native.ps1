@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [string]$EngineRoot = $env:SPATIAL_PREVIS_UE_ROOT,
-    [switch]$CoordinatesOnly
+    [switch]$CoordinatesOnly,
+    [ValidateRange(1, 64)][int]$MaxParallelActions = 2
 )
 $ErrorActionPreference = 'Stop'
 # Remote process hosts can omit optional Windows environment entries. Build.bat
@@ -54,7 +55,7 @@ $editor = Join-Path $EngineRoot 'Engine\Binaries\Win64\UnrealEditor-Cmd.exe'
 $corpus = Join-Path $repoRoot 'tests\fixtures\r0\project-conformance.v1.json'
 $report = Join-Path $evidenceDir 'conformance.json'
 [ordered]@{
-    scope='CORE-01 only'; engine=$version; compilerInstallation=$visualStudio
+    scope='Native project/workspace contracts, repository and read-only scene tools'; engine=$version; compilerInstallation=$visualStudio
     commit=(& git -C $repoRoot rev-parse HEAD); dirty=@(& git -C $repoRoot status --porcelain)
     os=(Get-CimInstance Win32_OperatingSystem | Select-Object Caption,Version)
     cpu=(Get-CimInstance Win32_Processor | Select-Object Name,NumberOfLogicalProcessors)
@@ -62,11 +63,17 @@ $report = Join-Path $evidenceDir 'conformance.json'
     gpu=@(Get-CimInstance Win32_VideoController | Select-Object Name,DriverVersion)
     disk=@(Get-PSDrive -PSProvider FileSystem | Select-Object Name,Free)
 } | ConvertTo-Json -Depth 8 | Set-Content (Join-Path $evidenceDir 'host.json') -Encoding UTF8
-& $build SpatialPrevisEditor Win64 Development "-Project=$project" -WaitMutex -NoHotReloadFromIDE 2>&1 | Tee-Object (Join-Path $evidenceDir 'build.log')
+& $build SpatialPrevisEditor Win64 Development "-Project=$project" "-MaxParallelActions=$MaxParallelActions" -WaitMutex -NoHotReloadFromIDE 2>&1 | Tee-Object (Join-Path $evidenceDir 'build.log')
 if ($LASTEXITCODE -ne 0) { throw "UE build failed; inspect $evidenceDir\build.log" }
 & $editor $project -run=SpatialPrevisConformance "-Corpus=$corpus" "-Report=$report" -unattended -NullRHI -nosplash -nop4 2>&1 | Tee-Object (Join-Path $evidenceDir 'commandlet.log')
 if ($LASTEXITCODE -ne 0) { throw "Native conformance failed; inspect $evidenceDir" }
 & node (Join-Path $PSScriptRoot 'compare-r0-native.mjs') $report 2>&1 | Tee-Object (Join-Path $evidenceDir 'comparison.log')
 if ($LASTEXITCODE -ne 0) { throw 'Native semantic comparison failed.' }
-Write-Host "Native CORE-01 evidence: $evidenceDir"
-Write-Host 'A CORE-01 pass does not close workspace, rendering, Android or owner acceptance gates.'
+$workspaceCorpus = Join-Path $repoRoot 'tests\fixtures\r0\workspace-conformance.v1.json'
+$workspaceReport = Join-Path $evidenceDir 'workspace-conformance.json'
+& $editor $project -run=SpatialPrevisWorkspaceConformance "-Corpus=$workspaceCorpus" "-Report=$workspaceReport" -unattended -NullRHI -nosplash -nop4 2>&1 | Tee-Object (Join-Path $evidenceDir 'workspace-commandlet.log')
+if ($LASTEXITCODE -ne 0) { throw "Native workspace conformance failed; inspect $evidenceDir" }
+& node (Join-Path $PSScriptRoot 'compare-r0-native-workspace.mjs') $workspaceReport 2>&1 | Tee-Object (Join-Path $evidenceDir 'workspace-comparison.log')
+if ($LASTEXITCODE -ne 0) { throw 'Native workspace semantic comparison failed.' }
+Write-Host "Native conformance evidence: $evidenceDir"
+Write-Host 'Contract conformance does not close rendering, actual Android, or owner acceptance gates.'
