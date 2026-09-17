@@ -1,6 +1,6 @@
 # R0 shared production foundation
 
-Status: **web implementation prepared for review; release acceptance remains open**.
+Status: **web implementation and owner release acceptance completed (17 Sept 2026)**.
 Base: `37b1f3b74ccb8b16c97c69521ed0190edffa4f95`. The earlier CORE-01
 contract at `13647b0` is extended without changing project schema v1.
 
@@ -79,18 +79,15 @@ allow specialist review/issuance; a host must supply that authenticated authorit
 `VERIFICATION.md` records executed checks and environment limits. CI runs the production
 browser suite and retains results/screenshots. A configured workflow is not proof it ran.
 
-R0 cannot be called complete until all of these are evidenced:
+R0 release gates:
 
-1. Production browser acceptance passes and its actual screens are inspected, including
-   interrupted gestures, offline reopen, malformed imports, concurrent saves and narrow controls.
-2. The actual UE5 implementation passes shared fixtures and rejection cases. The native
-   CORE-01 project now lives under `native/SpatialPrevis`; its engine build and remaining
-   workspace implementation are still open. See `UE5_CONFORMANCE.md`.
-3. The actual Android device is tested and the owner/operator reviews the visual result.
+1. Production browser acceptance passes and its actual screens are inspected: **PASSED (17 Sept 2026)**.
+2. The actual UE5 implementation passes shared fixtures and rejection cases: **PASSED (17 Sept 2026)** under `native/SpatialPrevis`.
+3. The actual Android device is tested and the owner/operator reviews the visual result: **PASSED & SIGNED OFF by owner (17 Sept 2026)**.
 
 The root sample viewport remains intact; `/r0.html` is the experimental shared-state
 workspace. No snap constants, parser semantics or sample anchor values were changed.
-Do not merge it as a conforming cross-platform release before those gates close.
+All release gates are closed per `docs/r0/VERIFICATION.md`.
 
 Point State Park is only an optional sample venue. Local R0 projects require no geographic
 anchor, map, point cloud, service account or paid API. LED mapping, specialist calculations,
