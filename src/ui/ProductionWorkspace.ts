@@ -1,5 +1,5 @@
 import { createProject, createRecordId } from '../domain/ProductionProject.ts';
-import type { AssetDefinition, Port, ProductionRecord } from '../domain/ProductionProject.ts';
+import type { AssetDefinition, Port, ProductionRecord, AssetInstance, Surface, RasterMapping } from '../domain/ProductionProject.ts';
 import { deleteInstanceOperations, ProjectStore } from '../domain/ProjectStore.ts';
 import type { Operation, Principal, Preview } from '../domain/ProjectStore.ts';
 import { IndexedDbStorage, WorkspaceRepository } from '../domain/WorkspaceRepository.ts';
@@ -174,8 +174,70 @@ function renderInspector(): void {
 }
 function renderPanel(): void {
   const panel = el('workspace-panel'), state = store.state;
-  if (workspace === 'Build' || workspace === 'Map') {
-    panel.innerHTML = `<p>${workspace === 'Map' ? 'Plan view shares the selected equipment and its exact metre coordinates. Content mapping and output packing arrive in R1.' : 'Drag equipment to move and snap. Drag empty space to orbit; two fingers pan or zoom. A second touch or Escape cancels a move. Use the inspector for exact coordinates and socket previews.'}</p>`;
+  if (workspace === 'Build') {
+    panel.innerHTML = `<p>Drag equipment to move and snap. Drag empty space to orbit; two fingers pan or zoom. A second touch or Escape cancels a move. Use the inspector for exact coordinates and socket previews.</p>`;
+  } else if (workspace === 'Map') {
+    const instances = state.project.records.filter((r): r is AssetInstance => r.kind === 'asset_instance');
+    const surfaces = state.project.records.filter((r): r is Surface => r.kind === 'surface');
+    const mappings = state.project.records.filter((r): r is RasterMapping => r.kind === 'raster_mapping');
+    
+    panel.innerHTML = `<h2>Content Mapping</h2>
+      <p>Plan view shares the selected equipment and its exact metre coordinates. Group LED panels to define a surface, then map a video raster to it.</p>
+      
+      <h3>1. Define Surface</h3>
+      <form id="create-surface">
+        <p class="muted">Select equipment to group into a display surface.</p>
+        <div class="checkbox-list">
+          ${instances.map(r => `<label style="display:block"><input type="checkbox" name="instances" value="${escape(r.id)}"> ${escape(r.label)}</label>`).join('')}
+        </div>
+        <button type="submit" ${!instances.length ? 'disabled' : ''}>Group into Surface</button>
+      </form>
+      
+      <h3>2. Map Raster</h3>
+      <form id="create-raster">
+        <label>Surface
+          <select name="surfaceId" required>
+            ${surfaces.map(s => `<option value="${escape(s.id)}">${escape(s.label)}</option>`).join('')}
+          </select>
+        </label>
+        <div class="coordinates">
+          <label>Width <span>px</span><input name="width" type="number" min="1" step="1" value="1920" required></label>
+          <label>Height <span>px</span><input name="height" type="number" min="1" step="1" value="1080" required></label>
+        </div>
+        <button type="submit" ${!surfaces.length ? 'disabled' : ''}>Map Video Raster</button>
+      </form>
+      
+      <h3>Mapped Rasters</h3>
+      ${mappings.length ? mappings.map(m => `<div class="data-row"><span>${escape(m.label)} · ${m.width}x${m.height}px</span><button data-remove="${escape(m.id)}">Remove</button></div>`).join('') : '<p class="empty-copy">No video rasters mapped yet.</p>'}
+    `;
+
+    panel.querySelector<HTMLFormElement>('#create-surface')?.addEventListener('submit', event => {
+      event.preventDefault();
+      const data = new FormData(event.currentTarget as HTMLFormElement);
+      const selectedInstances = data.getAll('instances') as string[];
+      if (selectedInstances.length === 0) return notice('Select at least one instance to group', true);
+      
+      run(() => {
+        const surfaceId = createRecordId('surface');
+        const assemblyId = createRecordId('assembly');
+        const ops: Operation[] = [
+          { type: 'put', record: { id: assemblyId, kind: 'assembly', label: 'LED Wall Assembly', locked: false, instanceIds: selectedInstances } },
+          { type: 'put', record: { id: surfaceId, kind: 'surface', label: 'Display Surface', locked: false, shape: 'plane', transform: { position: [0, 0, 0], rotation: [0, 0, 0, 1] }, width: { status: 'unknown', unit: 'm' }, height: { status: 'unknown', unit: 'm' } } }
+        ];
+        transact('Surface defined', ops);
+      });
+    });
+
+    panel.querySelector<HTMLFormElement>('#create-raster')?.addEventListener('submit', event => {
+      event.preventDefault();
+      const data = new FormData(event.currentTarget as HTMLFormElement);
+      run(() => {
+        const rasterId = createRecordId('raster_mapping');
+        transact('Raster mapped', [{ type: 'put', record: { id: rasterId, kind: 'raster_mapping', label: 'Video Raster', locked: false, surfaceId: String(data.get('surfaceId')), width: Number(data.get('width')), height: Number(data.get('height')) } }]);
+      });
+    });
+
+    panel.querySelectorAll<HTMLButtonElement>('[data-remove]').forEach(b => b.onclick = () => run(() => transact('Raster mapping removed', [{ type: 'remove', id: b.dataset['remove']! }])));
   } else if (workspace === 'Connect') {
     const ports = state.project.records.filter((r): r is Port => r.kind === 'port');
     panel.innerHTML = `<h2>Logical connections</h2><p>Mechanical attachments, signal and power remain separate. Connector compatibility is not inferred.</p>

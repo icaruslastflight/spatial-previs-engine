@@ -106,8 +106,15 @@ export interface DocumentSnapshot extends RecordBase {
   includedRecordIds: string[];
 }
 
+export interface RasterMapping extends RecordBase {
+  kind: 'raster_mapping';
+  surfaceId: string;
+  width: number;
+  height: number;
+}
+
 export type ProductionRecord = AssetDefinition | InventoryItem | StockPool | AssetInstance
-  | Assembly | Surface | Zone | Port | Connection | MechanicalAttachment | DocumentSnapshot;
+  | Assembly | Surface | Zone | Port | Connection | MechanicalAttachment | DocumentSnapshot | RasterMapping;
 
 export interface ProductionProject {
   schemaVersion: typeof PROJECT_SCHEMA_VERSION;

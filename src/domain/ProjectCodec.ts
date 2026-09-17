@@ -66,6 +66,7 @@ const fields: Record<ProductionRecord['kind'], string[]> = {
   connection: ['domain', 'sourcePortId', 'targetPortId'],
   mechanical_attachment: ['parentInstanceId', 'childInstanceId', 'parentSocketId', 'childSocketId'],
   document_snapshot: ['projectRevision', 'templateId', 'templateVersion', 'status', 'includedRecordIds'],
+  raster_mapping: ['surfaceId', 'width', 'height'],
 };
 const domains = ['power', 'video', 'audio', 'data'];
 
@@ -84,9 +85,14 @@ function record(value: unknown, path: string): void {
     else if (['instanceIds', 'includedRecordIds'].includes(field)) strings(val, p);
     else if (['quantity', 'projectRevision'].includes(field)) natural(val, p);
     else if (['width', 'height'].includes(field)) {
-      quantity(val, p);
-      const q = object(val, p);
-      if (q.unit !== 'm' || (q.status === 'known' && (q.value as number) <= 0)) fail(p, 'expected positive metres or unknown metres');
+      if (kind === 'raster_mapping') {
+        natural(val, p);
+        if (val === 0) fail(p, 'expected positive dimension');
+      } else {
+        quantity(val, p);
+        const q = object(val, p);
+        if (q.unit !== 'm' || (q.status === 'known' && (q.value as number) <= 0)) fail(p, 'expected positive metres or unknown metres');
+      }
     } else if (field === 'sizeMeters') {
       tuple(val, 3, p);
       if (val.some(x => x <= 0)) fail(p, 'expected positive dimensions');
@@ -161,6 +167,9 @@ export function validateProject(value: unknown): asserts value is ProductionProj
     if (r.kind === 'document_snapshot') {
       if (r.projectRevision > (p.revision as number)) fail(r.id, 'snapshot references a future revision');
       // Snapshot IDs describe the historical revision, so deleted records need not still exist.
+    }
+    if (r.kind === 'raster_mapping') {
+      reference(r.surfaceId, 'surface', r.id);
     }
   }
   for (const child of parentOf.keys()) {
