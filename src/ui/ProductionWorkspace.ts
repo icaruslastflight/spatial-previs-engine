@@ -5,7 +5,7 @@ import type { Operation, Principal, Preview } from '../domain/ProjectStore.ts';
 import { IndexedDbStorage, WorkspaceRepository } from '../domain/WorkspaceRepository.ts';
 import { serializeWorkspace } from '../domain/WorkspaceState.ts';
 import { translateInstanceOperations } from '../domain/ProjectTransforms.ts';
-import { technicalDataCheck, weightRiggingCheck, electricalPowerLoadCheck } from '../domain/ProjectChecks.ts';
+import { technicalDataCheck, weightRiggingCheck, electricalPowerLoadCheck, laserSafetyCheck } from '../domain/ProjectChecks.ts';
 import { readSceneTool } from '../assistant/SceneTools.ts';
 import { createDiagnosticBundle } from '../domain/DiagnosticBundle.ts';
 import { ProductionViewport } from './ProductionViewport.ts';
@@ -171,6 +171,7 @@ function renderInspector(): void {
     if (record.kind === 'asset_instance') {
       await target.recordCheck(weightRiggingCheck(target.project, record, `check:${crypto.randomUUID()}`), target.project.revision);
       await target.recordCheck(electricalPowerLoadCheck(target.project, record, `check:${crypto.randomUUID()}`), target.project.revision);
+      await target.recordCheck(laserSafetyCheck(target.project, record, `check:${crypto.randomUUID()}`), target.project.revision);
     }
     if (target !== store) return;
     markDirty(); setWorkspace('Check'); notice('Recorded data checked');
