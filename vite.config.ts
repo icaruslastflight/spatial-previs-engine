@@ -195,7 +195,11 @@ export default defineConfig({
     // Cesium, Three and the splat renderer are individually large by nature.
     chunkSizeWarningLimit: 4096,
     rollupOptions: {
-      input: { main: resolve('index.html'), r0: resolve('r0.html') },
+      input: {
+        main: resolve('index.html'),
+        r0: resolve('r0.html'),
+        'concert-stage-demo': resolve('showcase/concert-stage-demo.html'),
+      },
       output: {
         // Rollup 5 accepts only the function form of manualChunks.
         manualChunks(id: string) {
