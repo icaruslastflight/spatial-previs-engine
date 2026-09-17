@@ -170,7 +170,12 @@ function buildBeamCone(
 ): THREE.Mesh {
   const radius = Math.tan(THREE.MathUtils.degToRad(fieldAngle / 2)) * throwDist;
   const geo = new THREE.ConeGeometry(Math.max(radius, 0.05), throwDist, 32, 1, true);
-  geo.translate(0, throwDist / 2, 0);   // apex at emitter, opening downward
+  // ConeGeometry puts its tip at +h/2, so shifting down by h/2 lands the apex
+  // on the mesh origin and opens the cone along local -Y -- which is already
+  // the direction the emitter fires, so the caller adds no rotation. Shifting
+  // up instead parks the wide end on the emitter and tapers the beam to a
+  // point at the floor, which is backwards for every real fixture.
+  geo.translate(0, -throwDist / 2, 0);
 
   const mat = new THREE.MeshBasicMaterial({
     color,
@@ -326,8 +331,8 @@ async function main(): Promise<void> {
     const beamColor = safeBeam ? color : new THREE.Color(1, 0.2, 0.2);
     const cone = buildBeamCone(fieldAngle, distance, beamColor, safeBeam);
 
-    // The emitter fires along its local –Y (downward when hung). Rotate cone to match.
-    cone.rotation.x = Math.PI;
+    // The emitter fires along its local -Y, and buildBeamCone already opens the
+    // cone that way, so it mounts unrotated.
     fixture.emitterGroup.add(cone);
 
     const poolRadius = Math.tan(THREE.MathUtils.degToRad(fieldAngle / 2)) * distance;
