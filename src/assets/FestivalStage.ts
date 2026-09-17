@@ -30,6 +30,16 @@ export interface FixtureMount {
   /** Which run this mount belongs to — lets a caller chase per-truss. */
   run: 'rear-top' | 'arm-left' | 'arm-right';
   /**
+   * Yaw to apply on top of the facing flip, so a fixture on an angled arm
+   * squares up with the leg it actually hangs from instead of sharing one
+   * rig-wide orientation. Front (local +Z at rest) is rotated onto this
+   * mount's own `perp` -- the same audience-facing direction the COLORstrips
+   * on that leg are offset toward -- so the lens points into the stage box
+   * rather than out past the arm's outboard end. Identity on the rear-top
+   * run, which runs straight and is already square to the audience.
+   */
+  quaternion: THREE.Quaternion;
+  /**
    * The placeholder prop hanging here, when props were placed. A caller
    * resolving a real GDTF fixture onto this mount hides the prop rather than
    * leaving two bodies in the same 145 mm of air.
@@ -165,12 +175,26 @@ export async function buildFestivalStage(
     return object;
   }
 
-  /** Record a mount, and optionally hang the placeholder prop on it. */
-  function mount(position: THREE.Vector3, facing: 'down' | 'up', run: FixtureMount['run']): void {
-    const entry: FixtureMount = { position: position.clone(), facing, run };
+  /**
+   * Record a mount, and optionally hang the placeholder prop on it.
+   *
+   * `frontQuat` rotates the prop's local +Z onto this mount's own inward
+   * direction; for a `down` mount it composes AFTER `qFlip`, because qFlip
+   * only inverts local X/Y (a rotation about Z) and never touches the Z axis
+   * it is itself defined by -- flipping a fixture upside down to hang it does
+   * not change which way its lens faces, so the yaw is free to apply on top.
+   */
+  function mount(
+    position: THREE.Vector3,
+    facing: 'down' | 'up',
+    run: FixtureMount['run'],
+    frontQuat: THREE.Quaternion = new THREE.Quaternion(),
+  ): void {
+    const entry: FixtureMount = { position: position.clone(), facing, run, quaternion: frontQuat.clone() };
     if (placeProps) {
-      entry.prop =
-        facing === 'up' ? place('beam', position) : place('wash', position, qFlip);
+      const propQuat =
+        facing === 'up' ? frontQuat : new THREE.Quaternion().multiplyQuaternions(frontQuat, qFlip);
+      entry.prop = place(facing === 'up' ? 'beam' : 'wash', position, propQuat);
     }
     mounts.push(entry);
   }
@@ -261,19 +285,26 @@ export async function buildFestivalStage(
       { origin: P2, dir: dir2, count: 3, span: 3.29 },
     ];
     for (const leg of runs) {
-      for (let i = 0; i < leg.count; i++) {
-        const p = leg.origin.clone().add(leg.dir.clone().multiplyScalar(0.645 + i * 1.0));
-        mount(new THREE.Vector3(p.x, Y_3M + CHORD, p.z), 'up', run);
-        mount(new THREE.Vector3(p.x, Y_3M - CHORD, p.z), 'down', run);
-      }
-
-      // COLORstrips run the length of each leg on the audience-facing side.
-      // The perpendicular is taken in the horizontal plane and flipped toward
-      // +Z so every bar faces front regardless of which way the leg runs.
+      // The leg's own inward/audience-facing direction. Taken in the
+      // horizontal plane and flipped toward +Z so it means the same thing
+      // ("toward the crowd") on every leg regardless of which way that leg
+      // happens to run -- both the COLORstrips below and the fixture mounts
+      // above them read off this one vector, so a bar and the heads sharing
+      // its leg square up together rather than picking their own conventions.
       const perp = new THREE.Vector3()
         .crossVectors(leg.dir, new THREE.Vector3(0, 1, 0))
         .normalize();
       if (perp.z < 0) perp.negate();
+      const frontQuat = new THREE.Quaternion().setFromUnitVectors(
+        new THREE.Vector3(0, 0, 1),
+        perp,
+      );
+
+      for (let i = 0; i < leg.count; i++) {
+        const p = leg.origin.clone().add(leg.dir.clone().multiplyScalar(0.645 + i * 1.0));
+        mount(new THREE.Vector3(p.x, Y_3M + CHORD, p.z), 'up', run, frontQuat);
+        mount(new THREE.Vector3(p.x, Y_3M - CHORD, p.z), 'down', run, frontQuat);
+      }
 
       const barCount = Math.floor(leg.span / COLORSTRIP_LENGTH);
       const barQuat = new THREE.Quaternion().setFromUnitVectors(

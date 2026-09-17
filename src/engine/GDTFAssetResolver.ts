@@ -115,6 +115,15 @@ export interface ResolvedFixtureInstance {
   readonly yokeGroup: THREE.Group;
   readonly headGroup: THREE.Group;
   readonly emitterGroup: THREE.Group;
+  /**
+   * The yoke pivot's orientation with pan at zero, i.e. the static basis its
+   * `Position` matrix establishes. Driving pan post-multiplies a rotation onto
+   * this, so anything solving an aim backwards from a wanted beam direction
+   * needs the rest basis separately from the live quaternion.
+   */
+  readonly yokeRestQuaternion: THREE.Quaternion;
+  /** The head pivot's orientation with tilt at zero. */
+  readonly headRestQuaternion: THREE.Quaternion;
   readonly light: THREE.SpotLight;
   /** DMX channel footprint of the selected mode. */
   readonly footprint: number;
@@ -588,6 +597,8 @@ function assembleFixture(profile: GDTFProfile, mode: GDTFDmxMode): ResolvedFixtu
     yokeGroup,
     headGroup,
     emitterGroup,
+    yokeRestQuaternion: yokeStaticQuaternion.clone(),
+    headRestQuaternion: headStaticQuaternion.clone(),
     light,
     footprint: mode.footprint,
     updateDMXChannels,
