@@ -1,7 +1,7 @@
 {
   "name": "spatial-previs-engine",
   "private": true,
-  "version": "1.0.0-alpha",
+  "version": "1.1.0-alpha",
   "type": "module",
   "description": "Spatial Previs Engine — venue-independent live event design and pre-visualization for real and virtual environments.",
   "scripts": {
