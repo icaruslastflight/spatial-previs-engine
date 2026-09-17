@@ -338,7 +338,59 @@ function renderPanel(): void {
     panel.innerHTML = `<h2>Current draft · revision ${state.project.revision}</h2><p>Local design quantities, not warehouse availability. Export project includes the exact graph, checks, history and any previously issued snapshots.</p><table><thead><tr><th>Placed equipment</th><th>Inventory allocation</th></tr></thead><tbody>${rows.map(r => {
       const item = r.inventoryItemId ? state.project.records.find(i => i.id === r.inventoryItemId) as any : null;
       return `<tr><td><button data-scope="${escape(r.id)}">${escape(r.label)}</button></td><td>${item ? escape(item.serialNumber || item.id) : 'Unallocated'}</td></tr>`;
-    }).join('')}</tbody></table><p>${state.issued.length} immutable issued snapshots stored. Crew-pack generation is a later release.</p><div class="export-actions"><button id="export-evidence">Export scene evidence</button><button id="export-diagnostics">Export diagnostics</button></div><p>Diagnostics replace names, sources and identities with aliases; geometry and numeric values remain. Both exports download locally.</p>`;
+    }).join('')}</tbody></table>
+    <div class="section-heading"><h4>Crew-pack Generation</h4></div>
+    <div class="export-actions" style="margin-bottom: 1rem">
+      <button id="export-pullsheet">Download Pull Sheet (CSV)</button>
+      <button id="export-patchsheet">Download Patch Sheet (CSV)</button>
+      <button id="export-weightreport">Download Weight Report (CSV)</button>
+    </div>
+    <p>${state.issued.length} immutable issued snapshots stored.</p>
+    <div class="section-heading"><h4>Engine Artifacts</h4></div>
+    <div class="export-actions"><button id="export-evidence">Export scene evidence</button><button id="export-diagnostics">Export diagnostics</button></div>
+    <p>Diagnostics replace names, sources and identities with aliases; geometry and numeric values remain. Both exports download locally.</p>`;
+    
+    el('export-pullsheet').onclick = () => run(() => {
+      let csv = 'Category,Item Name,Catalog ID,Quantity Needed\n';
+      const instances = state.project.records.filter(r => r.kind === 'asset_instance');
+      const counts = new Map<string, number>();
+      for (const instance of instances) counts.set(instance.definitionId, (counts.get(instance.definitionId) || 0) + 1);
+      for (const [defId, count] of counts.entries()) {
+        const def = state.project.records.find(r => r.id === defId);
+        if (def && def.kind === 'asset_definition') csv += `"${def.category}","${def.label}","${def.catalogId}",${count}\n`;
+      }
+      downloadCsv(csv, `pull-sheet-r${state.project.revision}.csv`);
+    });
+    
+    el('export-patchsheet').onclick = () => run(() => {
+      let csv = 'Domain,Source Item,Source Port,Target Item,Target Port\n';
+      const connections = state.project.records.filter(r => r.kind === 'connection');
+      for (const conn of connections) {
+        if (conn.kind !== 'connection') continue;
+        const sourcePort = state.project.records.find(r => r.id === conn.sourcePortId);
+        const targetPort = state.project.records.find(r => r.id === conn.targetPortId);
+        if (sourcePort?.kind === 'port' && targetPort?.kind === 'port') {
+          const sourceItem = state.project.records.find(r => r.id === sourcePort.instanceId);
+          const targetItem = state.project.records.find(r => r.id === targetPort.instanceId);
+          csv += `"${conn.domain}","${sourceItem?.label || 'Unknown'}","${sourcePort.label}","${targetItem?.label || 'Unknown'}","${targetPort.label}"\n`;
+        }
+      }
+      downloadCsv(csv, `patch-sheet-r${state.project.revision}.csv`);
+    });
+    
+    el('export-weightreport').onclick = () => run(() => {
+      let csv = 'Root Item,Total Mass (kg),Data Completeness\n';
+      const instances = state.project.records.filter(r => r.kind === 'asset_instance');
+      for (const instance of instances) {
+        const isChild = state.project.records.some(r => r.kind === 'mechanical_attachment' && r.childInstanceId === instance.id);
+        if (!isChild) {
+           const check = weightRiggingCheck(state.project, instance, 'temp');
+           csv += `"${instance.label}","${check.summary.replace(/"/g, '""')}","${check.status === 'pass' ? 'Complete' : 'Missing Data'}"\n`;
+        }
+      }
+      downloadCsv(csv, `weight-report-r${state.project.revision}.csv`);
+    });
+
     el('export-evidence').onclick = () => run(async () => {
       const evidence = await readSceneTool(store.state, { name: 'scene.summary' });
       downloadJson(JSON.stringify(evidence, null, 2), `spatial-evidence-r${evidence.revision}.json`);
@@ -367,6 +419,11 @@ function downloadJson(content: string, filename: string): void {
   const url = URL.createObjectURL(new Blob([content], { type: 'application/json' }));
   const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000); notice('Download prepared');
+}
+function downloadCsv(content: string, filename: string): void {
+  const url = URL.createObjectURL(new Blob([content], { type: 'text/csv;charset=utf-8;' }));
+  const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000); notice('CSV Download prepared');
 }
 function exportProject(): void { downloadJson(serializeWorkspace(store.state), `spatial-previs-r${store.project.revision}.json`); }
 
