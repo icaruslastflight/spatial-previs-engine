@@ -9,6 +9,7 @@ import { technicalDataCheck, weightRiggingCheck, electricalPowerLoadCheck } from
 import { readSceneTool } from '../assistant/SceneTools.ts';
 import { createDiagnosticBundle } from '../domain/DiagnosticBundle.ts';
 import { ProductionViewport } from './ProductionViewport.ts';
+import { CablingInspector } from './CablingInspector.ts';
 import type { CatalogAsset } from './ProductionViewport.ts';
 import './workspace.css';
 
@@ -47,6 +48,7 @@ const repository = new WorkspaceRepository(new IndexedDbStorage());
 let store = new ProjectStore(createProject('local-production'), authorizer);
 let generation: number | null = null, selected: string | null = null, workspace = 'Build';
 let catalog: CatalogAsset[] = [], viewport: ProductionViewport | null = null;
+let cablingInspector: CablingInspector | null = null;
 let preview: Preview | null = null, dirty = false, serial = 0, busy = false;
 let detach = () => {};
 let opening = false;
@@ -246,8 +248,15 @@ function renderPanel(): void {
     const ports = state.project.records.filter((r): r is Port => r.kind === 'port');
     panel.innerHTML = `<h2>Logical connections</h2><p>Mechanical attachments, signal and power remain separate. Connector compatibility is not inferred.</p>
       ${selectedRecord()?.kind === 'asset_instance' ? '<form id="add-port"><label>Port name<input name="name" required placeholder="Video input"></label><label>Domain<select name="domain"><option>video</option><option>audio</option><option>data</option><option>power</option></select></label><label>Direction<select name="direction"><option>input</option><option>output</option><option>bidirectional</option></select></label><button>Add port to selection</button></form>' : '<p>Select equipment to add a port.</p>'}
-      <form id="connect-ports"><label>From<select name="source">${ports.filter(p => p.direction !== 'input').map(p => `<option value="${escape(p.id)}">${escape(p.label)} · ${p.domain}</option>`).join('')}</select></label><label>To<select name="target">${ports.filter(p => p.direction !== 'output').map(p => `<option value="${escape(p.id)}">${escape(p.label)} · ${p.domain}</option>`).join('')}</select></label><button ${ports.length < 2 ? 'disabled' : ''}>Preview connection</button></form>
-      ${state.project.records.filter(r => r.kind === 'connection').map(r => `<div class="data-row"><span>${escape(r.label)} · ${r.domain}</span><button data-remove="${escape(r.id)}">Remove connection</button></div>`).join('')}`;
+      <form id="connect-ports"><label>From<select name="source">${ports.filter(p => p.direction !== 'input').map(p => `<option value="${escape(p.id)}">${escape(p.label)} Â· ${p.domain}</option>`).join('')}</select></label><label>To<select name="target">${ports.filter(p => p.direction !== 'output').map(p => `<option value="${escape(p.id)}">${escape(p.label)} Â· ${p.domain}</option>`).join('')}</select></label><button ${ports.length < 2 ? 'disabled' : ''}>Preview connection</button></form>
+      ${state.project.records.filter(r => r.kind === 'connection').map(r => `<div class="data-row"><span>${escape(r.label)} Â· ${r.domain}</span><button data-remove="${escape(r.id)}">Remove connection</button></div>`).join('')}
+      <hr style="margin: 1rem 0; border: 1px solid #444;" />
+      <h3>A* 3D Truss Cable Router</h3>
+      <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
+        <button id="render-cables">Render 3D Splines</button>
+        <button id="export-cable-schedule">Export Cable Schedule</button>
+      </div>`;
+    
     panel.querySelector<HTMLFormElement>('#add-port')?.addEventListener('submit', event => {
       event.preventDefault(); const data = new FormData(event.currentTarget as HTMLFormElement);
       run(() => transact('Port added', [{ type: 'put', record: { id: createRecordId('port'), kind: 'port', label: String(data.get('name')),
@@ -262,6 +271,19 @@ function renderPanel(): void {
       });
     };
     panel.querySelectorAll<HTMLButtonElement>('[data-remove]').forEach(b => b.onclick = () => run(() => transact('Connection removed', [{ type: 'remove', id: b.dataset['remove']! }])));
+    
+    el<HTMLButtonElement>('render-cables').onclick = () => {
+      if (!viewport) return;
+      if (cablingInspector) cablingInspector.destroy();
+      cablingInspector = new CablingInspector(viewport.scene, viewport.camera, document.querySelector<HTMLCanvasElement>('#scene-canvas')!, store.project);
+      cablingInspector.renderRoutes();
+      notice('Cable splines rendered. Use handles to edit routing.');
+    };
+    el<HTMLButtonElement>('export-cable-schedule').onclick = () => {
+      if (!cablingInspector) { notice('Render cables first'); return; }
+      cablingInspector.exportCableSchedule();
+    };
+
   } else if (workspace === 'Check') {
     panel.innerHTML = `<h2>Scoped checks</h2>
       <div class="alpha-disclaimer" style="color: #ff9900; font-size: 0.9em; margin-bottom: 1rem; border-left: 3px solid #ff9900; padding-left: 0.5rem;">
@@ -586,3 +608,4 @@ async function initialize(): Promise<void> {
   document.body.dataset['ready'] = 'true';
 }
 run(initialize);
+

@@ -14,6 +14,8 @@ export class ProductionViewport {
   #scene = new THREE.Scene();
   #camera = new THREE.PerspectiveCamera(48, 1, 0.05, 2000);
   #controls: OrbitControls;
+  get scene() { return this.#scene; }
+  get camera() { return this.#camera; }
   #layer = new THREE.Group();
   #highlight = new THREE.BoxHelper(new THREE.Object3D(), 0xe4bf79);
   #templates = new Map<string, Promise<THREE.Object3D>>();
