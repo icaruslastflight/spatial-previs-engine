@@ -42,15 +42,21 @@ renderer.toneMappingExposure = 1.1;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x05060a);
-scene.fog = new THREE.FogExp2(0x08090f, 0.018);
+// Light enough to sit the rig in depth without losing the outboard arm ends,
+// which stand ~13 m further from the lens than the upstage truss.
+scene.fog = new THREE.FogExp2(0x08090f, 0.011);
 
-/* Camera — front-of-house angle for maximum rig legibility. */
+/*
+ * Camera — front of house, far enough back to hold the whole rig.
+ * The arms carry the plot out to roughly ±6 m and 8 m downstage of the
+ * upstage truss, so a lens parked at the old arch distance clips both ends.
+ */
 const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 400);
-camera.position.set(0, 6.8, 18);
-camera.lookAt(0, 3.5, 0);
+camera.position.set(0, 12, 32);
+camera.lookAt(0, 3.2, 1);
 
 const controls = new OrbitControls(camera, canvas);
-controls.target.set(0, 3.0, 0);
+controls.target.set(0, 3.2, 1);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
 controls.update();

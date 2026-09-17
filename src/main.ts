@@ -85,7 +85,8 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   20000,
 );
-camera.position.set(9, 6, 13);
+// Far enough out to hold the whole starting rig, including the arm ends.
+camera.position.set(14, 10, 26);
 
 /* -------------------------------------------------------------------------- */
 /* Lighting                                                                    */
@@ -135,7 +136,7 @@ controls.minDistance = 1.5;
 controls.maxDistance = 3000;
 // Stop just short of the horizon so the camera never ends up under the site.
 controls.maxPolarAngle = Math.PI * 0.495;
-controls.target.set(0, 1, 0);
+controls.target.set(0, 3, 1);
 // One finger orbits; two fingers pinch-zoom AND pan together.
 controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
 controls.update();
