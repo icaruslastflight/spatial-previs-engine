@@ -42,8 +42,8 @@ export async function readSceneTool(state: WorkspaceState, request: unknown) {
     coordinateFrame: snapshot.project.coordinateFrame,
     record, records, counts, quantities, checks,
     sources: records.map(r => ({ recordId: r.id, revision: snapshot.project.revision, source: 'Current project record' })),
-    unsupportedChecks: ['structural', 'electrical', 'optical', 'acoustic', 'laser_safety'].map(domain => ({
-      domain, status: 'not_evaluated' as const, reason: 'No validated calculation model is implemented in R0',
+    unsupportedChecks: ['optical', 'acoustic', 'laser_safety'].map(domain => ({
+      domain, status: 'not_evaluated' as const, reason: 'No validated calculation model is implemented in R1',
     })),
     boundaries: {
       access: 'read_only',
