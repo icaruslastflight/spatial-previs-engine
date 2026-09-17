@@ -553,14 +553,20 @@ artifact you carry into the PR body or commit message so a reviewer can see
 what was thought before it was typed. Trial-and-error tool loops burn far more
 API cost than the one round of thinking that would have avoided them.
 
+This section is deliberately **provider-agnostic**. It classifies work by the
+kind of thinking a phase needs, not by any vendor's product name. Whoever
+is executing — a human, or any AI coding assistant, agent CLI or
+open-weight model — reads these rules the same way.
+
 ### 13.1 What every plan states
 
 1. **Phases and steps in order.** Break the work into a small number of phases;
    list the steps in each. A step names its file(s) and the change type
    (read / edit / add / delete / verify).
-2. **Model choice per phase, with a reason.** Say which class of model is
-   right for that phase (§13.2). "Default 4.7" is a valid line; the point is
-   that a 5-class choice is deliberate, not silent.
+2. **Tier choice per phase, with a reason.** Say which tier of model
+   (§13.2) is right for that phase and why. "Default tier" is a valid
+   line; the point is that a deep-reasoning choice is deliberate, not
+   silent.
 3. **Verification per phase.** What proves the phase is done — a test name,
    a build target, a specific tool run, an inspected artifact. A phase
    without a verification line is not planned, it is speculated.
@@ -570,28 +576,39 @@ autonomous/agent-mode work, in a task list the agent maintains). Keep it
 tight: bullets, not prose. If a phase changes shape mid-work, rewrite the
 plan and note why — do not silently drift.
 
-### 13.2 Choosing the model per phase
+### 13.2 Choosing the model tier per phase
 
-Two rough classes. Names may drift; the reasoning stays.
+Two tiers, defined by the work each is meant to do. Any provider's product
+maps onto them; do not hard-code a vendor name into the plan.
 
-- **4.7-class** (Sonnet 4.7, Opus 4.7, or the current equivalent) — the
-  workhorse. Use for anything routine: mechanical refactors, doc edits,
+- **Default tier — the fast, capable workhorse.** Whichever model in the
+  current toolbelt is the fastest one that still handles routine work
+  reliably. Use it for anything routine: mechanical refactors, doc edits,
   following a written plan step by step, single-file bug fixes with clear
   symptoms, adding a test that mirrors an existing one, chores, most
   glue-code and file-plumbing work.
-- **5-class** (Opus 5, or the current top-of-line reasoning model) — reserve
-  for phases whose success actually depends on deeper reasoning:
+- **Deep-reasoning tier — the slow, careful specialist.** Whichever model
+  in the current toolbelt has the deepest reasoning available (typically
+  the highest-cost, highest-latency option). Reserve it for phases whose
+  success actually depends on that depth:
   - **Root-cause hunts where the symptom does not point at the cause.**
     (The `TMap<FString>` case-collision bug on this repo — `mass`/`Mass`/`MASS`
-    all collapse silently because Unreal's default map key funcs hash and
-    compare `FString` case-insensitively — was exactly this class.)
+    all collapse silently because the underlying map's default key funcs
+    hash and compare their string keys case-insensitively — was exactly
+    this class.)
   - Architecture calls where two viable shapes need real trade-off analysis.
   - Cross-file refactors that require holding the whole call graph in mind.
   - Algorithms you are deriving rather than adapting from a known reference.
   - Hard-to-reverse or safety-critical code where "close enough" is not enough.
 
-If neither list clearly fits, pick 4.7 and note in the plan why 5 might be
-warranted if it stalls. Do not switch mid-phase without amending the plan.
+If neither list clearly fits, pick the default tier and note in the plan
+why the deep-reasoning tier might be warranted if it stalls. Do not switch
+mid-phase without amending the plan.
+
+Product names (whatever this year's headline model is called for each
+vendor) belong in the plan's "reason" clause at most, not in these tier
+labels. When a vendor renames or reshuffles tiers, this rule stays valid;
+only the mapping to concrete product names moves.
 
 ### 13.3 Cost discipline
 
@@ -601,10 +618,10 @@ Two heuristics:
 - **A short plan beats a long trial-and-error loop.** If you are on your
   third speculative tool call trying to figure out what a file contains,
   stop and write the plan.
-- **Do not pay 5-class rates for 4.7-class work.** Reading a file, running
-  a known command, applying a named edit — none of these need the deeper
-  reasoning model. Reserve it for the reasoning-heavy phase and drop back
-  down for the mechanical follow-through.
+- **Do not pay deep-reasoning rates for default-tier work.** Reading a
+  file, running a known command, applying a named edit — none of these
+  need the deeper reasoning tier. Reserve it for the reasoning-heavy
+  phase and drop back down for the mechanical follow-through.
 
 Trivial one-file, one-symptom changes are exempt — write the fix, not the
 plan.
