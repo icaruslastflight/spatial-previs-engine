@@ -1,7 +1,9 @@
 # R0 desktop conformance
 
 Status: native CORE-01 source implemented; Unreal build and runtime conformance pending.
-The AirGPU workstation is online. Visual Studio 2026 and its C++ tools are verified.
+The AirGPU workstation has been accessed successfully; after the owner's restart,
+Desktop Commander must reconnect before native validation resumes. Visual Studio
+2026 and its C++ tools are verified.
 Epic Games Launcher installed successfully on 17 September 2026; UE5.8.2 files are now
 present. The initial build encountered a missing Windows TMP variable in the remote
 process environment; preflight now restores it. The owner restarted the PC during

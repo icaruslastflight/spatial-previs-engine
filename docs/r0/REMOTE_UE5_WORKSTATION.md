@@ -1,13 +1,23 @@
-# Remote UE5 workstation plan
+# Remote UE5 workstation
 
 ## Verified workstation update on 17 September 2026
 
 The owner has provisioned the workstation and authorized administrative setup and
-development. Desktop Commander is online. Actual hardware differs from the original
-proposal: Windows 11 Pro, approximately 16 GiB RAM, AMD Radeon RX 9060 XT and a
-200 GiB system drive. Visual Studio Community 2026 and C++ tools are installed.
-Epic launcher installation succeeded after Windows elevation; the owner signed in
-and downloaded UE5.8.2, then restarted the PC. The engine build remains unverified.
+development. Remote Desktop Commander has successfully provided Windows file and
+terminal access. **Current checkpoint: after the owner's PC restart, the remote
+device agent must be reopened and reconnected before development commands resume.**
+The earlier successful connection does not establish that the device is online now.
+
+Actual hardware differs from the original proposal: Windows 11 Pro, approximately
+16 GiB RAM, AMD Radeon RX 9060 XT and a 200 GiB system drive. Visual Studio Community
+2026 and C++ tools are installed. Epic launcher installation succeeded after Windows
+elevation; the owner signed in and UE5.8.2 files are present under
+`C:\Program Files\Epic Games\UE_5.8`.
+
+The initial native build attempt was blocked by an absent Windows `TMP` variable in
+the remote process environment. The preflight now restores Windows temporary paths;
+the owner's restart interrupted the next attempt. Native editor compilation,
+commandlet conformance and UE runtime/UI verification remain pending.
 
 The native source checkout is `C:\Users\user\Documents\SpatialPrevisEngine`.
 The separate browser acceptance checkout is `C:\Users\user\Documents\SpatialPrevisWebEvidence\repo`.
@@ -15,8 +25,13 @@ Both use the actual shared web baseline. Portable native coordinate checks pass 
 MSVC; the browser suite passes 23 scenarios. No new provider purchase was made.
 
 The total USD 30 budget remains a user constraint. Provider balance and billing were
-not accessed. Keep the machine running during the requested installation; stop it
-through the provider when work is finished and the owner no longer needs the stream.
+not accessed. Keep the machine running during the authorized build and verification
+session; stop it through the provider when work is finished and the owner no longer
+needs the stream.
+
+Once the owner reconnects the device agent, verify Windows access and the existing
+engine files, then resume `scripts/verify-r0-native.ps1` from the native source
+checkout. Retain the build and commandlet reports before recording any native pass.
 
 ## Original rental proposal retained for context
 
@@ -37,13 +52,24 @@ Paperspace advertises A4000 at USD 0.76/hour with 45 GB RAM and 8 vCPUs, but a c
 
 User will perform the rental. No provider account or payment action is requested from the assistant.
 
-## Codex connection preference
+## Codex connection status
 
-A current directory search found Remote Desktop Commander, which relays authorized file and terminal access from ChatGPT to a Windows or macOS machine. It can support source edits, Git and build commands on the rented workstation. Its connection to an actual AirGPU host has not been tested; it is not a UE5 editor-control or GPU-provisioning plugin. Install and link it from the rented Windows desktop, then verify a harmless file/terminal read before project work.
+Remote Desktop Commander is installed and paired with the provisioned Windows
+workstation. Its device commands have been used successfully for file and terminal
+work, including Windows preflight, portable MSVC coordinate checks and browser
+acceptance. This verifies the remote development connection; UE5 compilation and
+runtime conformance require their own recorded results.
+
+The current reconnection checkpoint is the owner's PC restart. Reopen the paired
+agent on that desktop and keep it running, then confirm device availability before
+resuming commands. The agent's previous availability is not a current online check.
 
 DigitalOcean also has a plugin described as provisioning a Droplet for a remote Codex workspace. GPU provisioning, Windows desktop streaming and a complete UE5 configuration were not established by that description. Do not purchase a generic CPU Droplet as the UE5 workstation based only on the plugin name.
 
-Preferred candidate combination: AirGPU for the interactive desktop plus Remote Desktop Commander for authorized code/build access. Desktop Commander lists a free remote plan with 10,000 tool calls per month; use that plan within the cash limit. The plugin is installed in ChatGPT; its device commands have not surfaced in this session, so access to a rented machine and provider compatibility remain unverified.
+The original proposal combined AirGPU for the interactive desktop with Remote
+Desktop Commander for authorized code/build access. That connection is now proven
+on the provisioned Windows host. No new provider purchase or paid plugin commitment
+was made during this work; provider balance and billing remain unverified.
 
 Setup reference: https://desktopcommander.app/mcp/chatgpt/
 

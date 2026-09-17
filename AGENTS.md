@@ -45,6 +45,12 @@ follow-up requiring a new request.
   https://drive.google.com/file/d/1Dvx5kEi538tHm9_lbEkhS60t0pRAs_d9/view
   Keep the editable source and PDF synchronized. Downloads are snapshots, not
   automatic phone sync.
+- The private project folder contains the guide, source snapshot and screenshots:
+  https://drive.google.com/drive/folders/1hxxk-5GxRSn13je5movPeL6uR5u8z9i4
+  Update the existing editable DOCX (`1YZoGbbMamPzGCk5mS4RxhfFFIhIgiJ3c`),
+  authoring ZIP (`14EHMcOO9cKQQzShqz8UDecXESnNm2APx`) and development source ZIP
+  (`15yr8O0j8GrDQ4UGVFAEgSHbJXA1VVIvG`) in place when those artifacts change.
+  Raw screenshots are in folder `18sxiMAERxrTrwyGsYNr0cuncD1h8t4z3`.
 
 ## Continuity and environment
 
