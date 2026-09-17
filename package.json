@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Festival Visualizer — browser-native spatial twin and live event pre-visualization client anchored at Point State Park, Pittsburgh.",
+  "description": "Festival Visualizer â€” browser-native spatial twin and live event pre-visualization client anchored at Point State Park, Pittsburgh.",
   "scripts": {
     "dev": "vite --host",
     "build": "tsc && vite build",

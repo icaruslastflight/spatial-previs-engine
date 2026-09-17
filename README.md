@@ -1,9 +1,10 @@
 # spatial-previs-engine
 
-High-performance spatial twin and live-event pre-visualization platform anchored
-at **Point State Park, Pittsburgh, PA** (40.4417&deg;N, 80.0075&deg;W).
+High-performance spatial twin and live-event pre-visualization platform with configurable venue georeferencing.
 
-This repository holds the **web client** — the Parallel High-Capability Web
+Point State Park, Pittsburgh is included as the R0 reference venue and regression fixture; it is not a product-level location constraint.
+
+This repository holds the **web client** â€” the Parallel High-Capability Web
 Application line, built for maximum browser-native parity with the Unreal
 Engine 5 desktop architecture. Three.js + CesiumJS + Gaussian splatting, with
 modular-asset magnetic snapping.
@@ -22,18 +23,18 @@ No API keys are required. The basemap degrades gracefully to a keyless tier.
 | Command | Does |
 | --- | --- |
 | `npm run dev` | Dev server, exposed on the LAN so you can open it on a phone |
-| `npm run build` | `tsc && vite build` — must be clean before committing |
+| `npm run build` | `tsc && vite build` â€” must be clean before committing |
 | `npm run preview` | Serve the production build locally |
 | `npm test` | Vitest: core engine, geodetic, CP-1, socket snapping, asset library |
-| `npm run verify` | Foundation health check — structure, typecheck, tests, build |
+| `npm run verify` | Foundation health check â€” structure, typecheck, tests, build |
 | `npx tsc --noEmit` | Typecheck only |
 | `npm run build:assets` | Compile the modular asset library to GLB |
 
 ## Deploying (free tier only)
 
 ```bash
-npm run build                          # Vercel / local  → base '/'
-DEPLOY_TARGET=gh-pages npm run build   # GitHub Pages    → base '/spatial-previs-engine/'
+npm run build                          # Vercel / local  â†’ base '/'
+DEPLOY_TARGET=gh-pages npm run build   # GitHub Pages    â†’ base '/spatial-previs-engine/'
 BASE_PATH=/custom/ npm run build       # explicit override
 ```
 
@@ -43,7 +44,7 @@ resolve correctly.
 
 The build also emits a PWA manifest and service worker, so the client installs
 to a phone home screen as a landscape standalone app and re-opens without an
-uplink. Cesium's runtime trees are deliberately left out of the precache — they
+uplink. Cesium's runtime trees are deliberately left out of the precache â€” they
 run to tens of megabytes and are fetched on demand.
 
 ## Basemap tiers
@@ -60,9 +61,9 @@ Copy `.env.example` to `.env.local` to supply keys. Never commit one.
 
 ## Using the viewport
 
-- **One finger on an asset** — drag it across the ground plane
-- **One finger on empty space** — orbit the camera
-- **Two fingers** — pinch-zoom and pan
+- **One finger on an asset** â€” drag it across the ground plane
+- **One finger on empty space** â€” orbit the camera
+- **Two fingers** â€” pinch-zoom and pan
 - Assets snap magnetically within **150 mm**, auto-aligning mating faces and
   quantizing roll to 0&deg; / 90&deg; / 180&deg; / 270&deg;
 
@@ -80,7 +81,7 @@ The client is layered under `src/`:
 | `render/`, `network/`, `ui/` | Reserved; each carries a README naming its phase |
 
 Everything that runs per frame registers on the shared `EngineLoop` in a
-priority band — telemetry, then physics, then automation, then render — rather
+priority band â€” telemetry, then physics, then automation, then render â€” rather
 than opening a private `requestAnimationFrame`.
 
 ## Project guidelines
