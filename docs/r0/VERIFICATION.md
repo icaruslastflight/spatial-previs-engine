@@ -56,20 +56,39 @@ visual quality or real-device interaction evidence.
 
 ## Part 3 — Owner Acceptance Sign-off
 
-R0 owner acceptance — 17 September 2026
+Submitted through the R0 sign-off page and recorded verbatim as received.
+
+```
+R0 owner acceptance — 2026-09-17
+
+Head:                  13b4da3
+PR:                    https://github.com/icaruslastflight/spatial-previs-engine/pull/10
 
 Browser screen inspection (Gate 1)
-- Owner:                icaruslastflight
-- Reviewed screens:     test-results/r0/r0-*.png (nine files)
-- Verdict:              PASS
-- Browser + version:    Windows Chrome / Chromium 153 desktop (1440×960) & touch emulation (390×844)
+- Owner:               Brice
+- Reviewed screens:    test-results/r0/r0-*.png (nine files)
+- Verdict:             PASS
+- Reference:           docs/r0/ANDROID_AND_OWNER_ACCEPTANCE.md Part 1
 
 Android touch pass (Gate 3)
-- Owner:                icaruslastflight
-- Device:               Android Phone (Chrome for Android)
-- Checklist:            All 21 touch-pass items verified (gestures, 2-finger abort, pinch zoom, offline reload, error handling, handoff modal, rotation)
-- Touch targets:        ≥ 40 px verified across all interactive controls
-- Frame pacing:         Smooth pans, no stutters or input freezes
-- Verdict:              PASS
-- Notes:                Visual result reviewed and approved by owner. Release acceptance gates closed.
+- Owner:               Brice
+- Device:              Android
+- Browser:             Chrome for Android 152.0.7977.64
+- Preview URL:         <lan url or tunnel url>
+- Passed rows:         21/21
+- Verdict:             PASS
+- Reference:           docs/r0/ANDROID_AND_OWNER_ACCEPTANCE.md Part 2
+
+Notes:
+
+```
+
+Both R0 gates that required a human closed here. Native UE 5.8 conformance
+(292 CORE-01 + 26 syntax + 62 workspace parse + 8 SHA-256 + 10 scenarios /
+93 ordered steps) already closed on the same head. R0 is done.
+
+The preview URL was not captured in the submission; the Android touch pass
+was driven against a preview served locally on the owner's LAN and none of
+the passing rows depend on the URL being recorded here. Everything else in
+the block is as-submitted.
 

@@ -53,6 +53,7 @@
       <div class="palette">
         <button id="add-truss" type="button">+ F34 Truss 2M</button>
         <button id="add-deck" type="button">+ Deck 4&times;8</button>
+        <button id="add-paraflex" type="button">+ Paraflex DIY</button>
       </div>
       <p class="hint">
         Drag an asset with one finger to move it &middot; two fingers to pinch-zoom and pan &middot;
@@ -61,6 +62,39 @@
       <!-- Tile attribution: a licensing requirement, so it lives in the HUD. -->
       <div id="cesium-credits" class="cesium-credits"></div>
     </footer>
+
+    <!--
+      Paraflex cabinets are generated to order rather than picked off a shelf,
+      so the palette button opens a spec sheet instead of spawning immediately.
+    -->
+    <div id="paraflex-modal" class="modal" hidden>
+      <form id="paraflex-form" class="modal-card">
+        <h2>Paraflex DIY specs</h2>
+
+        <label for="pf-model">CAD enclosure type</label>
+        <input id="pf-model" name="model" type="text" value="Type O 1x18" autocomplete="off" />
+
+        <label for="pf-driver">Driver size</label>
+        <select id="pf-driver" name="driver">
+          <option value="12">12 inch</option>
+          <option value="15">15 inch</option>
+          <option value="18" selected>18 inch</option>
+          <option value="21">21 inch</option>
+        </select>
+
+        <label for="pf-material">Construction material</label>
+        <select id="pf-material" name="material">
+          <option value="15mm">15 mm Baltic birch</option>
+          <option value="18mm" selected>18 mm Baltic birch</option>
+          <option value="MDF">3/4&quot; MDF</option>
+        </select>
+
+        <div class="modal-actions">
+          <button id="pf-cancel" type="button" class="ghost">Cancel</button>
+          <button id="pf-spawn" type="submit">Generate &amp; spawn</button>
+        </div>
+      </form>
+    </div>
 
     <script type="module" src="/src/main.ts"></script>
   </body>

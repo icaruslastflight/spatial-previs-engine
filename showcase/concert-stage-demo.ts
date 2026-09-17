@@ -16,7 +16,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
-import { createF34BoxTruss2M, createStageDeck4x8, DECK_4X8 } from '../src/assets/ModularPrimitives.ts';
+import { buildFestivalStage } from '../src/assets/FestivalStage.ts';
 import { parseGDTF, findBeam } from '../src/engine/GDTFParser.ts';
 import type { GDTFProfile } from '../src/engine/GDTFParser.ts';
 import { GDTFAssetResolver, fluxToCandela } from '../src/engine/GDTFAssetResolver.ts';
@@ -42,15 +42,21 @@ renderer.toneMappingExposure = 1.1;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x05060a);
-scene.fog = new THREE.FogExp2(0x08090f, 0.018);
+// Light enough to sit the rig in depth without losing the outboard arm ends,
+// which stand ~13 m further from the lens than the upstage truss.
+scene.fog = new THREE.FogExp2(0x08090f, 0.011);
 
-/* Camera — front-of-house angle for maximum rig legibility. */
+/*
+ * Camera — front of house, far enough back to hold the whole rig.
+ * The arms carry the plot out to roughly ±6 m and 8 m downstage of the
+ * upstage truss, so a lens parked at the old arch distance clips both ends.
+ */
 const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 400);
-camera.position.set(0, 6.8, 18);
-camera.lookAt(0, 3.5, 0);
+camera.position.set(0, 12, 32);
+camera.lookAt(0, 3.2, 1);
 
 const controls = new OrbitControls(camera, canvas);
-controls.target.set(0, 3.0, 0);
+controls.target.set(0, 3.2, 1);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
 controls.update();
@@ -68,16 +74,12 @@ scene.add(rimLight);
 /* Stage geometry constants                                            */
 /* ─────────────────────────────────────────────────────────────────── */
 
-const TRUSS_HEIGHT  = 6.2;   // m — bottom chord of arch above deck surface
-const TOWER_HEIGHT  = 6.0;   // m — upright tower sections
-const ARCH_SPAN     = 12.0;  // m — total arch width
-const ARCH_SEGS     = 6;     // number of 2 m sticks across the arch
-const TOWER_X       = ARCH_SPAN / 2;   // left/right tower X
-const DECK_ROWS     = 2;     // front-to-back rows of deck panels
-const DECK_COLS     = 3;     // left-to-right columns of deck panels
-const VIDEO_W       = 8.0;   // m — LED wall width
-const VIDEO_H       = 4.0;   // m — LED wall height
-const VIDEO_Z       = -1.4;  // m — LED wall depth behind centre
+/**
+ * How many mounts get a real GDTF-resolved fixture. The rig carries far more
+ * positions than this, but each resolved fixture brings a shadow-casting
+ * SpotLight, so the rest keep their placeholder props and this handful does
+ * the photometric and laser-safety work the showcase exists to demonstrate.
+ */
 const FIXTURE_COUNT = 6;
 
 /* ─────────────────────────────────────────────────────────────────── */
@@ -98,87 +100,16 @@ const grid = new THREE.GridHelper(60, 60, 0x161e30, 0x0d1220);
 scene.add(grid);
 
 /* ─────────────────────────────────────────────────────────────────── */
-/* Stage decks                                                         */
+/* Rig                                                                 */
 /* ─────────────────────────────────────────────────────────────────── */
 
-const deckOffsetX = -((DECK_COLS - 1) * DECK_4X8.LENGTH) / 2;
-const deckOffsetZ = 3.0;   // front edge of decks (towards audience)
+/*
+ * Decks, truss, arms, subs and the LED wall all come from the shared
+ * FestivalStage module, so this showcase and the sample viewport render the
+ * same rig from one definition rather than two drifting copies. Built inside
+ * main() because it loads GLB truss stock.
+ */
 
-for (let col = 0; col < DECK_COLS; col++) {
-  for (let row = 0; row < DECK_ROWS; row++) {
-    const deck = createStageDeck4x8();
-    deck.position.set(
-      deckOffsetX + col * DECK_4X8.LENGTH,
-      0,
-      deckOffsetZ - row * DECK_4X8.WIDTH,
-    );
-    deck.castShadow = true;
-    deck.receiveShadow = true;
-    scene.add(deck);
-  }
-}
-
-/* ─────────────────────────────────────────────────────────────────── */
-/* Truss towers (uprights)                                             */
-/* ─────────────────────────────────────────────────────────────────── */
-
-function buildTowerGroup(xPos: number): THREE.Group {
-  const group = new THREE.Group();
-  const stickCount = Math.ceil(TOWER_HEIGHT / 2);
-
-  for (let i = 0; i < stickCount; i++) {
-    const stick = createF34BoxTruss2M();
-    // Rotate 90° so the truss runs vertically (along Y).
-    stick.rotation.z = Math.PI / 2;
-    stick.position.set(0, 1 + i * 2, 0);
-    group.add(stick);
-  }
-
-  group.position.set(xPos, 0, 0);
-  return group;
-}
-
-scene.add(buildTowerGroup(-TOWER_X));
-scene.add(buildTowerGroup( TOWER_X));
-
-/* ─────────────────────────────────────────────────────────────────── */
-/* Truss arch (horizontal)                                             */
-/* ─────────────────────────────────────────────────────────────────── */
-
-const archStickWidth = ARCH_SPAN / ARCH_SEGS;  // ~2 m each
-
-for (let i = 0; i < ARCH_SEGS; i++) {
-  const stick = createF34BoxTruss2M();
-  // Scale to fill the segment if arch span doesn't divide evenly into 2 m.
-  stick.scale.x = archStickWidth / 2.0;
-  stick.position.set(-ARCH_SPAN / 2 + archStickWidth * (i + 0.5), TRUSS_HEIGHT, 0);
-  scene.add(stick);
-}
-
-/* ─────────────────────────────────────────────────────────────────── */
-/* LED video wall (emissive plane)                                     */
-/* ─────────────────────────────────────────────────────────────────── */
-
-const ledWall = new THREE.Mesh(
-  new THREE.PlaneGeometry(VIDEO_W, VIDEO_H),
-  new THREE.MeshStandardMaterial({
-    color: 0x1a2a4a,
-    emissive: 0x1a3a7a,
-    emissiveIntensity: 0.6,
-    roughness: 0.5,
-    metalness: 0.2,
-  }),
-);
-ledWall.position.set(0, TRUSS_HEIGHT - VIDEO_H / 2, VIDEO_Z);
-scene.add(ledWall);
-
-/* LED pixel grid overlay — gives the wall texture at close range. */
-const ledGrid = new THREE.GridHelper(VIDEO_W, Math.round(VIDEO_W / 0.16), 0x2a5080, 0x1a3060);
-(ledGrid.material as THREE.Material).transparent = true;
-(ledGrid.material as THREE.Material).opacity = 0.3;
-ledGrid.rotation.x = Math.PI / 2;
-ledGrid.position.set(0, TRUSS_HEIGHT - VIDEO_H / 2, VIDEO_Z + 0.02);
-scene.add(ledGrid);
 
 /* ─────────────────────────────────────────────────────────────────── */
 /* Audience zone bounding box (for laser MPE evaluation)              */
@@ -239,7 +170,12 @@ function buildBeamCone(
 ): THREE.Mesh {
   const radius = Math.tan(THREE.MathUtils.degToRad(fieldAngle / 2)) * throwDist;
   const geo = new THREE.ConeGeometry(Math.max(radius, 0.05), throwDist, 32, 1, true);
-  geo.translate(0, throwDist / 2, 0);   // apex at emitter, opening downward
+  // ConeGeometry puts its tip at +h/2, so shifting down by h/2 lands the apex
+  // on the mesh origin and opens the cone along local -Y -- which is already
+  // the direction the emitter fires, so the caller adds no rotation. Shifting
+  // up instead parks the wide end on the emitter and tapers the beam to a
+  // point at the floor, which is backwards for every real fixture.
+  geo.translate(0, -throwDist / 2, 0);
 
   const mat = new THREE.MeshBasicMaterial({
     color,
@@ -269,18 +205,24 @@ function buildFloorPool(radius: number, color: THREE.Color, safe: boolean): THRE
 }
 
 /**
- * Throw distance from the fixture's resolved emitter to the floor (Y=0).
+ * Throw from the fixture's resolved emitter to the floor (Y=0).
  * Returns null when the beam points up or sideways.
+ *
+ * Returns the origin and direction as well as the landing, so the beam cone
+ * and the floor pool are placed from one computation. Deriving the cone from
+ * the emitter's local axes instead lets the two disagree the moment pan and
+ * tilt move the head, which is how the cones ended up aimed at the sky while
+ * the pools stayed on the deck.
  */
 function throwToFloor(
   fixture: ResolvedFixtureInstance,
-): { distance: number; hit: THREE.Vector3 } | null {
+): { distance: number; hit: THREE.Vector3; origin: THREE.Vector3; dir: THREE.Vector3 } | null {
   const origin = fixture.emitterGroup.getWorldPosition(new THREE.Vector3());
   const aim    = fixture.light.target.getWorldPosition(new THREE.Vector3());
   const dir    = aim.sub(origin).normalize();
   if (dir.y >= -1e-3) return null;
   const t = origin.y / -dir.y;
-  return { distance: t, hit: origin.clone().addScaledVector(dir, t) };
+  return { distance: t, hit: origin.clone().addScaledVector(dir, t), origin, dir };
 }
 
 /** Does the beam's floor hit land inside the audience zone AABB? */
@@ -309,6 +251,10 @@ const RIG_PLAN = [
 async function main(): Promise<void> {
   const status = document.getElementById('status') as HTMLElement;
 
+  status.textContent = 'building rig…';
+  const stage = await buildFestivalStage();
+  scene.add(stage.group);
+
   status.textContent = 'building GDTF archive…';
   const archive = await buildGdtfArchive();
 
@@ -323,8 +269,15 @@ async function main(): Promise<void> {
   const beam      = beamNode?.beam;
   const fieldAngle = beam?.fieldAngleDegrees ?? 15;
 
-  /* Place fixtures across the horizontal arch. */
-  const fixSpacing = (ARCH_SPAN - 2.4) / (FIXTURE_COUNT - 1);
+  /*
+   * Hang the resolved fixtures on real mount points from the rig rather than
+   * inventing coordinates. Only down-facing mounts qualify — an uplit chord
+   * throws nothing at the floor, so it cannot exercise the MPE evaluation —
+   * and they are sampled evenly so the beams fan across the whole rig instead
+   * of bunching on one truss.
+   */
+  const downMounts = stage.mounts.filter((m) => m.facing === 'down');
+  const stride = downMounts.length / FIXTURE_COUNT;
 
   interface Rig {
     fixture: ResolvedFixtureInstance;
@@ -333,11 +286,17 @@ async function main(): Promise<void> {
   const rigs: Rig[] = [];
 
   for (let i = 0; i < FIXTURE_COUNT; i++) {
+    const mount = downMounts[Math.floor(i * stride)];
+    if (!mount) break;
+
     const plan = RIG_PLAN[i % RIG_PLAN.length];
     const fixture = resolver.instantiateFixture(profile.fixtureTypeId, 'Standard');
 
-    const x = -ARCH_SPAN / 2 + 1.2 + i * fixSpacing;
-    fixture.root.position.set(x, TRUSS_HEIGHT - 0.16, 0);
+    // The placeholder prop and the resolved fixture would occupy the same
+    // 145 mm under the chord, so the prop steps aside.
+    if (mount.prop) mount.prop.visible = false;
+
+    fixture.root.position.copy(mount.position);
     fixture.light.castShadow = true;
     fixture.light.shadow.mapSize.set(512, 512);
 
@@ -368,7 +327,7 @@ async function main(): Promise<void> {
     const landing = throwToFloor(fixture);
     if (!landing) continue;
 
-    const { distance, hit } = landing;
+    const { distance, hit, origin, dir } = landing;
     const inZone    = hitsAudienceZone(hit);
     const elevation = hit.y;                  // always 0 for floor hits — but beam intercept Y if tilted
     const safeBeam  = !inZone || elevation >= 2.5;
@@ -378,9 +337,12 @@ async function main(): Promise<void> {
     const beamColor = safeBeam ? color : new THREE.Color(1, 0.2, 0.2);
     const cone = buildBeamCone(fieldAngle, distance, beamColor, safeBeam);
 
-    // The emitter fires along its local –Y (downward when hung). Rotate cone to match.
-    cone.rotation.x = Math.PI;
-    fixture.emitterGroup.add(cone);
+    // Placed in world space along the same direction the floor pool was
+    // solved from, so the two can never drift apart. buildBeamCone opens
+    // along -Y, so that is the axis being rotated onto the aim.
+    cone.position.copy(origin);
+    cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), dir);
+    scene.add(cone);
 
     const poolRadius = Math.tan(THREE.MathUtils.degToRad(fieldAngle / 2)) * distance;
     const pool = buildFloorPool(poolRadius, beamColor, safeBeam);
@@ -400,10 +362,11 @@ async function main(): Promise<void> {
 
   /* ── Stats panel ─────────────────────────────────── */
   const table = document.getElementById('stats-table') as HTMLTableElement;
-  setRow(table, 'Truss arch',      `${ARCH_SEGS}× 2 m F34 sticks`);
-  setRow(table, 'Tower height',    `${TOWER_HEIGHT} m (×2 sides)`);
-  setRow(table, 'Stage decks',     `${DECK_ROWS * DECK_COLS}× 4′×8′ panels`);
-  setRow(table, 'LED wall',        `${VIDEO_W}×${VIDEO_H} m`);
+  setRow(table, 'Truss',           `${stage.registerable.length}× F34 pieces`);
+  setRow(table, 'Mount points',    `${stage.mounts.length} (${downMounts.length} down-facing)`);
+  setRow(table, 'Stage decks',     `${stage.decks.length}× 4′×8′ panels`);
+  setRow(table, 'Subs',            `${stage.subs.length}× cabinets`);
+  setRow(table, 'LED bars',        `${stage.ledBars.length}× COLORstrip 38″`);
   setRow(table, 'Fixtures',        `${rigs.length}× GDTF moving heads`);
   setRow(table, 'DMX channels',    `${rigs.length * (profile.dmxModes[0]?.footprint ?? 0)} total`);
   setRow(table, 'Field angle',     `${fieldAngle}°`);
