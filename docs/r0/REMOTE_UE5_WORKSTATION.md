@@ -4,9 +4,10 @@
 
 The owner has provisioned the workstation and authorized administrative setup and
 development. Remote Desktop Commander has successfully provided Windows file and
-terminal access. **Current checkpoint: after the owner's PC restart, the remote
-device agent must be reopened and reconnected before development commands resume.**
-The earlier successful connection does not establish that the device is online now.
+terminal access, including a fresh successful connection after the owner's restart.
+Normal automatic startup is installed; the administrator upgrade is prepared and
+awaits Windows approval. See [workstation controls](WORKSTATION_CONTROLS.md) for
+verified cleanup, recovery, power controls and exact pending setup.
 
 Actual hardware differs from the original proposal: Windows 11 Pro, approximately
 16 GiB RAM, AMD Radeon RX 9060 XT and a 200 GiB system drive. Visual Studio Community
@@ -29,8 +30,8 @@ not accessed. Keep the machine running during the authorized build and verificat
 session; stop it through the provider when work is finished and the owner no longer
 needs the stream.
 
-Once the owner reconnects the device agent, verify Windows access and the existing
-engine files, then resume `scripts/verify-r0-native.ps1` from the native source
+The owner's later screenshot shows Epic verifying UE5.8.2 at 88%, with a connection
+warning. Verify installation completion, then resume `scripts/verify-r0-native.ps1` from the native source
 checkout. Retain the build and commandlet reports before recording any native pass.
 
 ## Original rental proposal retained for context
@@ -60,9 +61,9 @@ work, including Windows preflight, portable MSVC coordinate checks and browser
 acceptance. This verifies the remote development connection; UE5 compilation and
 runtime conformance require their own recorded results.
 
-The current reconnection checkpoint is the owner's PC restart. Reopen the paired
-agent on that desktop and keep it running, then confirm device availability before
-resuming commands. The agent's previous availability is not a current online check.
+The post-restart connection was verified live. Inspect current availability before
+resuming; the current standard-permission agent and pending administrator upgrade
+are documented in [workstation controls](WORKSTATION_CONTROLS.md).
 
 DigitalOcean also has a plugin described as provisioning a Droplet for a remote Codex workspace. GPU provisioning, Windows desktop streaming and a complete UE5 configuration were not established by that description. Do not purchase a generic CPU Droplet as the UE5 workstation based only on the plugin name.
 

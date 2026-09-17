@@ -15,6 +15,7 @@ Native continuation: `codex/ue5-r0-native`, CORE-01 source milestone.
 | Native report comparator | 34 synthetic corruption tests passed. Synthetic reports are not native execution evidence. |
 | Native UE5 | Source project, codec, record inspector and commandlet implemented. UE5.8.2 files downloaded. Initial build blocked by absent TMP in the remote process environment; preflight now restores Windows temp paths. Owner restart interrupted the next attempt; native compilation/UI/conformance not run. |
 | Actual Android / visual approval | Not run / not approved. |
+| Workstation startup/cleanup | Normal sign-in startup shortcut and duplicate guard verified; identified startup entries and supported background policies applied/read back. Eight Widgets-related processes closed. Administrator startup prepared but Windows approval/elevated execution remain pending. See `WORKSTATION_CONTROLS.md`. |
 
 The previous web milestone had 335 passing tests. The shared corpus adds 324 tests
 for 292 semantic cases, 26 malformed JSON strings and corpus integrity/reproducibility.
