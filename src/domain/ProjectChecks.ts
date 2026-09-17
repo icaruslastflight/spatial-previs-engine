@@ -79,7 +79,7 @@ export function weightRiggingCheck(project: ProductionProject, record: Productio
     status: missingData ? 'needs_data' : 'pass',
     summary: missingData ? 'Cannot calculate total weight; missing mass data on some attached equipment.' : `Total attached weight: ${totalMass.toFixed(2)} kg`,
     assumptions: ['Static load only', 'Center of mass calculations not yet evaluated'],
-    uncertainty: ['Dynamic rigging forces not included', 'Safety factors not applied'],
+    uncertainty: ['Dynamic rigging forces not included', 'Safety factors not applied', 'ALPHA BUILD NOTATION: Calculations cannot be guaranteed. The program is not liable for miscalculations or damage.'],
     evidence
   };
 }
@@ -139,7 +139,7 @@ export function electricalPowerLoadCheck(project: ProductionProject, record: Pro
     status: missingData ? 'needs_data' : 'pass',
     summary: missingData ? 'Cannot calculate total power; missing power data on some connected equipment.' : `Total electrical load: ${totalPower.toFixed(2)} W`,
     assumptions: ['Peak power draw assumed', 'Power factor and phase balancing not evaluated'],
-    uncertainty: ['Voltage drop and cable resistance not calculated'],
+    uncertainty: ['Voltage drop and cable resistance not calculated', 'ALPHA BUILD NOTATION: Calculations cannot be guaranteed. The program is not liable for miscalculations or damage.'],
     evidence
   };
 }

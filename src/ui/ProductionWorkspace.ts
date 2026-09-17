@@ -263,7 +263,11 @@ function renderPanel(): void {
     };
     panel.querySelectorAll<HTMLButtonElement>('[data-remove]').forEach(b => b.onclick = () => run(() => transact('Connection removed', [{ type: 'remove', id: b.dataset['remove']! }])));
   } else if (workspace === 'Check') {
-    panel.innerHTML = '<h2>Scoped checks</h2><p>Checks describe a named model and its inputs. Specialist approval is unavailable until a reviewer authority is configured.</p>' +
+    panel.innerHTML = `<h2>Scoped checks</h2>
+      <div class="alpha-disclaimer" style="color: #ff9900; font-size: 0.9em; margin-bottom: 1rem; border-left: 3px solid #ff9900; padding-left: 0.5rem;">
+        <strong>ALPHA BUILD NOTATION:</strong> Any calculations performed cannot be guaranteed. The program is not liable for miscalculations, damage, or safety hazards.
+      </div>
+      <p>Checks describe a named model and its inputs. Specialist approval is unavailable until a reviewer authority is configured.</p>` +
       (state.checks.length ? state.checks.map(c => `<button class="check-row" data-scope="${escape(c.scope[0])}"><strong class="check-status ${c.status}">${escape(c.status.replaceAll('_', ' '))}</strong><span>${escape(c.summary)}<small>${escape(c.model)} v${escape(c.modelVersion)} · input revision ${c.inputRevision}</small></span></button>`).join('') : '<p class="empty-copy">No checks yet. Select equipment and choose Check recorded data.</p>');
     panel.querySelectorAll<HTMLButtonElement>('[data-scope]').forEach(b => b.onclick = () => select(b.dataset['scope']!));
   } else {
