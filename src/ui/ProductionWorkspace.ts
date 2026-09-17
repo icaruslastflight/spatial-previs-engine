@@ -51,6 +51,7 @@ let catalog: CatalogAsset[] = [], viewport: ProductionViewport | null = null;
 let operationsSubTab: 'Inventory' | 'Crew' | 'Vendors' = 'Inventory';
 let cablingInspector: CablingInspector | null = null;
 let preview: Preview | null = null, dirty = false, serial = 0, busy = false;
+let isDemo = new URLSearchParams(window.location.search).has('demo');
 let detach = () => {};
 let opening = false;
 let renderSequence = 0;
@@ -84,11 +85,36 @@ async function reconcile(): Promise<void> {
     if (sequence === renderSequence) el('render-status').textContent = `Scene update failed: ${e instanceof Error ? e.message : String(e)}. Previous scene retained.`;
   }
 }
+function checkDemoLimits(operations: Operation[]): void {
+  if (!isDemo) return;
+  const project = store.project;
+  let instances = project.records.filter(r => r.kind === 'asset_instance').length;
+  let connections = project.records.filter(r => r.kind === 'connection').length;
+  let zones = project.records.filter(r => r.kind === 'zone').length;
+  let ops = project.records.filter(r => r.kind === 'personnel' || r.kind === 'vendor').length;
+  
+  for (const op of operations) {
+    if (op.type === 'put' && op.record) {
+      if (op.record.kind === 'asset_instance' && !project.records.some(r => r.id === op.record!.id)) instances++;
+      if (op.record.kind === 'connection' && !project.records.some(r => r.id === op.record!.id)) connections++;
+      if (op.record.kind === 'zone' && !project.records.some(r => r.id === op.record!.id)) zones++;
+      if ((op.record.kind === 'personnel' || op.record.kind === 'vendor') && !project.records.some(r => r.id === op.record!.id)) ops++;
+    }
+  }
+  
+  if (instances > 600) throw new Error('Demo Limit: Maximum 600 pieces of equipment allowed.');
+  if (connections > 100) throw new Error('Demo Limit: Maximum 100 connections allowed.');
+  if (zones > 15) throw new Error('Demo Limit: Maximum 15 zones allowed.');
+  if (ops > 50) throw new Error('Demo Limit: Maximum 50 operations records allowed.');
+}
+
 function transact(label: string, operations: Operation[]): void {
+  checkDemoLimits(operations);
   store.execute({ key: crypto.randomUUID(), label, baseRevision: store.project.revision, operations }, human);
   notice(label);
 }
 function propose(label: string, operations: Operation[]): void {
+  checkDemoLimits(operations);
   if (preview) store.cancel(preview.id);
   preview = store.preview({ key: crypto.randomUUID(), label, baseRevision: store.project.revision, operations }, human);
   const box = el('proposal'); box.hidden = false;
@@ -539,6 +565,7 @@ el('open-desktop-url').onclick = () => {
   } catch (e) { desktopUrlStatus(e instanceof Error ? e.message : 'Desktop link could not be opened.', true); }
 };
 el('save').onclick = () => run(async () => {
+  if (isDemo) return notice('Saving is disabled in Demo Mode.', true);
   if (busy || opening) return; busy = true; const savedSerial = serial; el('save-status').textContent = 'Saving…';
   try {
     generation = await repository.save(store.state, generation);
@@ -592,8 +619,25 @@ window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); 
 
 async function initialize(): Promise<void> {
   try {
-    const saved = await repository.load(await repository.lastProjectId() ?? 'local-production');
-    if (saved) { store = new ProjectStore(saved.state, authorizer); generation = saved.generation; el('save-status').textContent = 'Saved on this device'; }
+    
+    if (isDemo) {
+      try {
+        const res = await fetch(`${import.meta.env.BASE_URL}demo.json`);
+        if (res.ok) {
+          const { parseWorkspace } = await import('../domain/WorkspaceState.ts');
+          const state = parseWorkspace(await res.text());
+          store = new ProjectStore(state, authorizer);
+          generation = null; dirty = true;
+          notice('Demo project loaded! (Unsaved)');
+        }
+      } catch (e) {
+        console.warn('Demo load failed', e);
+      }
+    }
+    if (!isDemo || dirty === false) {
+      const saved = await repository.load(await repository.lastProjectId() ?? 'local-production');
+      if (saved) { store = new ProjectStore(saved.state, authorizer); generation = saved.generation; el('save-status').textContent = 'Saved on this device'; }
+    }
   } catch (e) { notice(`Saved project could not be opened: ${e instanceof Error ? e.message : String(e)}. Export before replacing it.`, true); }
   connectStore(); render();
   const response = await fetch(`${import.meta.env.BASE_URL}assets/manifest.json`);
