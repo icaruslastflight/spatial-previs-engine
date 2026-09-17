@@ -205,18 +205,24 @@ function buildFloorPool(radius: number, color: THREE.Color, safe: boolean): THRE
 }
 
 /**
- * Throw distance from the fixture's resolved emitter to the floor (Y=0).
+ * Throw from the fixture's resolved emitter to the floor (Y=0).
  * Returns null when the beam points up or sideways.
+ *
+ * Returns the origin and direction as well as the landing, so the beam cone
+ * and the floor pool are placed from one computation. Deriving the cone from
+ * the emitter's local axes instead lets the two disagree the moment pan and
+ * tilt move the head, which is how the cones ended up aimed at the sky while
+ * the pools stayed on the deck.
  */
 function throwToFloor(
   fixture: ResolvedFixtureInstance,
-): { distance: number; hit: THREE.Vector3 } | null {
+): { distance: number; hit: THREE.Vector3; origin: THREE.Vector3; dir: THREE.Vector3 } | null {
   const origin = fixture.emitterGroup.getWorldPosition(new THREE.Vector3());
   const aim    = fixture.light.target.getWorldPosition(new THREE.Vector3());
   const dir    = aim.sub(origin).normalize();
   if (dir.y >= -1e-3) return null;
   const t = origin.y / -dir.y;
-  return { distance: t, hit: origin.clone().addScaledVector(dir, t) };
+  return { distance: t, hit: origin.clone().addScaledVector(dir, t), origin, dir };
 }
 
 /** Does the beam's floor hit land inside the audience zone AABB? */
@@ -321,7 +327,7 @@ async function main(): Promise<void> {
     const landing = throwToFloor(fixture);
     if (!landing) continue;
 
-    const { distance, hit } = landing;
+    const { distance, hit, origin, dir } = landing;
     const inZone    = hitsAudienceZone(hit);
     const elevation = hit.y;                  // always 0 for floor hits — but beam intercept Y if tilted
     const safeBeam  = !inZone || elevation >= 2.5;
@@ -331,9 +337,12 @@ async function main(): Promise<void> {
     const beamColor = safeBeam ? color : new THREE.Color(1, 0.2, 0.2);
     const cone = buildBeamCone(fieldAngle, distance, beamColor, safeBeam);
 
-    // The emitter fires along its local -Y, and buildBeamCone already opens the
-    // cone that way, so it mounts unrotated.
-    fixture.emitterGroup.add(cone);
+    // Placed in world space along the same direction the floor pool was
+    // solved from, so the two can never drift apart. buildBeamCone opens
+    // along -Y, so that is the axis being rotated onto the aim.
+    cone.position.copy(origin);
+    cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), dir);
+    scene.add(cone);
 
     const poolRadius = Math.tan(THREE.MathUtils.degToRad(fieldAngle / 2)) * distance;
     const pool = buildFloorPool(poolRadius, beamColor, safeBeam);
