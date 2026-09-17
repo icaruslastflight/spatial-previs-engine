@@ -145,6 +145,47 @@ try {
   await phone.screenshot({ path: `${output}/r0-phone.png`, fullPage: true });
   await phone.locator('#save').tap();
   await phone.waitForFunction(() => document.querySelector('#save-status').textContent === 'Saved on this device');
+  // Desktop access is a separate preference. It must not trim the project backup,
+  // transfer it automatically, or turn a saved URL into executable navigation.
+  const handoffBackup = await downloadJson(phone, '#export');
+  const desktopUrlKey = 'spatial-previs.desktop-url.v1';
+  await phone.locator('#continue-desktop').tap();
+  assert.equal(await phone.locator('#desktop-handoff').isVisible(), true);
+  assert.match(await phone.locator('#desktop-handoff').textContent(), /Native UE5 import of this complete workspace is still in development/);
+  assert.equal(await phone.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+  // Allow Chromium's touch highlight to fade before documenting the modal.
+  await phone.waitForTimeout(500);
+  await phone.screenshot({ path: `${output}/r0-phone-handoff.png` });
+  assert.deepEqual(await downloadJson(phone, '#handoff-export'), handoffBackup);
+  for (const value of ['javascript:alert(1)', 'data:text/html,invalid', 'file:///C:/project.json', 'moonlight://desktop', 'http://desktop.example.test/', 'https://user:password@desktop.example.test/', 'https://desktop.example.test/?token=example', 'https://desktop.example.test/#token']) {
+    await phone.locator('#desktop-url').fill(value);
+    await phone.locator('#desktop-url-form button[type=submit]').tap();
+    assert.equal(await phone.locator('#desktop-url-status').evaluate(el => el.classList.contains('error')), true);
+    assert.equal(await phone.evaluate(key => localStorage.getItem(key), desktopUrlKey), null);
+    assert.equal(await phone.locator('#open-desktop-url').isDisabled(), true);
+  }
+  const desktopAddress = 'https://desktop.example.test/portal';
+  await phone.locator('#desktop-url').fill(desktopAddress);
+  await phone.locator('#desktop-url-form button[type=submit]').tap();
+  await phone.locator('#close-desktop-handoff').tap();
+  await phone.reload(); await phone.waitForSelector('body[data-ready="true"]');
+  await phone.locator('#continue-desktop').tap();
+  assert.equal(await phone.locator('#desktop-url').inputValue(), desktopAddress);
+  await phoneContext.route('https://desktop.example.test/**', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Desktop access test</title>' }));
+  const popupPending = phone.waitForEvent('popup');
+  await phone.locator('#open-desktop-url').tap();
+  const desktopPopup = await popupPending; await desktopPopup.waitForLoadState();
+  assert.equal(desktopPopup.url(), desktopAddress);
+  assert.equal(await desktopPopup.evaluate(() => window.opener), null);
+  assert.equal(await desktopPopup.evaluate(() => document.referrer), '');
+  await desktopPopup.close();
+  assert.deepEqual(await downloadJson(phone, '#handoff-export'), handoffBackup);
+  await phone.locator('#clear-desktop-url').tap();
+  assert.equal(await phone.evaluate(key => localStorage.getItem(key), desktopUrlKey), null);
+  await phone.keyboard.press('Escape');
+  assert.equal(await phone.locator('#desktop-handoff').isVisible(), false);
+  assert.equal(await phone.locator('#continue-desktop').evaluate(el => el === document.activeElement), true);
+  assert.deepEqual(await downloadJson(phone, '#export'), handoffBackup);
   await phone.evaluate(() => navigator.serviceWorker.ready);
   await phone.waitForFunction(() => navigator.serviceWorker.controller !== null);
   await phoneContext.setOffline(true);
@@ -178,8 +219,8 @@ try {
   assert.deepEqual(errors, []);
   const result = { status: 'passed', browser: browser.version(), desktop: '1440x960 Chromium', phone: '390x844 touch emulation',
     actualPhone: 'not_run', ue5: 'not_run',
-    scenarios: ['placement', 'numeric edit', 'lock', 'check invalidation', 'cancel', 'delete and undo', 'save and reopen', 'shared selection', 'concurrent save conflict', 'logical connections', 'malformed import recovery', 'export/import roundtrip', 'last project recovery', 'read-only evidence', 'redacted diagnostics', 'phone controls', 'offline reopen', 'landscape and tablet overflow', 'socket preview cancel/apply', 'unlink and undo'],
-    screenshots: ['desktop', 'build', 'map', 'connect', 'check', 'deliver', 'phone', 'phone-inspector'].map(name => `${output}/r0-${name}.png`) };
+    scenarios: ['placement', 'numeric edit', 'lock', 'check invalidation', 'cancel', 'delete and undo', 'save and reopen', 'shared selection', 'concurrent save conflict', 'logical connections', 'malformed import recovery', 'export/import roundtrip', 'last project recovery', 'read-only evidence', 'redacted diagnostics', 'phone controls', 'desktop handoff full backup', 'desktop URL validation and persistence', 'desktop link isolation', 'offline reopen', 'landscape and tablet overflow', 'socket preview cancel/apply', 'unlink and undo'],
+    screenshots: ['desktop', 'build', 'map', 'connect', 'check', 'deliver', 'phone', 'phone-inspector', 'phone-handoff'].map(name => `${output}/r0-${name}.png`) };
   await writeFile(`${output}/results.json`, JSON.stringify(result, null, 2));
   console.log(JSON.stringify(result, null, 2));
 } finally { await browser?.close(); server?.kill(); }

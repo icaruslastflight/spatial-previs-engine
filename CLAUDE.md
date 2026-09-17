@@ -2,28 +2,39 @@
 
 Venue-independent spatial twin and live-event pre-visualization client for
 real and virtual environments. **Point State Park, Pittsburgh, PA is a sample
-venue for optional point-cloud context, not the product's scope.** This is the *Parallel High-Capability Web
-Application* line: it targets maximum browser feature parity with the Unreal
-Engine 5 desktop architecture.
+venue for optional point-cloud context, not the product's scope.** This repository
+contains the web/mobile client and the native UE5 foundation. Desktop retains its
+full capability; browser/device limits must not reduce the desktop product.
 
 ---
 
 ## 1. Governing rules
 
-### 1.1 Strict Dual-Platform Parity
+Read `AGENTS.md` for the owner's standing documentation/continuity requirements.
+Every meaningful development change includes updating the living illustrated guide,
+roadmap, case study, account checklist and executed verification records. Keep their
+saved identities and version history; provide PDF/DOCX downloads for phone access.
 
-Every 3D feature, snapping kinematic, and protocol parser must behave
-**identically** on the web client and the UE5 desktop build.
+### 1.1 Shared contracts and full desktop capability
 
-- A change to snapping tolerances, socket semantics, the site anchor, or a
-  protocol parser is a **cross-platform change**. Land it on both sides or land
-  it on neither.
-- Where the web genuinely cannot match the desktop, say so at the point of
-  divergence in a code comment and treat the desktop as authoritative. There is
-  one such divergence today, documented in `src/geo/CesiumGlobe.ts`: the Cesium
-  basemap and the Three.js show layer do not share a depth buffer, so show
-  geometry is never occluded by basemap buildings. **Occlusion checks are
-  desktop-authoritative.**
+Owner decision on 17 September 2026: **do not limit desktop capability to what
+web/mobile can run.** This supersedes the earlier identical-feature-set requirement.
+
+- Desktop may ship advanced geometry, simulation, device integration and rendering
+  that browsers or phones cannot support. Give those workflows their full native
+  capability and mark availability explicitly in the web/mobile product.
+- Keep shared project identities, units, coordinate transforms, relationship
+  meanings and supported operations consistent. A contract change needs a versioned
+  compatibility/migration path and conformance evidence; do not silently reinterpret
+  or delete unsupported desktop data when a project passes through a browser.
+- Web/mobile must offer **Continue on desktop** for unavailable workflows, through
+  a configured desktop connection or clear handoff. A redirect is not automatic
+  project synchronization; explain export/import requirements where applicable.
+- Shared snapping/parser behavior must agree where both implementations support
+  it. Desktop-only features do not require a reduced browser implementation first.
+- Document actual capability differences. The Cesium basemap and Three.js show
+  layer do not share a depth buffer (`src/geo/CesiumGlobe.ts`), so show geometry
+  is not occluded by basemap buildings. Occlusion checks remain desktop-authoritative.
 - Shared numeric constants live in exactly one place per platform and are
   mirrored verbatim. On the web those are `POINT_STATE_PARK` in
   `src/geo/GeoAnchor.ts` and `SNAP_THRESHOLD_METERS` / `DETENT_STEP_RADIANS` in
@@ -53,10 +64,11 @@ a preference.
 - **No large binaries in git.** Scans go in release assets or an external bucket
   and are fetched at runtime. Git LFS bandwidth is not free.
 
-### 1.3 Mobile touch is the primary target
+### 1.3 Mobile touch is the primary browser target
 
-The viewport is developed and operated on a phone. Every interaction must work
-under touch before it is considered done.
+The browser viewport is developed and operated on a phone. Its supported
+interactions must work under touch before they are considered done. Desktop-only
+workflows remain available through the desktop handoff instead of constraining UE5.
 
 - One finger on an asset drags it; one finger on empty space orbits; two fingers
   pinch-zoom and pan. A second finger landing mid-drag **aborts** the drag and

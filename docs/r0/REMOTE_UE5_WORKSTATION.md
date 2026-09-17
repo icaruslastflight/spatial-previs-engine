@@ -7,12 +7,12 @@ development. Desktop Commander is online. Actual hardware differs from the origi
 proposal: Windows 11 Pro, approximately 16 GiB RAM, AMD Radeon RX 9060 XT and a
 200 GiB system drive. Visual Studio Community 2026 and C++ tools are installed.
 Epic launcher installation succeeded after Windows elevation; the owner signed in
-and started UE5.8 installation. The engine build remains unverified.
+and downloaded UE5.8.2, then restarted the PC. The engine build remains unverified.
 
 The native source checkout is `C:\Users\user\Documents\SpatialPrevisEngine`.
 The separate browser acceptance checkout is `C:\Users\user\Documents\SpatialPrevisWebEvidence\repo`.
 Both use the actual shared web baseline. Portable native coordinate checks pass with
-MSVC; the browser suite passes 20 scenarios. No new provider purchase was made.
+MSVC; the browser suite passes 23 scenarios. No new provider purchase was made.
 
 The total USD 30 budget remains a user constraint. Provider balance and billing were
 not accessed. Keep the machine running during the requested installation; stop it

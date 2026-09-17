@@ -10,10 +10,11 @@ point-cloud demonstration. It is not the product's required location or a
 restriction on where a project can be created. The existing legacy viewport
 opens that sample; its named coordinates and geodetic tests apply only to it.
 
-This repository holds the **web client** — the Parallel High-Capability Web
-Application line, built for maximum browser-native parity with the Unreal
-Engine 5 desktop architecture. Three.js + CesiumJS + Gaussian splatting, with
-modular-asset magnetic snapping.
+This repository holds the **web/mobile client and native UE5 foundation**.
+Desktop retains its full capability. Web/mobile support practical on-device
+workflows and a desktop handoff for features that need Unreal or stronger hardware.
+Project data and supported operations stay compatible across platforms. The web
+renderer uses Three.js, CesiumJS and Gaussian splatting with modular-asset snapping.
 
 ## Quick start
 
@@ -39,10 +40,13 @@ last successfully saved project. Export project downloads a portable backup.
 Concurrent tabs cannot silently overwrite each other's saves. Imported approval
 records require fresh authorized review; existing issued bytes remain unchanged.
 
-**R0 is a review build.** Native UE5 parity, actual-phone acceptance and commercial
+**R0 is a review build.** Native shared-contract conformance, actual-phone acceptance and commercial
 visual approval remain open. R0 movement, socket snaps and unlinking share the command/undo store. Read [R0 status](docs/r0/README.md),
 [desktop conformance](docs/r0/UE5_CONFORMANCE.md), and the
 [account/API setup checklist](docs/r0/ACCOUNTS_AND_APIS.md) before calling it a release.
+
+Read the [desktop capability decision](docs/r0/PLATFORM_CAPABILITIES.md) and
+[native project guide](native/README.md) for the platform boundary and current scope.
 
 ## Commands
 

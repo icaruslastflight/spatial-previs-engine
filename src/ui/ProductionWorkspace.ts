@@ -18,7 +18,7 @@ root.innerHTML = `<header class="project-bar"><div class="wordmark"><span class=
   <div class="project-identity"><span id="project-name">Local production</span><span id="revision">Revision 0</span></div>
   <span class="mode">Design only</span></header>
   <nav class="workspace-nav" aria-label="Workspace">${['Build', 'Map', 'Connect', 'Check', 'Deliver'].map((name, i) => `<button data-workspace="${name}" aria-pressed="${i === 0}"><span>0${i + 1}</span>${name}</button>`).join('')}</nav>
-  <div class="command-bar"><button id="save">Save project</button><button id="open">Open file</button><button id="export">Export project</button><span class="separator"></span><button id="undo" disabled>Undo</button><button id="redo" disabled>Redo</button><button id="equipment-toggle" aria-expanded="false">Equipment</button><button id="inspector-toggle" aria-expanded="false">Inspector</button></div>
+  <div class="command-bar"><button id="save">Save project</button><button id="open">Open file</button><button id="export">Export project</button><span class="separator"></span><button id="undo" disabled>Undo</button><button id="redo" disabled>Redo</button><button id="equipment-toggle" aria-expanded="false">Equipment</button><button id="inspector-toggle" aria-expanded="false">Inspector</button><button id="continue-desktop" aria-haspopup="dialog">Continue on desktop</button></div>
   <main class="work-area"><aside class="equipment"><h2>Equipment</h2><label class="search-label">Search catalog<input id="search" type="search" placeholder="Truss, panel, speaker…"></label><label>Category<select id="category"><option value="">All categories</option></select></label><div id="catalog" class="catalog"></div><div class="section-heading"><h2>Scene</h2><span id="scene-count">0 objects</span></div><div id="scene-list" class="scene-list"></div></aside>
   <section class="center"><div class="view-heading"><div><h1 id="view-title">Build the production</h1><p id="view-subtitle">Local scene · metres · optional venue context</p></div><button id="frame">Frame all</button></div>
   <div class="viewport"><canvas id="scene-canvas" aria-label="Production 3D scene"></canvas><div id="empty-scene"><strong>A venue starts with your design</strong><span>Add equipment from the catalog. A map or point cloud can come later.</span></div><span class="view-note">Catalog geometry is a planning placeholder</span><span id="render-status" role="status"></span></div>
@@ -26,7 +26,17 @@ root.innerHTML = `<header class="project-bar"><div class="wordmark"><span class=
   <aside class="inspector"><h2>Inspector</h2><div id="inspector-content"></div></aside></main>
   <section id="proposal" hidden aria-label="Proposed changes"></section>
   <footer><span id="notice" role="status">Opening local project…</span><span id="save-status">Unsaved</span><span class="gate">R0 preview · desktop conformance pending</span></footer>
-  <input id="file-input" type="file" accept=".json,application/json" hidden>`;
+  <input id="file-input" type="file" accept=".json,application/json" hidden>
+  <dialog id="desktop-handoff" aria-labelledby="desktop-handoff-title" aria-describedby="desktop-handoff-summary">
+    <div class="handoff-heading"><h2 id="desktop-handoff-title">Continue on desktop</h2><button id="close-desktop-handoff" aria-label="Close desktop handoff" autofocus>Close</button></div>
+    <p id="desktop-handoff-summary">Keep working here, or connect to your desktop for the tools and scene detail available there.</p>
+    <ol class="handoff-steps"><li><h3>Keep a complete backup</h3><p>Export the current project, checks, edit history and stored issued snapshots. Your edits stay here.</p><button id="handoff-export">Export project backup</button></li>
+    <li><h3>Connect to your computer</h3><p>Open Moonlight on your phone and connect to your paired PC, or use your desktop access link below.</p></li>
+    <li><h3>Bring your project with you</h3><p>Files do not transfer automatically. Move the backup to your PC, then use <strong>Open file</strong> in the desktop browser workspace. Native UE5 import of this complete workspace is still in development; keep the original backup and its history.</p></li></ol>
+    <form id="desktop-url-form" novalidate><label for="desktop-url">Your desktop access URL <span class="muted">(optional)</span></label><input id="desktop-url" type="url" inputmode="url" autocomplete="off" spellcheck="false" maxlength="2048" placeholder="https://your-desktop-portal.example/" aria-describedby="desktop-url-help desktop-url-status"><p id="desktop-url-help">Use an HTTPS address without a password, sign-in token, query string or fragment. Saved only in this browser; excluded from project exports.</p><div class="handoff-actions"><button type="submit">Save desktop URL</button><button id="open-desktop-url" type="button" disabled>Open desktop link</button><button id="clear-desktop-url" type="button" hidden>Forget link</button></div><p id="desktop-url-status" role="status"></p></form>
+    <details class="handoff-provider"><summary>Already using AirGPU?</summary><p><a href="https://app.airgpu.com/" target="_blank" rel="noopener noreferrer">Open AirGPU dashboard</a> to manage your existing cloud PC. Your project is not sent to AirGPU.</p></details>
+    <div class="desktop-capability"><span class="capability-badge">Desktop-only · planned</span><p>Full-fidelity rendering, dense scenes and advanced production tools belong on the desktop roadmap. Web and mobile support a subset; they do not limit desktop capability. These native features are still in development.</p></div>
+  </dialog>`;
 
 function el<T extends HTMLElement = HTMLElement>(id: string): T { return document.getElementById(id)! as T; }
 const human: Principal = { id: 'local-operator', kind: 'human' };
@@ -222,6 +232,62 @@ function downloadJson(content: string, filename: string): void {
   const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000); notice('Download prepared');
 }
+function exportProject(): void { downloadJson(serializeWorkspace(store.state), `spatial-previs-r${store.project.revision}.json`); }
+
+// Access is a local preference, never project data or a remote-control integration.
+const desktopUrlKey = 'spatial-previs.desktop-url.v1';
+let desktopUrl = '';
+function validateDesktopUrl(value: string): string {
+  const address = value.trim();
+  if (!address) return '';
+  if (address.length > 2048 || /\s/.test(address) || !/^https:\/\//i.test(address)) throw new Error('Enter an absolute HTTPS desktop address.');
+  const parsed = new URL(address);
+  if (parsed.protocol !== 'https:' || !parsed.hostname || parsed.username || parsed.password || parsed.search || parsed.hash) {
+    throw new Error('Use HTTPS without a password, sign-in token, query string or fragment.');
+  }
+  return parsed.href;
+}
+function desktopUrlStatus(message: string, error = false): void {
+  el('desktop-url-status').textContent = message;
+  el('desktop-url-status').classList.toggle('error', error);
+}
+function renderDesktopUrl(): void {
+  el<HTMLInputElement>('desktop-url').value = desktopUrl;
+  el<HTMLButtonElement>('open-desktop-url').disabled = !desktopUrl;
+  el('clear-desktop-url').hidden = !desktopUrl;
+}
+el('continue-desktop').onclick = () => {
+  desktopUrl = '';
+  try {
+    desktopUrl = validateDesktopUrl(localStorage.getItem(desktopUrlKey) ?? '');
+    desktopUrlStatus(desktopUrl ? 'Desktop link saved in this browser.' : 'No desktop link saved. Moonlight can be opened separately.');
+  } catch { desktopUrlStatus('Saved desktop link is unavailable. Enter an HTTPS address to replace it.', true); }
+  renderDesktopUrl();
+  el<HTMLDialogElement>('desktop-handoff').showModal();
+  el('desktop-handoff').scrollTop = 0;
+};
+el('close-desktop-handoff').onclick = () => el<HTMLDialogElement>('desktop-handoff').close();
+el('handoff-export').onclick = () => run(exportProject);
+el<HTMLFormElement>('desktop-url-form').onsubmit = event => {
+  event.preventDefault();
+  try {
+    const candidate = validateDesktopUrl(el<HTMLInputElement>('desktop-url').value);
+    if (candidate) localStorage.setItem(desktopUrlKey, candidate); else localStorage.removeItem(desktopUrlKey);
+    desktopUrl = candidate; renderDesktopUrl(); desktopUrlStatus(candidate ? 'Desktop link saved in this browser.' : 'Desktop link removed.');
+  } catch (e) { desktopUrlStatus(e instanceof Error ? e.message : 'Desktop link could not be saved.', true); }
+};
+el('clear-desktop-url').onclick = () => {
+  try { localStorage.removeItem(desktopUrlKey); desktopUrl = ''; renderDesktopUrl(); desktopUrlStatus('Desktop link removed.'); }
+  catch { desktopUrlStatus('This browser could not remove the saved link.', true); }
+};
+el('open-desktop-url').onclick = () => {
+  try {
+    const address = validateDesktopUrl(desktopUrl);
+    if (!address) throw new Error('Save a desktop URL first.');
+    window.open(address, '_blank', 'noopener,noreferrer');
+    desktopUrlStatus('Desktop link requested in a new tab. Your project has not been transferred.');
+  } catch (e) { desktopUrlStatus(e instanceof Error ? e.message : 'Desktop link could not be opened.', true); }
+};
 el('save').onclick = () => run(async () => {
   if (busy || opening) return; busy = true; const savedSerial = serial; el('save-status').textContent = 'Saving…';
   try {
@@ -231,7 +297,7 @@ el('save').onclick = () => run(async () => {
   } catch (e) { el('save-status').textContent = 'Save failed · export to keep changes'; throw e; }
   finally { busy = false; }
 });
-el('export').onclick = () => run(() => downloadJson(serializeWorkspace(store.state), `spatial-previs-r${store.project.revision}.json`));
+el('export').onclick = () => run(exportProject);
 el('open').onclick = () => el<HTMLInputElement>('file-input').click();
 el<HTMLInputElement>('file-input').onchange = () => run(async () => {
   const file = el<HTMLInputElement>('file-input').files?.[0]; if (!file) return;
@@ -263,6 +329,7 @@ for (const [id, className] of [['equipment-toggle', 'show-equipment'], ['inspect
 document.querySelectorAll<HTMLButtonElement>('[data-workspace]').forEach(b => b.onclick = () => setWorkspace(b.dataset['workspace']!));
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
+  if (el<HTMLDialogElement>('desktop-handoff').open) return;
   if (preview) { closeProposal(); notice('Proposal canceled; project unchanged'); }
   else {
     const wasInspector = root.classList.contains('show-inspector');

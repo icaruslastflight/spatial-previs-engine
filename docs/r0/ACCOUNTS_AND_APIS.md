@@ -8,7 +8,7 @@ require **no paid API and no model connection**. No new purchase is required.
 | GitHub | Existing repository access and Git Credential Manager/CLI sign-in on the development PC. No tokens in source. | Fetch the R0 review branch; run `git status`. |
 | Node.js / npm / Git | Install the repository-compatible toolchain. These are software, not API accounts. | Check versions, then `npm ci`. |
 | AirGPU | Use the existing rental; check credit before lengthy builds. | Online; Windows commands and Chrome browser acceptance executed. |
-| Epic Games / UE | Epic launcher installed and user signed in. UE5.8 installation is in progress. No Epic API key is required. | Wait for engine installation, then build `native/SpatialPrevis/SpatialPrevis.uproject`. |
+| Epic Games / UE | Epic launcher installed and user signed in. UE5.8.2 files are downloaded; PC restart in progress. No Epic API key is required. | After reboot, verify installation and build `native/SpatialPrevis/SpatialPrevis.uproject`. |
 | Visual Studio | Visual Studio Community 2026 and C++ workload are installed. | MSVC compiled and passed 358 coordinate assertions. Full Unreal build still pending. |
 | Remote Desktop Commander | Start the paired agent on the remote PC and keep it running during development. | Online device plus successful Windows preflight. |
 | Codex | Existing ChatGPT sign-in for the CLI. | Run the CLI on the PC. The R0 app needs no model API key. |

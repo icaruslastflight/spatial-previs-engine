@@ -2,8 +2,10 @@
 
 Status: native CORE-01 source implemented; Unreal build and runtime conformance pending.
 The AirGPU workstation is online. Visual Studio 2026 and its C++ tools are verified.
-Epic Games Launcher installed successfully on 17 September 2026; UE5.8 setup is in
-progress. The engine was not installed during initial inspection.
+Epic Games Launcher installed successfully on 17 September 2026; UE5.8.2 files are now
+present. The initial build encountered a missing Windows TMP variable in the remote
+process environment; preflight now restores it. The owner restarted the PC during
+the next attempt. Native build and commandlet results remain unverified.
 
 `native/SpatialPrevis/SpatialPrevis.uproject` is pinned to UE5.8. It contains the
 strict project codec, Tools > Spatial Previs R0 record inspector, coordinate adapter,
@@ -26,7 +28,8 @@ Results go into a new `test-results/native/<timestamp>/` folder. A script existi
 on disk is not evidence of a successful run.
 
 Native CORE-02/03/04 command/history/check/review/persistence behavior and real scene
-reconciliation/snapping are still unimplemented. Web/UE release parity remains open.
+reconciliation/snapping are still unimplemented. Shared-contract conformance remains
+open. Desktop capabilities are not capped by mobile support; see `PLATFORM_CAPABILITIES.md`.
 
 ## Shared contract
 
@@ -41,7 +44,7 @@ reconciliation/snapping are still unimplemented. Web/UE release parity remains o
   exact-input invalidation, reviewer authority and immutable issued JSON bytes.
 
 The native implementation must consume these same cases, including rejection
-cases. Do not mark parity complete from a successful import alone. Do not silently
+cases. Do not mark shared-contract conformance complete from a successful import alone. Do not silently
 activate this experimental shared format as a production format before that run.
 
 ## Required desktop evidence

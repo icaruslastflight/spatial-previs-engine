@@ -22,6 +22,9 @@
     "read-only evidence",
     "redacted diagnostics",
     "phone controls",
+    "desktop handoff full backup",
+    "desktop URL validation and persistence",
+    "desktop link isolation",
     "offline reopen",
     "landscape and tablet overflow",
     "socket preview cancel/apply",
@@ -35,6 +38,7 @@
     "C:\\Users\\user\\Documents\\SpatialPrevisWebEvidence\\repo\\test-results\\r0/r0-check.png",
     "C:\\Users\\user\\Documents\\SpatialPrevisWebEvidence\\repo\\test-results\\r0/r0-deliver.png",
     "C:\\Users\\user\\Documents\\SpatialPrevisWebEvidence\\repo\\test-results\\r0/r0-phone.png",
-    "C:\\Users\\user\\Documents\\SpatialPrevisWebEvidence\\repo\\test-results\\r0/r0-phone-inspector.png"
+    "C:\\Users\\user\\Documents\\SpatialPrevisWebEvidence\\repo\\test-results\\r0/r0-phone-inspector.png",
+    "C:\\Users\\user\\Documents\\SpatialPrevisWebEvidence\\repo\\test-results\\r0/r0-phone-handoff.png"
   ]
 }

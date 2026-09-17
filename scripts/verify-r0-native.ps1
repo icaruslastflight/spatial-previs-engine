@@ -4,12 +4,19 @@ param(
     [switch]$CoordinatesOnly
 )
 $ErrorActionPreference = 'Stop'
+# Remote process hosts can omit optional Windows environment entries. Build.bat
+# places its lock under TMP; an absent TMP otherwise looks like a competing build.
+$windowsTemp = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'Temp'
+if (!$env:TMP) { $env:TMP = $windowsTemp }
+if (!$env:TEMP) { $env:TEMP = $windowsTemp }
+if (!(Test-Path -LiteralPath $env:TMP)) { New-Item -ItemType Directory -Path $env:TMP -Force | Out-Null }
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss-fff'
 $evidenceDir = Join-Path $repoRoot "test-results\native\$stamp"
 New-Item -ItemType Directory -Path $evidenceDir -Force | Out-Null
 $programFilesX86 = [Environment]::GetFolderPath('ProgramFilesX86')
 if (!$programFilesX86) { $programFilesX86 = Join-Path $env:SystemDrive 'Program Files (x86)' }
+if (!${env:ProgramFiles(x86)}) { [Environment]::SetEnvironmentVariable('ProgramFiles(x86)', $programFilesX86, 'Process') }
 $vswhere = Join-Path $programFilesX86 'Microsoft Visual Studio\Installer\vswhere.exe'
 if (!(Test-Path $vswhere)) { throw 'Visual Studio C++ tools were not found.' }
 $visualStudio = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath

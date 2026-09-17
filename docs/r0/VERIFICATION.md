@@ -10,10 +10,10 @@ Native continuation: `codex/ue5-r0-native`, CORE-01 source milestone.
 | Unit/domain/scene tests | 659 passed across 17 files. Includes 324 shared corpus/reproducibility tests, plus existing commands, socket integration, evidence and recovery coverage. |
 | Production build/PWA | Passed; both entrypoints, service worker and Cesium runtime assets emitted. |
 | Browser test syntax | `node --check scripts/test-r0-browser.mjs`: passed. |
-| Production browser workflows | 20 scenarios passed on remote Windows Chrome 153.0.8010.48. Real desktop and phone-width screenshots captured and inspected; results retained with this record. |
+| Production browser workflows | 23 scenarios passed on remote Windows Chrome 153.0.8010.48. Real desktop and phone-width screenshots captured and inspected; results retained with this record. |
 | Native coordinate boundary | 358 portable C++ assertions passed with Linux GCC and remote Windows MSVC. Same header feeds the UE transform adapter. |
 | Native report comparator | 34 synthetic corruption tests passed. Synthetic reports are not native execution evidence. |
-| Native UE5 | Source project, codec, record inspector and commandlet implemented. Engine installation in progress; native compilation/UI/conformance not run. |
+| Native UE5 | Source project, codec, record inspector and commandlet implemented. UE5.8.2 files downloaded. Initial build blocked by absent TMP in the remote process environment; preflight now restores Windows temp paths. Owner restart interrupted the next attempt; native compilation/UI/conformance not run. |
 | Actual Android / visual approval | Not run / not approved. |
 
 The previous web milestone had 335 passing tests. The shared corpus adds 324 tests
