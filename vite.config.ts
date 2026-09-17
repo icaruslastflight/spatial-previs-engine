@@ -218,5 +218,16 @@ export default defineConfig({
   server: {
     host: true, // expose on the LAN so the viewport can be tested from a phone
     port: 5173,
+    // Vite rejects requests whose Host header it does not recognise, which is
+    // the right default -- but the phone that operates this viewport is often
+    // not on the workstation's LAN, so on-device testing goes through a free
+    // tunnel. These are suffix matches (the leading dot), so only the tunnel
+    // providers' own subdomains are accepted, never an arbitrary host.
+    allowedHosts: [
+      '.trycloudflare.com', // cloudflared quick tunnel -- no account, $0
+      '.ngrok-free.app',
+      '.loca.lt', // localtunnel
+      '.ts.net', // Tailscale Funnel
+    ],
   },
 });

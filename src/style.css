@@ -232,3 +232,95 @@ body {
     max-width: none;
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/* Spec modal (Paraflex DIY)                                                  */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Shown when an asset is generated to order rather than picked off the palette.
+ * Uses [hidden] rather than a display toggle in script so the element keeps one
+ * source of truth for visibility.
+ */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(4, 8, 12, 0.8);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.modal[hidden] {
+  display: none;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 24rem;
+  display: grid;
+  gap: 0.35rem;
+  padding: 1.25rem;
+  border: 1px solid rgba(120, 170, 220, 0.22);
+  border-radius: 10px;
+  background: rgba(12, 18, 24, 0.95);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.modal-card h2 {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #35d6a0;
+}
+
+.modal-card label {
+  font-size: 0.7rem;
+  color: #8ba0b6;
+  margin-top: 0.5rem;
+}
+
+.modal-card input,
+.modal-card select {
+  width: 100%;
+  box-sizing: border-box;
+  /* 44 px keeps these reachable under touch, per the mobile-first rule. */
+  min-height: 44px;
+  padding: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font: inherit;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 1.25rem;
+}
+
+.modal-actions button {
+  min-height: 44px;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid rgba(53, 214, 160, 0.5);
+  background: rgba(53, 214, 160, 0.2);
+  color: #35d6a0;
+}
+
+.modal-actions button.ghost {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: #fff;
+  font-weight: 400;
+}

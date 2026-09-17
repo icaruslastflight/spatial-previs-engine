@@ -16,7 +16,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
-import { createF34BoxTruss2M, createStageDeck4x8, DECK_4X8 } from '../src/assets/ModularPrimitives.ts';
+import { buildFestivalStage } from '../src/assets/FestivalStage.ts';
 import { parseGDTF, findBeam } from '../src/engine/GDTFParser.ts';
 import type { GDTFProfile } from '../src/engine/GDTFParser.ts';
 import { GDTFAssetResolver, fluxToCandela } from '../src/engine/GDTFAssetResolver.ts';
@@ -68,16 +68,12 @@ scene.add(rimLight);
 /* Stage geometry constants                                            */
 /* ─────────────────────────────────────────────────────────────────── */
 
-const TRUSS_HEIGHT  = 6.2;   // m — bottom chord of arch above deck surface
-const TOWER_HEIGHT  = 6.0;   // m — upright tower sections
-const ARCH_SPAN     = 12.0;  // m — total arch width
-const ARCH_SEGS     = 6;     // number of 2 m sticks across the arch
-const TOWER_X       = ARCH_SPAN / 2;   // left/right tower X
-const DECK_ROWS     = 2;     // front-to-back rows of deck panels
-const DECK_COLS     = 3;     // left-to-right columns of deck panels
-const VIDEO_W       = 8.0;   // m — LED wall width
-const VIDEO_H       = 4.0;   // m — LED wall height
-const VIDEO_Z       = -1.4;  // m — LED wall depth behind centre
+/**
+ * How many mounts get a real GDTF-resolved fixture. The rig carries far more
+ * positions than this, but each resolved fixture brings a shadow-casting
+ * SpotLight, so the rest keep their placeholder props and this handful does
+ * the photometric and laser-safety work the showcase exists to demonstrate.
+ */
 const FIXTURE_COUNT = 6;
 
 /* ─────────────────────────────────────────────────────────────────── */
@@ -98,87 +94,16 @@ const grid = new THREE.GridHelper(60, 60, 0x161e30, 0x0d1220);
 scene.add(grid);
 
 /* ─────────────────────────────────────────────────────────────────── */
-/* Stage decks                                                         */
+/* Rig                                                                 */
 /* ─────────────────────────────────────────────────────────────────── */
 
-const deckOffsetX = -((DECK_COLS - 1) * DECK_4X8.LENGTH) / 2;
-const deckOffsetZ = 3.0;   // front edge of decks (towards audience)
+/*
+ * Decks, truss, arms, subs and the LED wall all come from the shared
+ * FestivalStage module, so this showcase and the sample viewport render the
+ * same rig from one definition rather than two drifting copies. Built inside
+ * main() because it loads GLB truss stock.
+ */
 
-for (let col = 0; col < DECK_COLS; col++) {
-  for (let row = 0; row < DECK_ROWS; row++) {
-    const deck = createStageDeck4x8();
-    deck.position.set(
-      deckOffsetX + col * DECK_4X8.LENGTH,
-      0,
-      deckOffsetZ - row * DECK_4X8.WIDTH,
-    );
-    deck.castShadow = true;
-    deck.receiveShadow = true;
-    scene.add(deck);
-  }
-}
-
-/* ─────────────────────────────────────────────────────────────────── */
-/* Truss towers (uprights)                                             */
-/* ─────────────────────────────────────────────────────────────────── */
-
-function buildTowerGroup(xPos: number): THREE.Group {
-  const group = new THREE.Group();
-  const stickCount = Math.ceil(TOWER_HEIGHT / 2);
-
-  for (let i = 0; i < stickCount; i++) {
-    const stick = createF34BoxTruss2M();
-    // Rotate 90° so the truss runs vertically (along Y).
-    stick.rotation.z = Math.PI / 2;
-    stick.position.set(0, 1 + i * 2, 0);
-    group.add(stick);
-  }
-
-  group.position.set(xPos, 0, 0);
-  return group;
-}
-
-scene.add(buildTowerGroup(-TOWER_X));
-scene.add(buildTowerGroup( TOWER_X));
-
-/* ─────────────────────────────────────────────────────────────────── */
-/* Truss arch (horizontal)                                             */
-/* ─────────────────────────────────────────────────────────────────── */
-
-const archStickWidth = ARCH_SPAN / ARCH_SEGS;  // ~2 m each
-
-for (let i = 0; i < ARCH_SEGS; i++) {
-  const stick = createF34BoxTruss2M();
-  // Scale to fill the segment if arch span doesn't divide evenly into 2 m.
-  stick.scale.x = archStickWidth / 2.0;
-  stick.position.set(-ARCH_SPAN / 2 + archStickWidth * (i + 0.5), TRUSS_HEIGHT, 0);
-  scene.add(stick);
-}
-
-/* ─────────────────────────────────────────────────────────────────── */
-/* LED video wall (emissive plane)                                     */
-/* ─────────────────────────────────────────────────────────────────── */
-
-const ledWall = new THREE.Mesh(
-  new THREE.PlaneGeometry(VIDEO_W, VIDEO_H),
-  new THREE.MeshStandardMaterial({
-    color: 0x1a2a4a,
-    emissive: 0x1a3a7a,
-    emissiveIntensity: 0.6,
-    roughness: 0.5,
-    metalness: 0.2,
-  }),
-);
-ledWall.position.set(0, TRUSS_HEIGHT - VIDEO_H / 2, VIDEO_Z);
-scene.add(ledWall);
-
-/* LED pixel grid overlay — gives the wall texture at close range. */
-const ledGrid = new THREE.GridHelper(VIDEO_W, Math.round(VIDEO_W / 0.16), 0x2a5080, 0x1a3060);
-(ledGrid.material as THREE.Material).transparent = true;
-(ledGrid.material as THREE.Material).opacity = 0.3;
-ledGrid.rotation.x = Math.PI / 2;
-ledGrid.position.set(0, TRUSS_HEIGHT - VIDEO_H / 2, VIDEO_Z + 0.02);
-scene.add(ledGrid);
 
 /* ─────────────────────────────────────────────────────────────────── */
 /* Audience zone bounding box (for laser MPE evaluation)              */
@@ -309,6 +234,10 @@ const RIG_PLAN = [
 async function main(): Promise<void> {
   const status = document.getElementById('status') as HTMLElement;
 
+  status.textContent = 'building rig…';
+  const stage = await buildFestivalStage();
+  scene.add(stage.group);
+
   status.textContent = 'building GDTF archive…';
   const archive = await buildGdtfArchive();
 
@@ -323,8 +252,15 @@ async function main(): Promise<void> {
   const beam      = beamNode?.beam;
   const fieldAngle = beam?.fieldAngleDegrees ?? 15;
 
-  /* Place fixtures across the horizontal arch. */
-  const fixSpacing = (ARCH_SPAN - 2.4) / (FIXTURE_COUNT - 1);
+  /*
+   * Hang the resolved fixtures on real mount points from the rig rather than
+   * inventing coordinates. Only down-facing mounts qualify — an uplit chord
+   * throws nothing at the floor, so it cannot exercise the MPE evaluation —
+   * and they are sampled evenly so the beams fan across the whole rig instead
+   * of bunching on one truss.
+   */
+  const downMounts = stage.mounts.filter((m) => m.facing === 'down');
+  const stride = downMounts.length / FIXTURE_COUNT;
 
   interface Rig {
     fixture: ResolvedFixtureInstance;
@@ -333,11 +269,17 @@ async function main(): Promise<void> {
   const rigs: Rig[] = [];
 
   for (let i = 0; i < FIXTURE_COUNT; i++) {
+    const mount = downMounts[Math.floor(i * stride)];
+    if (!mount) break;
+
     const plan = RIG_PLAN[i % RIG_PLAN.length];
     const fixture = resolver.instantiateFixture(profile.fixtureTypeId, 'Standard');
 
-    const x = -ARCH_SPAN / 2 + 1.2 + i * fixSpacing;
-    fixture.root.position.set(x, TRUSS_HEIGHT - 0.16, 0);
+    // The placeholder prop and the resolved fixture would occupy the same
+    // 145 mm under the chord, so the prop steps aside.
+    if (mount.prop) mount.prop.visible = false;
+
+    fixture.root.position.copy(mount.position);
     fixture.light.castShadow = true;
     fixture.light.shadow.mapSize.set(512, 512);
 
@@ -400,10 +342,11 @@ async function main(): Promise<void> {
 
   /* ── Stats panel ─────────────────────────────────── */
   const table = document.getElementById('stats-table') as HTMLTableElement;
-  setRow(table, 'Truss arch',      `${ARCH_SEGS}× 2 m F34 sticks`);
-  setRow(table, 'Tower height',    `${TOWER_HEIGHT} m (×2 sides)`);
-  setRow(table, 'Stage decks',     `${DECK_ROWS * DECK_COLS}× 4′×8′ panels`);
-  setRow(table, 'LED wall',        `${VIDEO_W}×${VIDEO_H} m`);
+  setRow(table, 'Truss',           `${stage.registerable.length}× F34 pieces`);
+  setRow(table, 'Mount points',    `${stage.mounts.length} (${downMounts.length} down-facing)`);
+  setRow(table, 'Stage decks',     `${stage.decks.length}× 4′×8′ panels`);
+  setRow(table, 'Subs',            `${stage.subs.length}× cabinets`);
+  setRow(table, 'LED bars',        `${stage.ledBars.length}× COLORstrip 38″`);
   setRow(table, 'Fixtures',        `${rigs.length}× GDTF moving heads`);
   setRow(table, 'DMX channels',    `${rigs.length * (profile.dmxModes[0]?.footprint ?? 0)} total`);
   setRow(table, 'Field angle',     `${fieldAngle}°`);

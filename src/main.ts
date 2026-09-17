@@ -12,6 +12,7 @@ import { SocketSnappingEngine, SNAP_THRESHOLD_METERS } from './engine/SocketSnap
 import type { SnapCandidate } from './engine/SocketSnappingEngine.ts';
 import { SceneIndex } from './engine/SceneIndex.ts';
 import { createF34BoxTruss2M, createStageDeck4x8 } from './assets/ModularPrimitives.ts';
+import { buildFestivalStage } from './assets/FestivalStage.ts';
 import { CesiumGlobe } from './geo/CesiumGlobe.ts';
 import { POINT_STATE_PARK } from './geo/GeoAnchor.ts';
 import { loadSiteBounds } from './viewport/SiteBounds.ts';
@@ -164,6 +165,7 @@ scene.add(showLayer);
 const ASSET_LABELS = {
   truss: { assetId: 'truss_f34_box_2m', category: 'trussing' },
   deck: { assetId: 'deck_4x8', category: 'staging' },
+  paraflex: { assetId: 'paraflex_diy_sub', category: 'audio' },
 } as const;
 
 type AssetKind = keyof typeof ASSET_LABELS;
@@ -186,28 +188,78 @@ function spawn(object: THREE.Object3D, kind: AssetKind, position: THREE.Vector3)
   return object;
 }
 
-function buildStartingPlot(): void {
-  // Two decks: one placed, one loose and a short drag from a clean butt joint.
-  spawn(createStageDeck4x8(), 'deck', new THREE.Vector3(0, 0, 0));
-  spawn(createStageDeck4x8(), 'deck', new THREE.Vector3(0.35, 0, 1.55));
+async function buildStartingPlot(): Promise<void> {
+  // The reference rig, from the same definition the showcase renders.
+  const stage = await buildFestivalStage();
+  showLayer.add(stage.group);
+  for (const piece of stage.registerable) engine.register(piece);
 
-  // Two truss sticks at working height, likewise a short drag from mating.
-  spawn(createF34BoxTruss2M(), 'truss', new THREE.Vector3(0, 2.4, -2.5));
-  spawn(createF34BoxTruss2M(), 'truss', new THREE.Vector3(-2.35, 2.4, -2.2));
+  // Two loose truss sticks off to one side. The rig itself is already mated,
+  // so without these there is nothing to practise drag-to-snap against.
+  spawn(createF34BoxTruss2M(), 'truss', new THREE.Vector3(6.2, 2.4, 2.6));
+  spawn(createF34BoxTruss2M(), 'truss', new THREE.Vector3(6.55, 2.4, 4.15));
+
+  sceneIndex.invalidate();
 }
 
-buildStartingPlot();
+void buildStartingPlot();
+
+/**
+ * Paraflex cabinets are cut to a CAD plan rather than bought, so the viewport
+ * generates one to the entered spec instead of cloning a fixed asset. Volume
+ * scales off the driver, which is what actually drives the box dimensions.
+ */
+function createParaflexSub(model: string, driverSize: string, material: string): THREE.Group {
+  const group = new THREE.Group();
+
+  const driverInches = Number.parseInt(driverSize, 10) || 18;
+  const scale = driverInches / 18;
+  const width = 0.6 * scale;
+  const height = 0.9 * scale;
+  const depth = 0.6 * scale;
+
+  const box = new THREE.Mesh(
+    new THREE.BoxGeometry(width, height, depth),
+    new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 }),
+  );
+  box.position.y = height / 2;
+  box.castShadow = true;
+  box.receiveShadow = true;
+  group.add(box);
+
+  // Wireframe stands in for the horn mouth until real CAD lands.
+  const mouth = new THREE.Mesh(
+    new THREE.PlaneGeometry(width * 0.8, height * 0.8),
+    new THREE.MeshBasicMaterial({ color: 0x050505, wireframe: true }),
+  );
+  mouth.position.set(0, height / 2, depth / 2 + 0.01);
+  group.add(mouth);
+
+  // Carried through save/load so a cut list can be produced from the scene.
+  group.userData['paraflex'] = { model, driver: driverSize, material };
+
+  return group;
+}
+
+interface ParaflexSpec {
+  model: string;
+  driver: string;
+  material: string;
+}
 
 let spawnCursor = 0;
-function spawnFromPalette(kind: 'truss' | 'deck'): void {
+function spawnFromPalette(kind: AssetKind, paraflex?: ParaflexSpec): void {
   // Lay new stock out in a row off to the side of the build.
   spawnCursor += 1;
   const x = 5 + (spawnCursor % 4) * 2.6;
   const z = 4 + Math.floor(spawnCursor / 4) * 2.2;
   if (kind === 'truss') {
     spawn(createF34BoxTruss2M(), 'truss', new THREE.Vector3(x, 2.4, z));
-  } else {
+  } else if (kind === 'deck') {
     spawn(createStageDeck4x8(), 'deck', new THREE.Vector3(x, 0, z));
+  } else if (paraflex) {
+    const cabinet = createParaflexSub(paraflex.model, paraflex.driver, paraflex.material);
+    spawn(cabinet, 'paraflex', new THREE.Vector3(x, 0, z));
   }
 }
 
@@ -217,6 +269,36 @@ requireElement<HTMLButtonElement>('add-truss').addEventListener('click', () =>
 requireElement<HTMLButtonElement>('add-deck').addEventListener('click', () =>
   spawnFromPalette('deck'),
 );
+
+/* Paraflex spec modal. */
+const paraflexModal = requireElement<HTMLDivElement>('paraflex-modal');
+const paraflexForm = requireElement<HTMLFormElement>('paraflex-form');
+
+function closeParaflexModal(): void {
+  paraflexModal.hidden = true;
+}
+
+requireElement<HTMLButtonElement>('add-paraflex').addEventListener('click', () => {
+  paraflexModal.hidden = false;
+  requireElement<HTMLInputElement>('pf-model').focus();
+});
+requireElement<HTMLButtonElement>('pf-cancel').addEventListener('click', closeParaflexModal);
+paraflexModal.addEventListener('click', (event) => {
+  // Tapping the scrim dismisses; tapping the card itself must not.
+  if (event.target === paraflexModal) closeParaflexModal();
+});
+window.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && !paraflexModal.hidden) closeParaflexModal();
+});
+paraflexForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  spawnFromPalette('paraflex', {
+    model: requireElement<HTMLInputElement>('pf-model').value,
+    driver: requireElement<HTMLSelectElement>('pf-driver').value,
+    material: requireElement<HTMLSelectElement>('pf-material').value,
+  });
+  closeParaflexModal();
+});
 
 /* -------------------------------------------------------------------------- */
 /* Drag + snap                                                                 */
