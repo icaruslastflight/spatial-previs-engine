@@ -16,7 +16,16 @@
 #include "Policies/PrettyJsonPrintPolicy.h"
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
+#include "SpatialPrevisCoordinates.h"
 #include "SpatialPrevisProjectCodec.h"
+#include "SpatialPrevisUnrealTransform.h"
+#include "SpatialPrevisWorkspaceCodec.h"
+#include "Components/StaticMeshComponent.h"
+#include "Editor.h"
+#include "Engine/StaticMesh.h"
+#include "Engine/World.h"
+#include "GameFramework/Actor.h"
+#include "Kismet/GameplayStatics.h"
 #include "Textures/SlateIcon.h"
 #include "ToolMenus.h"
 #include "Widgets/Docking/SDockTab.h"
@@ -95,14 +104,14 @@ public:
                 + SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 8)
                 [
                     SNew(STextBlock)
-                    .Text(LOCTEXT("Heading", "Spatial Previs R0 | CORE-01 native inspection"))
+                    .Text(LOCTEXT("Heading", "Spatial Previs | R1 Native Workspace & Level Integration"))
                 ]
                 + SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 12)
                 [
                     SNew(STextBlock)
                     .AutoWrapText(true)
                     .Text(LOCTEXT("Scope",
-                        "Read-only inspection of the shared production project contract. Workspace history import, scene editing and device control are not part of this milestone."))
+                        "R1 native workspace and level sync. Supports both bare project JSON and full workspace envelopes, with direct level actor spawning and exact native metre-to-centimetre coordinate conversion."))
                 ]
                 + SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 12)
                 [
@@ -110,17 +119,32 @@ public:
                     + SHorizontalBox::Slot().AutoWidth().Padding(0, 0, 8, 0)
                     [
                         SNew(SButton)
-                        .Text(LOCTEXT("Import", "Import project JSON..."))
-                        .ToolTipText(LOCTEXT("ImportTooltip", "Load and validate a bare project JSON file. A failed import preserves the active project."))
+                        .Text(LOCTEXT("Import", "Import project / workspace..."))
+                        .ToolTipText(LOCTEXT("ImportTooltip", "Load and validate a bare project or complete workspace envelope JSON file. A failed import preserves the active project."))
                         .OnClicked(this, &SProjectInspectionPanel::ImportProject)
                     ]
-                    + SHorizontalBox::Slot().AutoWidth()
+                    + SHorizontalBox::Slot().AutoWidth().Padding(0, 0, 8, 0)
                     [
                         SNew(SButton)
                         .Text(LOCTEXT("Export", "Export project JSON as..."))
                         .ToolTipText(LOCTEXT("ExportTooltip", "Validate and export the active project to a different path. Existing destination files require confirmation."))
                         .IsEnabled(this, &SProjectInspectionPanel::HasProject)
                         .OnClicked(this, &SProjectInspectionPanel::ExportProject)
+                    ]
+                    + SHorizontalBox::Slot().AutoWidth().Padding(0, 0, 8, 0)
+                    [
+                        SNew(SButton)
+                        .Text(LOCTEXT("SpawnActors", "Spawn Level Actors"))
+                        .ToolTipText(LOCTEXT("SpawnActorsTooltip", "Instantiate and position 3D scene actors in the active level for all asset instances using native coordinates."))
+                        .IsEnabled(this, &SProjectInspectionPanel::HasProject)
+                        .OnClicked(this, &SProjectInspectionPanel::SpawnLevelActors)
+                    ]
+                    + SHorizontalBox::Slot().AutoWidth()
+                    [
+                        SNew(SButton)
+                        .Text(LOCTEXT("ClearActors", "Clear Level Actors"))
+                        .ToolTipText(LOCTEXT("ClearActorsTooltip", "Remove all spawned Spatial Previs actors from the active level."))
+                        .OnClicked(this, &SProjectInspectionPanel::ClearLevelActors)
                     ]
                 ]
                 + SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 8)
@@ -178,6 +202,7 @@ public:
 private:
     // Only a successful whole-project parse may replace this document.
     TSharedPtr<FJsonObject> ActiveProject;
+    TSharedPtr<FJsonObject> ActiveWorkspace;
     TArray<FRecordItem> Records;
     TSharedPtr<SListView<FRecordItem>> RecordList;
     FString SourcePath;
@@ -254,10 +279,24 @@ private:
         }
         FString Error;
         TSharedPtr<FJsonObject> Candidate;
-        if (!FSpatialPrevisProjectCodec::Parse(Json, Candidate, Error))
+        TSharedPtr<FJsonObject> CandidateWorkspace;
+        bool bIsWorkspace = false;
+
+        if (FSpatialPrevisWorkspaceCodec::Parse(Json, CandidateWorkspace, Error))
         {
-            ReportFailure(TEXT("Import rejected: ") + Error);
-            return FReply::Handled();
+            Candidate = CandidateWorkspace->GetObjectField(TEXT("project"));
+            ActiveWorkspace = CandidateWorkspace;
+            bIsWorkspace = true;
+        }
+        else
+        {
+            FString ProjectError;
+            if (!FSpatialPrevisProjectCodec::Parse(Json, Candidate, ProjectError))
+            {
+                ReportFailure(FString::Printf(TEXT("Import rejected. Workspace error: %s | Project error: %s"), *Error, *ProjectError));
+                return FReply::Handled();
+            }
+            ActiveWorkspace.Reset();
         }
 
         // Validation is transactional: no row, source path or selection changes on failure.
@@ -272,7 +311,9 @@ private:
         RecordList->RequestListRefresh();
         Detail = LOCTEXT("EmptyDetails", "Select a record to inspect its complete JSON, including references and quantities.");
         RefreshSummary();
-        Status = LOCTEXT("ImportSuccess", "Project imported and validated. Records, quantities, references and revision are preserved; no scene actors were created.");
+        Status = bIsWorkspace
+            ? LOCTEXT("WorkspaceImportSuccess", "Workspace envelope imported and validated. Records, history and review evidence preserved. Ready to spawn level actors.")
+            : LOCTEXT("ImportSuccess", "Project imported and validated. Records, quantities, references and revision preserved. Ready to spawn level actors.");
         return FReply::Handled();
     }
 
@@ -340,6 +381,142 @@ private:
         }
         Status = FText::FromString(FString::Printf(
             TEXT("Validated project exported to %s. Project revision is unchanged."), *Destination));
+        return FReply::Handled();
+    }
+
+    FReply SpawnLevelActors()
+    {
+        if (!HasProject())
+        {
+            return FReply::Handled();
+        }
+
+        UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+        if (!World)
+        {
+            ReportFailure(TEXT("No active editor level found to spawn actors."));
+            return FReply::Handled();
+        }
+
+        int32 SpawnedCount = 0;
+        int32 UpdatedCount = 0;
+
+        UStaticMesh* BasicCubeMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cube.Cube"));
+
+        for (const FRecordItem& Record : Records)
+        {
+            if (!Record.IsValid())
+            {
+                continue;
+            }
+
+            const FString Kind = Record->GetStringField(TEXT("kind"));
+            if (Kind != TEXT("asset_instance"))
+            {
+                continue;
+            }
+
+            const FString Id = Record->GetStringField(TEXT("id"));
+            const FString Label = Record->GetStringField(TEXT("label"));
+
+            const TSharedPtr<FJsonObject>* TransformObj = nullptr;
+            if (!Record->TryGetObjectField(TEXT("transform"), TransformObj) || !TransformObj || !(*TransformObj).IsValid())
+            {
+                continue;
+            }
+
+            const TArray<TSharedPtr<FJsonValue>>* PosArray = nullptr;
+            const TArray<TSharedPtr<FJsonValue>>* RotArray = nullptr;
+            if (!(*TransformObj)->TryGetArrayField(TEXT("position"), PosArray) ||
+                !(*TransformObj)->TryGetArrayField(TEXT("rotation"), RotArray) ||
+                !PosArray || !RotArray || PosArray->Num() != 3 || RotArray->Num() != 4)
+            {
+                continue;
+            }
+
+            SpatialPrevisCoordinates::Vector Pos{
+                (*PosArray)[0]->AsNumber(),
+                (*PosArray)[1]->AsNumber(),
+                (*PosArray)[2]->AsNumber()
+            };
+            SpatialPrevisCoordinates::Quaternion Rot{
+                (*RotArray)[0]->AsNumber(),
+                (*RotArray)[1]->AsNumber(),
+                (*RotArray)[2]->AsNumber(),
+                (*RotArray)[3]->AsNumber()
+            };
+
+            const FTransform NativeTransform = SpatialPrevisTransform::ToNative(Pos, Rot);
+
+            TArray<AActor*> FoundActors;
+            UGameplayStatics::GetAllActorsWithTag(World, FName(*Id), FoundActors);
+            if (FoundActors.Num() > 0)
+            {
+                AActor* ExistingActor = FoundActors[0];
+                if (ExistingActor)
+                {
+                    ExistingActor->SetActorTransform(NativeTransform);
+                    UpdatedCount++;
+                }
+            }
+            else
+            {
+                FActorSpawnParameters SpawnParams;
+                SpawnParams.Name = *FString::Printf(TEXT("SP_%s"), *Id);
+                SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+                AActor* NewActor = World->SpawnActor<AActor>(AActor::StaticClass(), NativeTransform, SpawnParams);
+                if (NewActor)
+                {
+                    NewActor->Tags.Add(FName(TEXT("SpatialPrevisActor")));
+                    NewActor->Tags.Add(FName(*Id));
+                    NewActor->SetActorLabel(FString::Printf(TEXT("%s (%s)"), *Label, *Id));
+
+                    USceneComponent* RootComp = NewObject<USceneComponent>(NewActor, TEXT("RootComponent"));
+                    NewActor->SetRootComponent(RootComp);
+                    RootComp->RegisterComponent();
+                    RootComp->SetWorldTransform(NativeTransform);
+
+                    if (BasicCubeMesh)
+                    {
+                        UStaticMeshComponent* MeshComp = NewObject<UStaticMeshComponent>(NewActor, TEXT("VisualMesh"));
+                        MeshComp->SetStaticMesh(BasicCubeMesh);
+                        MeshComp->AttachToComponent(RootComp, FAttachmentTransformRules::KeepRelativeTransform);
+                        MeshComp->SetRelativeScale3D(FVector(0.5f, 0.5f, 0.5f));
+                        MeshComp->RegisterComponent();
+                    }
+
+                    SpawnedCount++;
+                }
+            }
+        }
+
+        Status = FText::FromString(FString::Printf(
+            TEXT("Level sync complete: %d actors spawned, %d updated in active level."), SpawnedCount, UpdatedCount));
+        return FReply::Handled();
+    }
+
+    FReply ClearLevelActors()
+    {
+        UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+        if (!World)
+        {
+            ReportFailure(TEXT("No active editor world found."));
+            return FReply::Handled();
+        }
+
+        TArray<AActor*> FoundActors;
+        UGameplayStatics::GetAllActorsWithTag(World, FName(TEXT("SpatialPrevisActor")), FoundActors);
+        const int32 Count = FoundActors.Num();
+        for (AActor* Actor : FoundActors)
+        {
+            if (Actor)
+            {
+                Actor->Destroy();
+            }
+        }
+
+        Status = FText::FromString(FString::Printf(TEXT("Cleared %d Spatial Previs actors from active level."), Count));
         return FReply::Handled();
     }
 
