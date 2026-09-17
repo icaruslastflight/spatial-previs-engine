@@ -1,28 +1,40 @@
 # Festival Visualizer — Project Guidelines
 
-Browser-native spatial twin and live-event pre-visualization client for
-**Point State Park, Pittsburgh, PA**. This is the *Parallel High-Capability Web
-Application* line: it targets maximum browser feature parity with the Unreal
-Engine 5 desktop architecture.
+Venue-independent spatial twin and live-event pre-visualization client for
+real and virtual environments. **Point State Park, Pittsburgh, PA is a sample
+venue for optional point-cloud context, not the product's scope.** This repository
+contains the web/mobile client and the native UE5 foundation. Desktop retains its
+full capability; browser/device limits must not reduce the desktop product.
 
 ---
 
 ## 1. Governing rules
 
-### 1.1 Strict Dual-Platform Parity
+Read `AGENTS.md` for the owner's standing documentation/continuity requirements.
+Every meaningful development change includes updating the living illustrated guide,
+roadmap, case study, account checklist and executed verification records. Keep their
+saved identities and version history; provide PDF/DOCX downloads for phone access.
 
-Every 3D feature, snapping kinematic, and protocol parser must behave
-**identically** on the web client and the UE5 desktop build.
+### 1.1 Shared contracts and full desktop capability
 
-- A change to snapping tolerances, socket semantics, the site anchor, or a
-  protocol parser is a **cross-platform change**. Land it on both sides or land
-  it on neither.
-- Where the web genuinely cannot match the desktop, say so at the point of
-  divergence in a code comment and treat the desktop as authoritative. There is
-  one such divergence today, documented in `src/geo/CesiumGlobe.ts`: the Cesium
-  basemap and the Three.js show layer do not share a depth buffer, so show
-  geometry is never occluded by basemap buildings. **Occlusion checks are
-  desktop-authoritative.**
+Owner decision on 17 September 2026: **do not limit desktop capability to what
+web/mobile can run.** This supersedes the earlier identical-feature-set requirement.
+
+- Desktop may ship advanced geometry, simulation, device integration and rendering
+  that browsers or phones cannot support. Give those workflows their full native
+  capability and mark availability explicitly in the web/mobile product.
+- Keep shared project identities, units, coordinate transforms, relationship
+  meanings and supported operations consistent. A contract change needs a versioned
+  compatibility/migration path and conformance evidence; do not silently reinterpret
+  or delete unsupported desktop data when a project passes through a browser.
+- Web/mobile must offer **Continue on desktop** for unavailable workflows, through
+  a configured desktop connection or clear handoff. A redirect is not automatic
+  project synchronization; explain export/import requirements where applicable.
+- Shared snapping/parser behavior must agree where both implementations support
+  it. Desktop-only features do not require a reduced browser implementation first.
+- Document actual capability differences. The Cesium basemap and Three.js show
+  layer do not share a depth buffer (`src/geo/CesiumGlobe.ts`), so show geometry
+  is not occluded by basemap buildings. Occlusion checks remain desktop-authoritative.
 - Shared numeric constants live in exactly one place per platform and are
   mirrored verbatim. On the web those are `POINT_STATE_PARK` in
   `src/geo/GeoAnchor.ts` and `SNAP_THRESHOLD_METERS` / `DETENT_STEP_RADIANS` in
@@ -52,10 +64,11 @@ a preference.
 - **No large binaries in git.** Scans go in release assets or an external bucket
   and are fetched at runtime. Git LFS bandwidth is not free.
 
-### 1.3 Mobile touch is the primary target
+### 1.3 Mobile touch is the primary browser target
 
-The viewport is developed and operated on a phone. Every interaction must work
-under touch before it is considered done.
+The browser viewport is developed and operated on a phone. Its supported
+interactions must work under touch before they are considered done. Desktop-only
+workflows remain available through the desktop handoff instead of constraining UE5.
 
 - One finger on an asset drags it; one finger on empty space orbits; two fingers
   pinch-zoom and pan. A second finger landing mid-drag **aborts** the drag and
@@ -67,6 +80,11 @@ under touch before it is considered done.
 ---
 
 ## 2. Site anchor — Point State Park
+
+These constants describe the existing sample venue only. Do not use them as
+mandatory defaults for new projects. Local unreferenced scenes must remain
+usable without maps, geographic coordinates, scans, accounts or API keys.
+Other venues require their own geographic reference and source evidence.
 
 ```
 Latitude    40.4417° N        →  +40.4417
@@ -526,3 +544,119 @@ straight-down beam sanity check in `tests/gdtf.test.ts` exists because this
 exact page first rendered with every beam pointing sideways, which is what
 found the fixed-vs-composed-quaternion bug in `GDTFAssetResolver`'s pan/tilt
 drive.
+
+## 13. AI planning and model selection
+
+Every non-trivial AI-driven change (three or more distinct steps, or any work
+that spans multiple modules) starts with a written plan. The plan is the
+artifact you carry into the PR body or commit message so a reviewer can see
+what was thought before it was typed. Trial-and-error tool loops burn far more
+API cost than the one round of thinking that would have avoided them.
+
+This section is deliberately **provider-agnostic**. It classifies work by the
+kind of thinking a phase needs, not by any vendor's product name. Whoever
+is executing — a human, or any AI coding assistant, agent CLI or
+open-weight model — reads these rules the same way.
+
+### 13.1 What every plan states
+
+1. **Phases and steps in order.** Break the work into a small number of phases;
+   list the steps in each. A step names its file(s) and the change type
+   (read / edit / add / delete / verify).
+2. **Tier choice per phase, with a reason.** Say which tier of model
+   (§13.2) is right for that phase and why. "Default tier" is a valid
+   line; the point is that a deep-reasoning choice is deliberate, not
+   silent.
+3. **Verification per phase.** What proves the phase is done — a test name,
+   a build target, a specific tool run, an inspected artifact. A phase
+   without a verification line is not planned, it is speculated.
+
+The plan lives inline in the PR or commit body (or, for
+autonomous/agent-mode work, in a task list the agent maintains). Keep it
+tight: bullets, not prose. If a phase changes shape mid-work, rewrite the
+plan and note why — do not silently drift.
+
+### 13.2 Choosing the model tier per phase
+
+Two tiers, defined by the work each is meant to do. Any provider's product
+maps onto them; do not hard-code a vendor name into the plan.
+
+- **Default tier — the fast, capable workhorse.** Whichever model in the
+  current toolbelt is the fastest one that still handles routine work
+  reliably. Use it for anything routine: mechanical refactors, doc edits,
+  following a written plan step by step, single-file bug fixes with clear
+  symptoms, adding a test that mirrors an existing one, chores, most
+  glue-code and file-plumbing work.
+- **Deep-reasoning tier — the slow, careful specialist.** Whichever model
+  in the current toolbelt has the deepest reasoning available (typically
+  the highest-cost, highest-latency option). Reserve it for phases whose
+  success actually depends on that depth:
+  - **Root-cause hunts where the symptom does not point at the cause.**
+    (The `TMap<FString>` case-collision bug on this repo — `mass`/`Mass`/`MASS`
+    all collapse silently because the underlying map's default key funcs
+    hash and compare their string keys case-insensitively — was exactly
+    this class.)
+  - Architecture calls where two viable shapes need real trade-off analysis.
+  - Cross-file refactors that require holding the whole call graph in mind.
+  - Algorithms you are deriving rather than adapting from a known reference.
+  - Hard-to-reverse or safety-critical code where "close enough" is not enough.
+
+If neither list clearly fits, pick the default tier and note in the plan
+why the deep-reasoning tier might be warranted if it stalls. Do not switch
+mid-phase without amending the plan.
+
+Product names (whatever this year's headline model is called for each
+vendor) belong in the plan's "reason" clause at most, not in these tier
+labels. When a vendor renames or reshuffles tiers, this rule stays valid;
+only the mapping to concrete product names moves.
+
+### 13.3 Cost discipline
+
+The purpose of §13 is fewer tokens per shipped change, not more ceremony.
+Two heuristics:
+
+- **A short plan beats a long trial-and-error loop.** If you are on your
+  third speculative tool call trying to figure out what a file contains,
+  stop and write the plan.
+- **Do not pay deep-reasoning rates for default-tier work.** Reading a
+  file, running a known command, applying a named edit — none of these
+  need the deeper reasoning tier. Reserve it for the reasoning-heavy
+  phase and drop back down for the mechanical follow-through.
+
+Trivial one-file, one-symptom changes are exempt — write the fix, not the
+plan.
+
+## 14. Local $0 AI memory
+
+A per-workstation vector + graph index of this repo lives at
+`.memory/`. The scripts under `scripts/memory/` build it and query it — no
+servers, no paid embeddings, no committed binaries. See
+`scripts/memory/README.md` for the full contract; the short version:
+
+- **Vector store:** ChromaDB `PersistentClient` under `.memory/chroma/`,
+  using its built-in ONNX embedder (`all-MiniLM-L6-v2`, ~80 MB, auto-
+  downloaded on first ingest into the user's `~/.cache/chroma/`). No
+  `sentence-transformers`, no `torch`.
+- **Graph:** NetworkX `DiGraph` of file→file import edges, persisted as
+  `.memory/graph.pickle`.
+- **Storage location:** the entire `.memory/` tree is git-ignored per §11.
+  Both artifacts regenerate deterministically from source. Do not commit
+  either.
+
+```bash
+pip install -r scripts/memory/requirements.txt
+python scripts/memory/ingest.py                          # ~30 s on this repo
+python scripts/memory/query.py "detent step radians"
+python scripts/memory/query.py --with-neighbors "GDTF pan tilt"
+```
+
+The ingest chunks 80-line windows with 15-line overlap and upserts by a
+content-hashed id so incremental re-runs stay cheap. The query prints
+`path:line` citations with a cosine-distance score; `--with-neighbors` walks
+one graph hop.
+
+**What this is not:** it is retrieval, not reasoning. It surfaces relevant
+chunks and lets any model or human read them. It is intentionally a CLI
+rather than an MCP server — MCP wiring is a separate concern and lives (if
+added) beside the query script rather than replacing it. Do not swap it for
+a paid vector API; that would cross the §1.2 hard budget.

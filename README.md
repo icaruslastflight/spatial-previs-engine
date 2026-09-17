@@ -1,22 +1,52 @@
 # spatial-previs-engine
 
-High-performance spatial twin and live-event pre-visualization platform with configurable venue georeferencing.
+Spatial Previs Engine is a venue-independent live-event design and
+pre-visualization platform for real venues and entirely virtual environments.
+Projects may use a local metre-based scene, an optional geographic reference,
+and optional point-cloud or Gaussian-splat context.
 
-Point State Park, Pittsburgh is included as the R0 reference venue and regression fixture; it is not a product-level location constraint.
+**Point State Park is a sample venue**, chosen for a possible real-world
+point-cloud demonstration. It is not the product's required location or a
+restriction on where a project can be created. The existing legacy viewport
+opens that sample; its named coordinates and geodetic tests apply only to it.
 
-This repository holds the **web client** â€” the Parallel High-Capability Web
-Application line, built for maximum browser-native parity with the Unreal
-Engine 5 desktop architecture. Three.js + CesiumJS + Gaussian splatting, with
-modular-asset magnetic snapping.
+This repository holds the **web/mobile client and native UE5 foundation**.
+Desktop retains its full capability. Web/mobile support practical on-device
+workflows and a desktop handoff for features that need Unreal or stronger hardware.
+Project data and supported operations stay compatible across platforms. The web
+renderer uses Three.js, CesiumJS and Gaussian splatting with modular-asset snapping.
 
 ## Quick start
 
 ```bash
-npm install
+npm ci
 npm run dev      # http://localhost:5173  (also served on your LAN for phone testing)
 ```
 
 No API keys are required. The basemap degrades gracefully to a keyless tier.
+
+### R0 production workspace preview
+
+Open **http://localhost:5173/r0.html** for the command-backed local editor.
+The root page remains the existing venue sample and socket viewport.
+R0 supports equipment search and placement, shared selection across Build / Map /
+Connect / Check / Deliver, exact metre coordinates, locks, connection previews,
+undo/redo, local saves, JSON import/export, scoped data checks and evidence exports.
+Use HTTPS or localhost for the browser's UUID and hashing APIs; an ordinary HTTP
+LAN address is not a secure context for R0 checks.
+
+Save project stores the graph and history on this browser/device and reopens the
+last successfully saved project. Export project downloads a portable backup.
+Concurrent tabs cannot silently overwrite each other's saves. Imported approval
+records require fresh authorized review; existing issued bytes remain unchanged.
+
+**R0 is a review build.** Native shared-contract conformance, actual-phone acceptance and commercial
+visual approval remain open. R0 movement, socket snaps and unlinking share the command/undo store. Read [R0 status](docs/r0/README.md),
+[desktop conformance](docs/r0/UE5_CONFORMANCE.md), and the
+[account/API setup checklist](docs/r0/ACCOUNTS_AND_APIS.md) before calling it a release.
+
+Read the [desktop capability decision](docs/r0/PLATFORM_CAPABILITIES.md) and
+[native project guide](native/README.md) for the platform boundary and current scope.
 
 ## Commands
 
@@ -26,7 +56,8 @@ No API keys are required. The basemap degrades gracefully to a keyless tier.
 | `npm run build` | `tsc && vite build` â€” must be clean before committing |
 | `npm run preview` | Serve the production build locally |
 | `npm test` | Vitest: core engine, geodetic, CP-1, socket snapping, asset library |
-| `npm run verify` | Foundation health check â€” structure, typecheck, tests, build |
+| `npm run test:r0:browser` | Production browser acceptance; run build and install Playwright Chromium first |
+| `npm run verify` | Foundation health check — structure, typecheck, tests, build |
 | `npx tsc --noEmit` | Typecheck only |
 | `npm run build:assets` | Compile the modular asset library to GLB |
 
@@ -74,11 +105,14 @@ The client is layered under `src/`:
 | Layer | Holds |
 | --- | --- |
 | `core/` | Frame clock, typed event bus, zero-allocation typed-array pool |
-| `geo/`, `geospatial/` | WGS84 anchor, ENU tangent frame, CP-1 venue origin |
+| `geo/`, `geospatial/` | Geographic frame utilities and the Point State Park sample reference |
 | `engine/` | Magnetic socket contract, proximity, detents, kinematic linking |
 | `assets/` | Procedural primitives and Gaussian splat loading |
 | `viewport/` | Touch drag-and-snap gestures, site bounds |
-| `render/`, `network/`, `ui/` | Reserved; each carries a README naming its phase |
+| `domain/` | Versioned project graph, transactions, persistence, scoped checks and diagnostic replay |
+| `assistant/` | Read-only scene/evidence tools with no required model provider |
+| `ui/` | R0 production workspace, responsive inspector and 3D projection of committed records |
+| `render/`, `network/` | Existing phase-specific extension points |
 
 Everything that runs per frame registers on the shared `EngineLoop` in a
 priority band â€” telemetry, then physics, then automation, then render â€” rather
@@ -88,4 +122,4 @@ than opening a private `requestAnimationFrame`.
 
 **Read [`CLAUDE.md`](./CLAUDE.md) before contributing.** It is the binding
 specification for the Strict Dual-Platform Parity rule, the $0 budget
-constraints, the site coordinate anchors, and the `extras.sockets` schema.
+constraints, the sample venue coordinate anchors, and the `extras.sockets` schema.
