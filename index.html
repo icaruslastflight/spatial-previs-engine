@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0c1014" />
+    <!--
+      iOS ignores the web app manifest's `display` and `orientation`; these two
+      are what actually get the installed client out of Safari's chrome.
+    -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Festival Viz" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="apple-touch-icon" href="./icon-maskable.svg" />
+    <meta
+      name="description"
+      content="Spatial Previs Engine — real and virtual venue design. This page demonstrates the Point State Park sample environment."
+    />
+    <title>Spatial Previs — Point State Park sample</title>
+    <script type="module" crossorigin src="/assets/main-D4aTt8sC.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/rolldown-runtime-Dd_uD5pT.js">
+    <link rel="modulepreload" crossorigin href="/assets/three-VMVxeMS_.js">
+    <link rel="modulepreload" crossorigin href="/assets/EngineLoop-CTdPukl_.js">
+    <link rel="modulepreload" crossorigin href="/assets/cesium-4sdZXkpf.js">
+    <link rel="stylesheet" crossorigin href="/assets/main-DlOe3p89.css">
+  <link rel="manifest" href="/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script></head>
+  <body>
+    <!-- Cesium basemap sits underneath; the Three canvas composites over it. -->
+    <div id="cesium-container"></div>
+    <canvas id="three-canvas"></canvas>
+
+    <div id="hud-stack">
+      <header id="hud-top">
+      <h1>Spatial Previs</h1>
+      <p class="site">Sample venue: Point State Park &middot; Pittsburgh, PA &middot; 40.4417&deg;N, 80.0075&deg;W</p>
+      <dl class="readout">
+        <dt>Basemap</dt>
+        <dd><span id="status-basemap">loading&hellip;</span></dd>
+        <dt>Renderer</dt>
+        <dd><span id="status-renderer">detecting&hellip;</span></dd>
+        <dt>Site</dt>
+        <dd><span id="status-site">loading&hellip;</span></dd>
+        <dt>Scans</dt>
+        <dd><span id="status-scans">checking&hellip;</span></dd>
+      </dl>
+      </header>
+
+      <div id="hud-snap">
+        <span class="label">Socket snap</span>
+        <span id="status-snap">no socket in range</span>
+      </div>
+    </div>
+
+    <footer id="hud-bottom">
+      <div class="palette">
+        <button id="add-truss" type="button">+ F34 Truss 2M</button>
+        <button id="add-deck" type="button">+ Deck 4&times;8</button>
+      </div>
+      <p class="hint">
+        Drag an asset with one finger to move it &middot; two fingers to pinch-zoom and pan &middot;
+        one finger on empty space to orbit. Assets snap within 150&nbsp;mm.
+      </p>
+      <!-- Tile attribution: a licensing requirement, so it lives in the HUD. -->
+      <div id="cesium-credits" class="cesium-credits"></div>
+    </footer>
+
+  </body>
+</html>

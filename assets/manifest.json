@@ -1,0 +1,1598 @@
+{
+  "$schema_version": "1.0.0",
+  "generated_by": "scripts/build-asset-library.js",
+  "socket_schema": {
+    "spec": "Event Asset Library and Modular Snapping Specification, section 3.1",
+    "embedded_at": "glTF node extras.sockets",
+    "socket_types": [
+      "TRUSS_CONICAL_F34",
+      "TRUSS_CONICAL_F44",
+      "STAGE_COFFIN_LOCK",
+      "STAGE_LEG_RECEIVER",
+      "LED_PANEL_FASTENER",
+      "LED_FLYBAR_PICKUP",
+      "PIPE_CLAMP_2IN",
+      "RIG_HOIST_HOOK",
+      "SPEAKER_ARRAY_PIN",
+      "GROUND_SUPPORT_BASE",
+      "SFX_MOUNT",
+      "BARRICADE_HINGE"
+    ],
+    "genders": [
+      "MALE",
+      "FEMALE",
+      "NEUTRAL",
+      "UNIVERSAL"
+    ],
+    "tolerances": {
+      "snap_radius_m": 0.15,
+      "snap_angle_deg": 15,
+      "detents_deg": [
+        0,
+        90,
+        180,
+        270
+      ]
+    }
+  },
+  "budgets": {
+    "max_lod0_triangles": 15000,
+    "collision_hull": "box, shipped in-GLB"
+  },
+  "totals": {
+    "assets": 37,
+    "categories": {
+      "trussing": 8,
+      "staging": 5,
+      "video": 4,
+      "lighting": 5,
+      "audio": 6,
+      "sfx": 5,
+      "site": 4
+    },
+    "triangles": 4896,
+    "sockets": 159
+  },
+  "assets": [
+    {
+      "id": "truss_f34_box_0m5",
+      "name": "F34 Box Truss 0.5 m",
+      "category": "trussing",
+      "reference": "Global Truss F34 / Prolyte H30V class",
+      "url": "assets/models/trussing/truss_f34_box_0m5.glb",
+      "dimensions": {
+        "meters": [
+          0.5151,
+          0.34,
+          0.3376
+        ],
+        "feet": [
+          1.69,
+          1.115,
+          1.107
+        ],
+        "bounds_min": [
+          -0.2576,
+          -0.17,
+          -0.1688
+        ],
+        "bounds_max": [
+          0.2576,
+          0.17,
+          0.1688
+        ]
+      },
+      "triangles": 352,
+      "dmx": null,
+      "socket_ids": [
+        "end_a_top_near",
+        "end_a_top_far",
+        "end_a_bottom_near",
+        "end_a_bottom_far",
+        "end_b_top_near",
+        "end_b_top_far",
+        "end_b_bottom_near",
+        "end_b_bottom_far"
+      ],
+      "socket_types": [
+        "TRUSS_CONICAL_F34"
+      ]
+    },
+    {
+      "id": "truss_f34_box_1m",
+      "name": "F34 Box Truss 1 m",
+      "category": "trussing",
+      "reference": "Global Truss F34 / Prolyte H30V class",
+      "url": "assets/models/trussing/truss_f34_box_1m.glb",
+      "dimensions": {
+        "meters": [
+          1.01,
+          0.34,
+          0.3376
+        ],
+        "feet": [
+          3.314,
+          1.115,
+          1.107
+        ],
+        "bounds_min": [
+          -0.505,
+          -0.17,
+          -0.1688
+        ],
+        "bounds_max": [
+          0.505,
+          0.17,
+          0.1688
+        ]
+      },
+      "triangles": 352,
+      "dmx": null,
+      "socket_ids": [
+        "end_a_top_near",
+        "end_a_top_far",
+        "end_a_bottom_near",
+        "end_a_bottom_far",
+        "end_b_top_near",
+        "end_b_top_far",
+        "end_b_bottom_near",
+        "end_b_bottom_far",
+        "hoist_pickup_1",
+        "hoist_pickup_2"
+      ],
+      "socket_types": [
+        "TRUSS_CONICAL_F34",
+        "RIG_HOIST_HOOK"
+      ]
+    },
+    {
+      "id": "truss_f34_box_2m",
+      "name": "F34 Box Truss 2 m",
+      "category": "trussing",
+      "reference": "Global Truss F34 / Prolyte H30V class",
+      "url": "assets/models/trussing/truss_f34_box_2m.glb",
+      "dimensions": {
+        "meters": [
+          2.01,
+          0.34,
+          0.3376
+        ],
+        "feet": [
+          6.595,
+          1.115,
+          1.107
+        ],
+        "bounds_min": [
+          -1.005,
+          -0.17,
+          -0.1688
+        ],
+        "bounds_max": [
+          1.005,
+          0.17,
+          0.1688
+        ]
+      },
+      "triangles": 544,
+      "dmx": null,
+      "socket_ids": [
+        "end_a_top_near",
+        "end_a_top_far",
+        "end_a_bottom_near",
+        "end_a_bottom_far",
+        "end_b_top_near",
+        "end_b_top_far",
+        "end_b_bottom_near",
+        "end_b_bottom_far",
+        "hoist_pickup_1",
+        "hoist_pickup_2"
+      ],
+      "socket_types": [
+        "TRUSS_CONICAL_F34",
+        "RIG_HOIST_HOOK"
+      ]
+    },
+    {
+      "id": "truss_f34_box_3m",
+      "name": "F34 Box Truss 3 m",
+      "category": "trussing",
+      "reference": "Global Truss F34 / Prolyte H30V class",
+      "url": "assets/models/trussing/truss_f34_box_3m.glb",
+      "dimensions": {
+        "meters": [
+          3.01,
+          0.34,
+          0.3376
+        ],
+        "feet": [
+          9.875,
+          1.115,
+          1.107
+        ],
+        "bounds_min": [
+          -1.505,
+          -0.17,
+          -0.1688
+        ],
+        "bounds_max": [
+          1.505,
+          0.17,
+          0.1688
+        ]
+      },
+      "triangles": 736,
+      "dmx": null,
+      "socket_ids": [
+        "end_a_top_near",
+        "end_a_top_far",
+        "end_a_bottom_near",
+        "end_a_bottom_far",
+        "end_b_top_near",
+        "end_b_top_far",
+        "end_b_bottom_near",
+        "end_b_bottom_far",
+        "hoist_pickup_1",
+        "hoist_pickup_2"
+      ],
+      "socket_types": [
+        "TRUSS_CONICAL_F34",
+        "RIG_HOIST_HOOK"
+      ]
+    },
+    {
+      "id": "truss_f44_box_2m",
+      "name": "F44 Box Truss 2 m",
+      "category": "trussing",
+      "reference": "Global Truss F44 class",
+      "url": "assets/models/trussing/truss_f44_box_2m.glb",
+      "dimensions": {
+        "meters": [
+          2.0154,
+          0.44,
+          0.4376
+        ],
+        "feet": [
+          6.612,
+          1.444,
+          1.436
+        ],
+        "bounds_min": [
+          -1.0077,
+          -0.22,
+          -0.2188
+        ],
+        "bounds_max": [
+          1.0077,
+          0.22,
+          0.2188
+        ]
+      },
+      "triangles": 544,
+      "dmx": null,
+      "socket_ids": [
+        "end_a_top_near",
+        "end_a_top_far",
+        "end_a_bottom_near",
+        "end_a_bottom_far",
+        "end_b_top_near",
+        "end_b_top_far",
+        "end_b_bottom_near",
+        "end_b_bottom_far",
+        "hoist_pickup_1",
+        "hoist_pickup_2"
+      ],
+      "socket_types": [
+        "TRUSS_CONICAL_F44",
+        "RIG_HOIST_HOOK"
+      ]
+    },
+    {
+      "id": "truss_f34_corner_6way",
+      "name": "F34 6-Way Corner Block",
+      "category": "trussing",
+      "reference": "Global Truss F34 corner block",
+      "url": "assets/models/trussing/truss_f34_corner_6way.glb",
+      "dimensions": {
+        "meters": [
+          0.29,
+          0.29,
+          0.29
+        ],
+        "feet": [
+          0.951,
+          0.951,
+          0.951
+        ],
+        "bounds_min": [
+          -0.145,
+          -0.145,
+          -0.145
+        ],
+        "bounds_max": [
+          0.145,
+          0.145,
+          0.145
+        ]
+      },
+      "triangles": 12,
+      "dmx": null,
+      "socket_ids": [
+        "px_tn",
+        "px_tf",
+        "px_bn",
+        "px_bf",
+        "nx_tn",
+        "nx_tf",
+        "nx_bn",
+        "nx_bf",
+        "py_tn",
+        "py_tf",
+        "py_bn",
+        "py_bf",
+        "ny_tn",
+        "ny_tf",
+        "ny_bn",
+        "ny_bf",
+        "pz_tn",
+        "pz_tf",
+        "pz_bn",
+        "pz_bf",
+        "nz_tn",
+        "nz_tf",
+        "nz_bn",
+        "nz_bf"
+      ],
+      "socket_types": [
+        "TRUSS_CONICAL_F34"
+      ]
+    },
+    {
+      "id": "truss_baseplate_24in",
+      "name": "24x24 in Steel Baseplate",
+      "category": "trussing",
+      "reference": "610 x 610 mm steel base",
+      "url": "assets/models/trussing/truss_baseplate_24in.glb",
+      "dimensions": {
+        "meters": [
+          0.6096,
+          0.062,
+          0.6096
+        ],
+        "feet": [
+          2,
+          0.203,
+          2
+        ],
+        "bounds_min": [
+          -0.3048,
+          0,
+          -0.3048
+        ],
+        "bounds_max": [
+          0.3048,
+          0.062,
+          0.3048
+        ]
+      },
+      "triangles": 24,
+      "dmx": null,
+      "socket_ids": [
+        "base_ground",
+        "spigot_tn",
+        "spigot_tf",
+        "spigot_bn",
+        "spigot_bf"
+      ],
+      "socket_types": [
+        "GROUND_SUPPORT_BASE",
+        "TRUSS_CONICAL_F34"
+      ]
+    },
+    {
+      "id": "hoist_cm_lodestar_1t",
+      "name": "CM Lodestar 1-Ton Chain Hoist",
+      "category": "trussing",
+      "reference": "Columbus McKinnon Lodestar RRS",
+      "url": "assets/models/trussing/hoist_cm_lodestar_1t.glb",
+      "dimensions": {
+        "meters": [
+          0.52,
+          0.47,
+          0.28
+        ],
+        "feet": [
+          1.706,
+          1.542,
+          0.919
+        ],
+        "bounds_min": [
+          -0.26,
+          -0.15,
+          -0.14
+        ],
+        "bounds_max": [
+          0.26,
+          0.32,
+          0.14
+        ]
+      },
+      "triangles": 56,
+      "dmx": null,
+      "socket_ids": [
+        "hook_top",
+        "hook_bottom"
+      ],
+      "socket_types": [
+        "RIG_HOIST_HOOK"
+      ]
+    },
+    {
+      "id": "deck_4x8",
+      "name": "4x8 ft Stage Deck",
+      "category": "staging",
+      "reference": "Bil-Jax / StageRight black diamond",
+      "url": "assets/models/staging/deck_4x8.glb",
+      "dimensions": {
+        "meters": [
+          2.4384,
+          0.075,
+          1.2192
+        ],
+        "feet": [
+          8,
+          0.246,
+          4
+        ],
+        "bounds_min": [
+          -1.2192,
+          -0.075,
+          -0.6096
+        ],
+        "bounds_max": [
+          1.2192,
+          0,
+          0.6096
+        ]
+      },
+      "triangles": 60,
+      "dmx": null,
+      "socket_ids": [
+        "lock_near_1",
+        "lock_near_2",
+        "lock_far_1",
+        "lock_far_2",
+        "lock_end_a",
+        "lock_end_b",
+        "leg_a_near",
+        "leg_a_far",
+        "leg_b_near",
+        "leg_b_far"
+      ],
+      "socket_types": [
+        "STAGE_COFFIN_LOCK",
+        "STAGE_LEG_RECEIVER"
+      ]
+    },
+    {
+      "id": "deck_4x4",
+      "name": "4x4 ft Stage Deck",
+      "category": "staging",
+      "reference": "Bil-Jax / StageRight black diamond",
+      "url": "assets/models/staging/deck_4x4.glb",
+      "dimensions": {
+        "meters": [
+          1.2192,
+          0.075,
+          1.2192
+        ],
+        "feet": [
+          4,
+          0.246,
+          4
+        ],
+        "bounds_min": [
+          -0.6096,
+          -0.075,
+          -0.6096
+        ],
+        "bounds_max": [
+          0.6096,
+          0,
+          0.6096
+        ]
+      },
+      "triangles": 60,
+      "dmx": null,
+      "socket_ids": [
+        "lock_near_1",
+        "lock_far_1",
+        "lock_end_a",
+        "lock_end_b",
+        "leg_a_near",
+        "leg_a_far",
+        "leg_b_near",
+        "leg_b_far"
+      ],
+      "socket_types": [
+        "STAGE_COFFIN_LOCK",
+        "STAGE_LEG_RECEIVER"
+      ]
+    },
+    {
+      "id": "leg_telescopic_16_72",
+      "name": "Telescopic Leg 16-72 in",
+      "category": "staging",
+      "reference": "Screw-jack levelling leg",
+      "url": "assets/models/staging/leg_telescopic_16_72.glb",
+      "dimensions": {
+        "meters": [
+          0.11,
+          1.112,
+          0.11
+        ],
+        "feet": [
+          0.361,
+          3.648,
+          0.361
+        ],
+        "bounds_min": [
+          -0.055,
+          0,
+          -0.055
+        ],
+        "bounds_max": [
+          0.055,
+          1.112,
+          0.055
+        ]
+      },
+      "triangles": 92,
+      "dmx": null,
+      "socket_ids": [
+        "leg_head",
+        "leg_foot"
+      ],
+      "socket_types": [
+        "STAGE_LEG_RECEIVER",
+        "GROUND_SUPPORT_BASE"
+      ]
+    },
+    {
+      "id": "guardrail_8ft",
+      "name": "8 ft Guardrail",
+      "category": "staging",
+      "reference": "OSHA 1.07 m guardrail",
+      "url": "assets/models/staging/guardrail_8ft.glb",
+      "dimensions": {
+        "meters": [
+          2.4384,
+          1.106,
+          0.04
+        ],
+        "feet": [
+          8,
+          3.629,
+          0.131
+        ],
+        "bounds_min": [
+          -1.2192,
+          -0.018,
+          -0.02
+        ],
+        "bounds_max": [
+          1.2192,
+          1.088,
+          0.02
+        ]
+      },
+      "triangles": 160,
+      "dmx": null,
+      "socket_ids": [
+        "rail_base_a",
+        "rail_base_b"
+      ],
+      "socket_types": [
+        "STAGE_COFFIN_LOCK"
+      ]
+    },
+    {
+      "id": "stairs_4step",
+      "name": "4-Step Stair Unit",
+      "category": "staging",
+      "reference": "Adjustable stage stair",
+      "url": "assets/models/staging/stairs_4step.glb",
+      "dimensions": {
+        "meters": [
+          1,
+          0.78,
+          1.135
+        ],
+        "feet": [
+          3.281,
+          2.559,
+          3.724
+        ],
+        "bounds_min": [
+          -0.5,
+          0,
+          -0.995
+        ],
+        "bounds_max": [
+          0.5,
+          0.78,
+          0.14
+        ]
+      },
+      "triangles": 96,
+      "dmx": null,
+      "socket_ids": [
+        "stair_top"
+      ],
+      "socket_types": [
+        "STAGE_COFFIN_LOCK"
+      ]
+    },
+    {
+      "id": "led_tile_500x500",
+      "name": "LED Tile 500x500 mm",
+      "category": "video",
+      "reference": "ROE Carbon / Absen Polaris class",
+      "url": "assets/models/video/led_tile_500x500.glb",
+      "dimensions": {
+        "meters": [
+          0.5,
+          0.5,
+          0.0722
+        ],
+        "feet": [
+          1.64,
+          1.64,
+          0.237
+        ],
+        "bounds_min": [
+          -0.25,
+          -0.25,
+          -0.04
+        ],
+        "bounds_max": [
+          0.25,
+          0.25,
+          0.0322
+        ]
+      },
+      "triangles": 24,
+      "dmx": null,
+      "socket_ids": [
+        "latch_right",
+        "latch_left",
+        "latch_top",
+        "latch_bottom",
+        "flybar_pickup"
+      ],
+      "socket_types": [
+        "LED_PANEL_FASTENER",
+        "LED_FLYBAR_PICKUP"
+      ]
+    },
+    {
+      "id": "led_tile_500x1000",
+      "name": "LED Tile 500x1000 mm",
+      "category": "video",
+      "reference": "ROE Black Pearl class",
+      "url": "assets/models/video/led_tile_500x1000.glb",
+      "dimensions": {
+        "meters": [
+          0.5,
+          1,
+          0.0722
+        ],
+        "feet": [
+          1.64,
+          3.281,
+          0.237
+        ],
+        "bounds_min": [
+          -0.25,
+          -0.5,
+          -0.04
+        ],
+        "bounds_max": [
+          0.25,
+          0.5,
+          0.0322
+        ]
+      },
+      "triangles": 24,
+      "dmx": null,
+      "socket_ids": [
+        "latch_right",
+        "latch_left",
+        "latch_top",
+        "latch_bottom",
+        "flybar_pickup"
+      ],
+      "socket_types": [
+        "LED_PANEL_FASTENER",
+        "LED_FLYBAR_PICKUP"
+      ]
+    },
+    {
+      "id": "led_flybar_8tile",
+      "name": "LED Flybar (8 tile)",
+      "category": "video",
+      "reference": "Single-header flybar",
+      "url": "assets/models/video/led_flybar_8tile.glb",
+      "dimensions": {
+        "meters": [
+          4,
+          0.21,
+          0.16
+        ],
+        "feet": [
+          13.123,
+          0.689,
+          0.525
+        ],
+        "bounds_min": [
+          -2,
+          -0.05,
+          -0.08
+        ],
+        "bounds_max": [
+          2,
+          0.16,
+          0.08
+        ]
+      },
+      "triangles": 36,
+      "dmx": null,
+      "socket_ids": [
+        "hoist_pickup",
+        "tile_1",
+        "tile_2",
+        "tile_3",
+        "tile_4",
+        "tile_5",
+        "tile_6",
+        "tile_7",
+        "tile_8"
+      ],
+      "socket_types": [
+        "RIG_HOIST_HOOK",
+        "LED_FLYBAR_PICKUP"
+      ]
+    },
+    {
+      "id": "led_ground_stack",
+      "name": "LED Ground-Stack Frame",
+      "category": "video",
+      "reference": "Ladder frame with ballast tray",
+      "url": "assets/models/video/led_ground_stack.glb",
+      "dimensions": {
+        "meters": [
+          1.1,
+          2.03,
+          0.9
+        ],
+        "feet": [
+          3.609,
+          6.66,
+          2.953
+        ],
+        "bounds_min": [
+          -0.55,
+          0,
+          -0.45
+        ],
+        "bounds_max": [
+          0.55,
+          2.03,
+          0.45
+        ]
+      },
+      "triangles": 60,
+      "dmx": null,
+      "socket_ids": [
+        "base_ground",
+        "tile_mount"
+      ],
+      "socket_types": [
+        "GROUND_SUPPORT_BASE",
+        "LED_FLYBAR_PICKUP"
+      ]
+    },
+    {
+      "id": "moving_head_beam",
+      "name": "Moving Head Beam",
+      "category": "lighting",
+      "reference": "Claypaky Sharpy class",
+      "url": "assets/models/lighting/moving_head_beam.glb",
+      "dimensions": {
+        "meters": [
+          0.34,
+          0.4621,
+          0.335
+        ],
+        "feet": [
+          1.115,
+          1.516,
+          1.099
+        ],
+        "bounds_min": [
+          -0.17,
+          0,
+          -0.125
+        ],
+        "bounds_max": [
+          0.17,
+          0.4621,
+          0.21
+        ]
+      },
+      "triangles": 92,
+      "dmx": {
+        "mode": "Standard",
+        "channels": 16
+      },
+      "socket_ids": [
+        "clamp_mount",
+        "safety_bond"
+      ],
+      "socket_types": [
+        "PIPE_CLAMP_2IN",
+        "RIG_HOIST_HOOK"
+      ]
+    },
+    {
+      "id": "moving_head_spot",
+      "name": "Moving Head Spot/Profile",
+      "category": "lighting",
+      "reference": "Robe MegaPointe class",
+      "url": "assets/models/lighting/moving_head_spot.glb",
+      "dimensions": {
+        "meters": [
+          0.42,
+          0.5608,
+          0.392
+        ],
+        "feet": [
+          1.378,
+          1.84,
+          1.286
+        ],
+        "bounds_min": [
+          -0.21,
+          0,
+          -0.14
+        ],
+        "bounds_max": [
+          0.21,
+          0.5608,
+          0.252
+        ]
+      },
+      "triangles": 92,
+      "dmx": {
+        "mode": "Mode 1",
+        "channels": 35
+      },
+      "socket_ids": [
+        "clamp_mount",
+        "safety_bond"
+      ],
+      "socket_types": [
+        "PIPE_CLAMP_2IN",
+        "RIG_HOIST_HOOK"
+      ]
+    },
+    {
+      "id": "moving_head_wash",
+      "name": "Moving Head Wash",
+      "category": "lighting",
+      "reference": "Martin MAC Aura class",
+      "url": "assets/models/lighting/moving_head_wash.glb",
+      "dimensions": {
+        "meters": [
+          0.38,
+          0.4507,
+          0.284
+        ],
+        "feet": [
+          1.247,
+          1.479,
+          0.932
+        ],
+        "bounds_min": [
+          -0.19,
+          0,
+          -0.13
+        ],
+        "bounds_max": [
+          0.19,
+          0.4507,
+          0.154
+        ]
+      },
+      "triangles": 92,
+      "dmx": {
+        "mode": "Extended",
+        "channels": 30
+      },
+      "socket_ids": [
+        "clamp_mount",
+        "safety_bond"
+      ],
+      "socket_types": [
+        "PIPE_CLAMP_2IN",
+        "RIG_HOIST_HOOK"
+      ]
+    },
+    {
+      "id": "strobe_jdc1",
+      "name": "Hybrid Strobe (JDC1 class)",
+      "category": "lighting",
+      "reference": "GLP JDC1",
+      "url": "assets/models/lighting/strobe_jdc1.glb",
+      "dimensions": {
+        "meters": [
+          0.63,
+          0.27,
+          0.198
+        ],
+        "feet": [
+          2.067,
+          0.886,
+          0.65
+        ],
+        "bounds_min": [
+          -0.315,
+          -0.135,
+          -0.095
+        ],
+        "bounds_max": [
+          0.315,
+          0.135,
+          0.103
+        ]
+      },
+      "triangles": 24,
+      "dmx": {
+        "mode": "Full",
+        "channels": 75
+      },
+      "socket_ids": [
+        "clamp_mount_a",
+        "clamp_mount_b"
+      ],
+      "socket_types": [
+        "PIPE_CLAMP_2IN"
+      ]
+    },
+    {
+      "id": "blinder_4lite",
+      "name": "4-Lite Blinder",
+      "category": "lighting",
+      "reference": "Moles / Chauvet Strike class",
+      "url": "assets/models/lighting/blinder_4lite.glb",
+      "dimensions": {
+        "meters": [
+          0.52,
+          0.52,
+          0.205
+        ],
+        "feet": [
+          1.706,
+          1.706,
+          0.673
+        ],
+        "bounds_min": [
+          -0.26,
+          -0.26,
+          -0.06
+        ],
+        "bounds_max": [
+          0.26,
+          0.26,
+          0.145
+        ]
+      },
+      "triangles": 204,
+      "dmx": {
+        "mode": "Individual",
+        "channels": 4
+      },
+      "socket_ids": [
+        "clamp_mount"
+      ],
+      "socket_types": [
+        "PIPE_CLAMP_2IN"
+      ]
+    },
+    {
+      "id": "line_array_k1",
+      "name": "Line Array Module K1 class",
+      "category": "audio",
+      "reference": "L-Acoustics K1",
+      "url": "assets/models/audio/line_array_k1.glb",
+      "dimensions": {
+        "meters": [
+          1.391,
+          0.44,
+          0.5932
+        ],
+        "feet": [
+          4.564,
+          1.444,
+          1.946
+        ],
+        "bounds_min": [
+          -0.6955,
+          -0.22,
+          -0.288
+        ],
+        "bounds_max": [
+          0.6955,
+          0.22,
+          0.3052
+        ]
+      },
+      "triangles": 48,
+      "dmx": null,
+      "socket_ids": [
+        "rig_top",
+        "rig_bottom"
+      ],
+      "socket_types": [
+        "SPEAKER_ARRAY_PIN"
+      ]
+    },
+    {
+      "id": "line_array_k2",
+      "name": "Line Array Module K2 class",
+      "category": "audio",
+      "reference": "L-Acoustics K2",
+      "url": "assets/models/audio/line_array_k2.glb",
+      "dimensions": {
+        "meters": [
+          1.3804,
+          0.4,
+          0.5689
+        ],
+        "feet": [
+          4.529,
+          1.312,
+          1.866
+        ],
+        "bounds_min": [
+          -0.6902,
+          -0.2,
+          -0.276
+        ],
+        "bounds_max": [
+          0.6902,
+          0.2,
+          0.2929
+        ]
+      },
+      "triangles": 48,
+      "dmx": null,
+      "socket_ids": [
+        "rig_top",
+        "rig_bottom"
+      ],
+      "socket_types": [
+        "SPEAKER_ARRAY_PIN"
+      ]
+    },
+    {
+      "id": "line_array_ksl",
+      "name": "Line Array Module KSL class",
+      "category": "audio",
+      "reference": "d&b audiotechnik KSL",
+      "url": "assets/models/audio/line_array_ksl.glb",
+      "dimensions": {
+        "meters": [
+          1.3592,
+          0.37,
+          0.5608
+        ],
+        "feet": [
+          4.459,
+          1.214,
+          1.84
+        ],
+        "bounds_min": [
+          -0.6796,
+          -0.185,
+          -0.272
+        ],
+        "bounds_max": [
+          0.6796,
+          0.185,
+          0.2888
+        ]
+      },
+      "triangles": 48,
+      "dmx": null,
+      "socket_ids": [
+        "rig_top",
+        "rig_bottom"
+      ],
+      "socket_types": [
+        "SPEAKER_ARRAY_PIN"
+      ]
+    },
+    {
+      "id": "array_flybar",
+      "name": "Line Array Flybar",
+      "category": "audio",
+      "reference": "Pull-back rigging frame",
+      "url": "assets/models/audio/array_flybar.glb",
+      "dimensions": {
+        "meters": [
+          1.4,
+          0.32,
+          0.3
+        ],
+        "feet": [
+          4.593,
+          1.05,
+          0.984
+        ],
+        "bounds_min": [
+          -0.7,
+          -0.06,
+          -0.15
+        ],
+        "bounds_max": [
+          0.7,
+          0.26,
+          0.15
+        ]
+      },
+      "triangles": 24,
+      "dmx": null,
+      "socket_ids": [
+        "hoist_pickup",
+        "array_top"
+      ],
+      "socket_types": [
+        "RIG_HOIST_HOOK",
+        "SPEAKER_ARRAY_PIN"
+      ]
+    },
+    {
+      "id": "sub_ks28",
+      "name": "Subwoofer KS28 class",
+      "category": "audio",
+      "reference": "L-Acoustics KS28",
+      "url": "assets/models/audio/sub_ks28.glb",
+      "dimensions": {
+        "meters": [
+          1.34,
+          0.535,
+          0.81
+        ],
+        "feet": [
+          4.396,
+          1.755,
+          2.657
+        ],
+        "bounds_min": [
+          -0.67,
+          -0.2675,
+          -0.395
+        ],
+        "bounds_max": [
+          0.67,
+          0.2675,
+          0.415
+        ]
+      },
+      "triangles": 24,
+      "dmx": null,
+      "socket_ids": [
+        "stack_top",
+        "stack_bottom"
+      ],
+      "socket_types": [
+        "GROUND_SUPPORT_BASE"
+      ]
+    },
+    {
+      "id": "delay_tower",
+      "name": "FOH Delay Tower",
+      "category": "audio",
+      "reference": "5 m ground-support delay mast",
+      "url": "assets/models/audio/delay_tower.glb",
+      "dimensions": {
+        "meters": [
+          1.6,
+          5.03,
+          1.6
+        ],
+        "feet": [
+          5.249,
+          16.503,
+          5.249
+        ],
+        "bounds_min": [
+          -0.8,
+          0,
+          -0.8
+        ],
+        "bounds_max": [
+          0.8,
+          5.03,
+          0.8
+        ]
+      },
+      "triangles": 64,
+      "dmx": null,
+      "socket_ids": [
+        "tower_base",
+        "array_pickup"
+      ],
+      "socket_types": [
+        "GROUND_SUPPORT_BASE",
+        "SPEAKER_ARRAY_PIN"
+      ]
+    },
+    {
+      "id": "laser_10w",
+      "name": "10 W Laser Projector",
+      "category": "sfx",
+      "reference": "Kvant / Pangolin ClubMAX class",
+      "url": "assets/models/sfx/laser_10w.glb",
+      "dimensions": {
+        "meters": [
+          0.42,
+          0.27,
+          0.36
+        ],
+        "feet": [
+          1.378,
+          0.886,
+          1.181
+        ],
+        "bounds_min": [
+          -0.21,
+          -0.12,
+          -0.15
+        ],
+        "bounds_max": [
+          0.21,
+          0.15,
+          0.21
+        ]
+      },
+      "triangles": 72,
+      "dmx": {
+        "mode": "Standard",
+        "channels": 16
+      },
+      "socket_ids": [
+        "yoke_mount",
+        "clamp_mount"
+      ],
+      "socket_types": [
+        "SFX_MOUNT",
+        "PIPE_CLAMP_2IN"
+      ]
+    },
+    {
+      "id": "laser_40w",
+      "name": "40 W Laser Projector",
+      "category": "sfx",
+      "reference": "Kvant ClubMAX 40 class",
+      "url": "assets/models/sfx/laser_40w.glb",
+      "dimensions": {
+        "meters": [
+          0.56,
+          0.35,
+          0.44
+        ],
+        "feet": [
+          1.837,
+          1.148,
+          1.444
+        ],
+        "bounds_min": [
+          -0.28,
+          -0.16,
+          -0.19
+        ],
+        "bounds_max": [
+          0.28,
+          0.19,
+          0.25
+        ]
+      },
+      "triangles": 72,
+      "dmx": {
+        "mode": "Standard",
+        "channels": 16
+      },
+      "socket_ids": [
+        "yoke_mount",
+        "clamp_mount"
+      ],
+      "socket_types": [
+        "SFX_MOUNT",
+        "PIPE_CLAMP_2IN"
+      ]
+    },
+    {
+      "id": "hazer_unique21",
+      "name": "Hazer (Unique 2.1 class)",
+      "category": "sfx",
+      "reference": "Look Solutions Unique 2.1",
+      "url": "assets/models/sfx/hazer_unique21.glb",
+      "dimensions": {
+        "meters": [
+          0.53,
+          0.3428,
+          0.34
+        ],
+        "feet": [
+          1.739,
+          1.125,
+          1.115
+        ],
+        "bounds_min": [
+          -0.265,
+          -0.16,
+          -0.13
+        ],
+        "bounds_max": [
+          0.265,
+          0.1828,
+          0.21
+        ]
+      },
+      "triangles": 52,
+      "dmx": {
+        "mode": "Standard",
+        "channels": 2
+      },
+      "socket_ids": [
+        "unit_mount"
+      ],
+      "socket_types": [
+        "SFX_MOUNT"
+      ]
+    },
+    {
+      "id": "co2_jet",
+      "name": "CO2 Cryo Jet",
+      "category": "sfx",
+      "reference": "Single-nozzle cryo jet",
+      "url": "assets/models/sfx/co2_jet.glb",
+      "dimensions": {
+        "meters": [
+          0.22,
+          0.3228,
+          0.3
+        ],
+        "feet": [
+          0.722,
+          1.059,
+          0.984
+        ],
+        "bounds_min": [
+          -0.11,
+          -0.15,
+          -0.11
+        ],
+        "bounds_max": [
+          0.11,
+          0.1728,
+          0.19
+        ]
+      },
+      "triangles": 52,
+      "dmx": {
+        "mode": "On/Off",
+        "channels": 1
+      },
+      "socket_ids": [
+        "unit_mount"
+      ],
+      "socket_types": [
+        "SFX_MOUNT"
+      ]
+    },
+    {
+      "id": "cold_spark",
+      "name": "Cold Spark Machine",
+      "category": "sfx",
+      "reference": "Sparkular class",
+      "url": "assets/models/sfx/cold_spark.glb",
+      "dimensions": {
+        "meters": [
+          0.36,
+          0.4228,
+          0.38
+        ],
+        "feet": [
+          1.181,
+          1.387,
+          1.247
+        ],
+        "bounds_min": [
+          -0.18,
+          -0.2,
+          -0.15
+        ],
+        "bounds_max": [
+          0.18,
+          0.2228,
+          0.23
+        ]
+      },
+      "triangles": 52,
+      "dmx": {
+        "mode": "Standard",
+        "channels": 2
+      },
+      "socket_ids": [
+        "unit_mount"
+      ],
+      "socket_types": [
+        "SFX_MOUNT"
+      ]
+    },
+    {
+      "id": "barricade_mojo",
+      "name": "Mojo Blow-Through Barricade",
+      "category": "site",
+      "reference": "Mojo aluminium barricade",
+      "url": "assets/models/site/barricade_mojo.glb",
+      "dimensions": {
+        "meters": [
+          1.22,
+          1.1,
+          0.8
+        ],
+        "feet": [
+          4.003,
+          3.609,
+          2.625
+        ],
+        "bounds_min": [
+          -0.61,
+          0,
+          -0.025
+        ],
+        "bounds_max": [
+          0.61,
+          1.1,
+          0.775
+        ]
+      },
+      "triangles": 48,
+      "dmx": null,
+      "socket_ids": [
+        "hinge_left",
+        "hinge_right"
+      ],
+      "socket_types": [
+        "BARRICADE_HINGE"
+      ]
+    },
+    {
+      "id": "cable_ramp_5ch",
+      "name": "5-Channel Cable Ramp",
+      "category": "site",
+      "reference": "Yellow Jacket 5-channel",
+      "url": "assets/models/site/cable_ramp_5ch.glb",
+      "dimensions": {
+        "meters": [
+          0.9,
+          0.075,
+          0.5
+        ],
+        "feet": [
+          2.953,
+          0.246,
+          1.64
+        ],
+        "bounds_min": [
+          -0.45,
+          0,
+          -0.25
+        ],
+        "bounds_max": [
+          0.45,
+          0.075,
+          0.25
+        ]
+      },
+      "triangles": 24,
+      "dmx": null,
+      "socket_ids": [
+        "ramp_a",
+        "ramp_b"
+      ],
+      "socket_types": [
+        "BARRICADE_HINGE"
+      ]
+    },
+    {
+      "id": "fence_bike_rack",
+      "name": "Bike-Rack Perimeter Fence",
+      "category": "site",
+      "reference": "Standard 2.5 m bike rack",
+      "url": "assets/models/site/fence_bike_rack.glb",
+      "dimensions": {
+        "meters": [
+          2.52,
+          1.0819,
+          0.6
+        ],
+        "feet": [
+          8.268,
+          3.549,
+          1.969
+        ],
+        "bounds_min": [
+          -1.26,
+          0.0361,
+          -0.3
+        ],
+        "bounds_max": [
+          1.26,
+          1.118,
+          0.3
+        ]
+      },
+      "triangles": 376,
+      "dmx": null,
+      "socket_ids": [
+        "fence_a",
+        "fence_b"
+      ],
+      "socket_types": [
+        "BARRICADE_HINGE"
+      ]
+    },
+    {
+      "id": "tent_foh_10x10",
+      "name": "FOH Tent 10x10 ft",
+      "category": "site",
+      "reference": "Pop-up FOH shelter",
+      "url": "assets/models/site/tent_foh_10x10.glb",
+      "dimensions": {
+        "meters": [
+          3.098,
+          2.7,
+          3.098
+        ],
+        "feet": [
+          10.164,
+          8.858,
+          10.164
+        ],
+        "bounds_min": [
+          -1.549,
+          0,
+          -1.549
+        ],
+        "bounds_max": [
+          1.549,
+          2.7,
+          1.549
+        ]
+      },
+      "triangles": 156,
+      "dmx": null,
+      "socket_ids": [
+        "anchor_ne",
+        "anchor_sw"
+      ],
+      "socket_types": [
+        "GROUND_SUPPORT_BASE"
+      ]
+    }
+  ]
+}

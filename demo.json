@@ -1,0 +1,209 @@
+{
+  "schemaVersion": 1,
+  "projectId": "r0-conformance-fixture",
+  "revision": 0,
+  "coordinateFrame": "right_handed_y_up_meters",
+  "records": [
+    {
+      "locked": false,
+      "kind": "asset_definition",
+      "id": "def:truss",
+      "label": "F34 truss",
+      "catalogId": "truss_f34_box_2m",
+      "category": "trussing",
+      "specifications": {
+        "mass": {
+          "status": "unknown",
+          "unit": "kg"
+        }
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_definition",
+      "id": "def:panel",
+      "label": "500 mm panel",
+      "catalogId": "led_tile_500x500",
+      "category": "video",
+      "specifications": {
+        "power": {
+          "status": "unknown",
+          "unit": "W"
+        }
+      }
+    },
+    {
+      "locked": false,
+      "kind": "inventory_item",
+      "id": "stock:panel1",
+      "label": "Panel serial 001",
+      "definitionId": "def:panel",
+      "serialNumber": "001",
+      "serviceStatus": "unknown",
+      "ownership": "owned",
+      "vendorId": null,
+      "containerId": null
+    },
+    {
+      "locked": false,
+      "kind": "stock_pool",
+      "id": "pool:panels",
+      "label": "Bulk panel stock",
+      "definitionId": "def:panel",
+      "quantity": 0
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0001",
+      "label": "Truss 01",
+      "definitionId": "def:truss",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0002",
+      "label": "Panel 01",
+      "definitionId": "def:panel",
+      "inventoryItemId": "stock:panel1",
+      "transform": {
+        "position": [
+          0,
+          2.4,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "assembly",
+      "id": "assembly:wall",
+      "label": "Rear wall",
+      "instanceIds": [
+        "inst_0002"
+      ]
+    },
+    {
+      "locked": false,
+      "kind": "surface",
+      "id": "surface:screen",
+      "label": "Screen plane",
+      "shape": "plane",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      "width": {
+        "status": "known",
+        "unit": "m",
+        "value": 0.5,
+        "provenance": "placeholder",
+        "source": "R0 synthetic fixture"
+      },
+      "height": {
+        "status": "unknown",
+        "unit": "m"
+      }
+    },
+    {
+      "locked": false,
+      "kind": "zone",
+      "id": "zone:audience",
+      "label": "Audience",
+      "role": "audience",
+      "shape": "box",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      "sizeMeters": [
+        6,
+        2,
+        8
+      ]
+    },
+    {
+      "locked": false,
+      "kind": "port",
+      "id": "port:send",
+      "label": "Video out",
+      "instanceId": "inst_0001",
+      "domain": "video",
+      "direction": "output",
+      "connector": null,
+      "protocol": null
+    },
+    {
+      "locked": false,
+      "kind": "port",
+      "id": "port:receive",
+      "label": "Video in",
+      "instanceId": "inst_0002",
+      "domain": "video",
+      "direction": "input",
+      "connector": null,
+      "protocol": null
+    },
+    {
+      "locked": false,
+      "kind": "mechanical_attachment",
+      "id": "attach:1",
+      "label": "Fixture attachment only",
+      "parentInstanceId": "inst_0001",
+      "childInstanceId": "inst_0002",
+      "parentSocketId": "fixture_mount",
+      "childSocketId": "mount"
+    },
+    {
+      "locked": false,
+      "kind": "document_snapshot",
+      "id": "doc:draft",
+      "label": "Draft inventory",
+      "projectRevision": 0,
+      "templateId": "r0-inventory",
+      "templateVersion": "1",
+      "status": "draft",
+      "includedRecordIds": [
+        "inst_0002"
+      ]
+    }
+  ]
+}

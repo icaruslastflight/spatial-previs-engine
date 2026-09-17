@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="6" fill="#0c1014"/>
+  <!-- The Point: confluence triangle -->
+  <path d="M4 22 L16 8 L28 22 Z" fill="none" stroke="#35d6a0" stroke-width="2" stroke-linejoin="round"/>
+  <!-- Truss chord with lacing -->
+  <path d="M8 26 L24 26 M8 26 L12 22 L16 26 L20 22 L24 26" fill="none" stroke="#4f9bff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

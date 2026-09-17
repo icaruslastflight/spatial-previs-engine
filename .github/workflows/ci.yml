@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Runs the same foundation health check documented in CLAUDE.md and
+  # scripts/workflows/verify_foundational_setup.sh's own header ("Run it
+  # before committing anything that touches the core, and in CI."):
+  # repository structure, cross-platform invariants (signed longitude,
+  # snap tolerances mirrored from UE5, no tracked .env.local), then the
+  # three terminal gates -- typecheck, unit tests, production build.
+  verify:
+    name: Foundation verify (typecheck, test, build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Foundation verify
+        run: npm run verify
+
+      - name: Native coordinate boundary without engine
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -I native/SpatialPrevis/Source/SpatialPrevisCore/Public native/tests/coordinates.cpp -o /tmp/spatial-previs-coordinates
+          /tmp/spatial-previs-coordinates
+
+      - name: Native evidence comparator corruption tests
+        run: node scripts/test-r0-native-comparator.mjs
+
+      - name: Install Chromium for R0 acceptance
+        run: npx playwright install --with-deps chromium
+
+      - name: R0 production browser workflows
+        run: npm run test:r0:browser
+
+      - name: Retain R0 browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r0-browser-evidence
+          path: test-results/r0/
+          if-no-files-found: ignore
+
+  # The geospatial splat pipeline (scripts/cleanup_splat.py + scripts/splatlib/)
+  # is Python, outside npm run verify's reach. Every script is byte-compiled
+  # (not just the one entrypoint the pipeline docs happen to name), then the
+  # geometric detector's self-test proves the clean-up path end to end on a
+  # synthetic capture -- no GPU, no weights, no real scan required.
+  python-pipeline:
+    name: Splat pipeline scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy
+
+      - name: Byte-compile every pipeline script
+        run: python3 -m py_compile scripts/*.py scripts/splatlib/*.py
+
+      - name: Splat clean-up self-test
+        run: python3 scripts/cleanup_splat.py --self-test
