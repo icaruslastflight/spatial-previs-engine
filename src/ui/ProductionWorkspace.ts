@@ -18,7 +18,7 @@ const root = document.querySelector<HTMLDivElement>('#workspace')!;
 root.innerHTML = `<header class="project-bar"><div class="wordmark"><span class="mark">SP</span><div><strong>Spatial Previs</strong><small>Production workspace</small></div></div>
   <div class="project-identity"><span id="project-name">Local production</span><span id="revision">Revision 0</span></div>
   <span class="mode">Design only</span></header>
-  <nav class="workspace-nav" aria-label="Workspace">${['Build', 'Map', 'Connect', 'Check', 'Stock', 'Deliver'].map((name, i) => `<button data-workspace="${name}" aria-pressed="${i === 0}"><span>0${i + 1}</span>${name}</button>`).join('')}</nav>
+  <nav class="workspace-nav" aria-label="Workspace">${['Build', 'Map', 'Connect', 'Check', 'Operations', 'Deliver'].map((name, i) => `<button data-workspace="${name}" aria-pressed="${i === 0}"><span>0${i + 1}</span>${name}</button>`).join('')}</nav>
   <div class="command-bar"><button id="save">Save project</button><button id="open">Open file</button><button id="export">Export project</button><span class="separator"></span><button id="undo" disabled>Undo</button><button id="redo" disabled>Redo</button><button id="equipment-toggle" aria-expanded="false">Equipment</button><button id="inspector-toggle" aria-expanded="false">Inspector</button><button id="continue-desktop" aria-haspopup="dialog">Continue on desktop</button></div>
   <main class="work-area"><aside class="equipment"><h2>Equipment</h2><label class="search-label">Search catalog<input id="search" type="search" placeholder="Truss, panel, speaker…"></label><label>Category<select id="category"><option value="">All categories</option></select></label><div id="catalog" class="catalog"></div><div class="section-heading"><h2>Scene</h2><span id="scene-count">0 objects</span></div><div id="scene-list" class="scene-list"></div></aside>
   <section class="center"><div class="view-heading"><div><h1 id="view-title">Build the production</h1><p id="view-subtitle">Local scene · metres · optional venue context</p></div><button id="frame">Frame all</button></div>
@@ -48,6 +48,7 @@ const repository = new WorkspaceRepository(new IndexedDbStorage());
 let store = new ProjectStore(createProject('local-production'), authorizer);
 let generation: number | null = null, selected: string | null = null, workspace = 'Build';
 let catalog: CatalogAsset[] = [], viewport: ProductionViewport | null = null;
+let operationsSubTab: 'Inventory' | 'Crew' | 'Vendors' = 'Inventory';
 let cablingInspector: CablingInspector | null = null;
 let preview: Preview | null = null, dirty = false, serial = 0, busy = false;
 let detach = () => {};
@@ -292,69 +293,73 @@ function renderPanel(): void {
       <p>Checks describe a named model and its inputs. Specialist approval is unavailable until a reviewer authority is configured.</p>` +
       (state.checks.length ? state.checks.map(c => `<button class="check-row" data-scope="${escape(c.scope[0])}"><strong class="check-status ${c.status}">${escape(c.status.replaceAll('_', ' '))}</strong><span>${escape(c.summary)}<small>${escape(c.model)} v${escape(c.modelVersion)} · input revision ${c.inputRevision}</small></span></button>`).join('') : '<p class="empty-copy">No checks yet. Select equipment and choose Check recorded data.</p>');
     panel.querySelectorAll<HTMLButtonElement>('[data-scope]').forEach(b => b.onclick = () => select(b.dataset['scope']!));
-  } else if (workspace === 'Stock') {
-    const record = selectedRecord();
-    if (!record || record.kind !== 'asset_instance') {
-      panel.innerHTML = `<h2>Inventory Reservations</h2><p>Select placed equipment to reserve a specific warehouse item or serial number against the theoretical stock pool.</p>`;
-    } else {
-      const def = state.project.records.find(r => r.id === record.definitionId);
-      const inventoryItem = record.inventoryItemId ? state.project.records.find(r => r.id === record.inventoryItemId) as any : null;
-      const pool = state.project.records.find(r => r.kind === 'stock_pool' && r.definitionId === record.definitionId) as any;
-      const totalPlaced = state.project.records.filter(r => r.kind === 'asset_instance' && r.definitionId === record.definitionId).length;
-      const allocated = state.project.records.filter(r => r.kind === 'asset_instance' && r.definitionId === record.definitionId && r.inventoryItemId).length;
-
-      panel.innerHTML = `<h2>Reserve inventory</h2>
-        <h3>${escape(record.label)}</h3>
-        <p class="muted">Definition: ${def ? escape(def.label) : 'Unknown'}</p>
-        
-        <div class="section-heading"><h4>Stock Pool</h4></div>
-        <form id="pool-form" style="margin-bottom: 2rem;">
-          <label>Theoretical Total Stock<input type="number" name="quantity" value="${pool?.quantity ?? 0}" min="0"></label>
-          <button type="submit">Update pool</button>
-          <p class="muted">Placed in scene: ${totalPlaced} | Allocated: ${allocated}</p>
-        </form>
-
-        <div class="section-heading"><h4>Specific Item Allocation</h4></div>
-        <form id="allocate-form">
-          <label>Assign Serial Number / Barcode<input name="serial" value="${escape(inventoryItem?.serialNumber || '')}" placeholder="Enter specific item ID or barcode"></label>
-          <button type="submit">Allocate item</button>
-          ${record.inventoryItemId ? `<button type="button" id="clear-allocation" class="danger" style="margin-left: 0.5rem">Clear</button>` : ''}
-        </form>`;
-
-      el('pool-form').onsubmit = (e) => {
-        e.preventDefault();
-        const qty = parseInt((new FormData(e.target as HTMLFormElement)).get('quantity') as string, 10);
-        if (isNaN(qty) || qty < 0) return;
-        run(() => {
-          const poolId = pool?.id || createRecordId('stock_pool');
-          transact('Stock pool updated', [{ type: 'put', record: { id: poolId, kind: 'stock_pool', label: `${def?.label || 'Item'} Pool`, locked: false, definitionId: record.definitionId, quantity: qty } }]);
-        });
-      };
+  } else if (workspace === 'Operations') {
+    const renderOps = () => {
+      const records = state.project.records;
+      const subTabs = ['Inventory', 'Crew', 'Vendors'].map(t => `<button type="button" class="sub-tab ${operationsSubTab === t ? 'selected' : ''}" data-sub="${t}">${t}</button>`).join('');
+      let html = `<div style="display:flex;gap:0.5rem;margin-bottom:1rem;border-bottom:1px solid #444;padding-bottom:0.5rem">${subTabs}</div>`;
       
-      el('allocate-form').onsubmit = (e) => {
-        e.preventDefault();
-        const serial = (new FormData(e.target as HTMLFormElement)).get('serial') as string;
-        if (!serial.trim()) return;
-        run(() => {
-          const ops: Operation[] = [];
-          let itemId = record.inventoryItemId;
-          const existing = state.project.records.find(r => r.kind === 'inventory_item' && (r as any).serialNumber === serial.trim() && r.definitionId === record.definitionId);
-          if (existing) {
-             itemId = existing.id;
-          } else {
-             itemId = itemId || createRecordId('inventory_item');
-             ops.push({ type: 'put', record: { id: itemId, kind: 'inventory_item', label: `SN: ${serial.trim()}`, locked: false, definitionId: record.definitionId, serialNumber: serial.trim(), serviceStatus: 'available' } });
-          }
-          if (record.inventoryItemId !== itemId) {
-             ops.push({ type: 'put', record: { ...record, inventoryItemId: itemId } });
-          }
-          if (ops.length) transact('Inventory item allocated', ops);
-        });
-      };
-      if (record.inventoryItemId) {
-        el('clear-allocation').onclick = () => run(() => transact('Inventory allocation cleared', [{ type: 'put', record: { ...record, inventoryItemId: null } }]));
+      if (operationsSubTab === 'Inventory') {
+        html += `<h2>Inventory Lifecycle & Containers</h2><p>Select placed equipment to manage allocation, status, and containers.</p>`;
+        const record = selectedRecord();
+        if (record && record.kind === 'asset_instance') {
+          const def = records.find(r => r.id === record.definitionId);
+          const inventoryItem = record.inventoryItemId ? records.find(r => r.id === record.inventoryItemId) as any : null;
+          html += `<h3>${escape(record.label)}</h3><p class="muted">${def ? escape(def.label) : ''}</p>
+          <form id="allocate-form">
+            <label>Serial / Barcode<input name="serial" value="${escape(inventoryItem?.serialNumber || '')}"></label>
+            <label>Service Status<select name="serviceStatus">${
+              ['available', 'prepped', 'outbound', 'show', 'returning', 'maintenance', 'missing', 'unavailable', 'unknown'].map(s => `<option ${inventoryItem?.serviceStatus === s ? 'selected' : ''}>${s}</option>`).join('')
+            }</select></label>
+            <label>Ownership<select name="ownership">${
+              ['owned', 'subrented'].map(s => `<option ${inventoryItem?.ownership === s ? 'selected' : ''}>${s}</option>`).join('')
+            }</select></label>
+            <button type="submit">Update Item</button>
+          </form>`;
+        }
+      } else if (operationsSubTab === 'Crew') {
+        const crew = records.filter(r => r.kind === 'personnel') as any[];
+        html += `<h2>Crew Management</h2><p>In-house and overhire contacts.</p>
+        <form id="add-crew"><div style="display:flex;gap:0.5rem"><input name="name" placeholder="Name" required><select name="type"><option>in-house</option><option>overhire</option></select><button type="submit">Add</button></div></form>
+        <div style="margin-top:1rem">${crew.map(c => `<div class="data-row"><span>${escape(c.name)} (${c.personnelType})</span></div>`).join('')}</div>`;
+      } else if (operationsSubTab === 'Vendors') {
+        const vendors = records.filter(r => r.kind === 'vendor') as any[];
+        html += `<h2>Vendors & Sub-rentals</h2><p>Rental houses and suppliers.</p>
+        <form id="add-vendor"><div style="display:flex;gap:0.5rem"><input name="name" placeholder="Company Name" required><select name="type"><option>rental</option><option>supplier</option><option>freelance_agency</option></select><button type="submit">Add</button></div></form>
+        <div style="margin-top:1rem">${vendors.map(v => `<div class="data-row"><span>${escape(v.name)} (${v.vendorType})</span></div>`).join('')}</div>`;
       }
-    }
+      panel.innerHTML = html;
+      
+      panel.querySelectorAll<HTMLButtonElement>('.sub-tab').forEach(b => b.onclick = () => { operationsSubTab = b.dataset['sub'] as any; renderOps(); });
+      
+      if (operationsSubTab === 'Crew') {
+        el<HTMLFormElement>('add-crew').onsubmit = (e) => {
+          e.preventDefault(); const fd = new FormData(e.target as HTMLFormElement);
+          run(() => transact('Crew added', [{ type: 'put', record: { id: createRecordId('personnel'), kind: 'personnel', label: String(fd.get('name')), locked: false, name: String(fd.get('name')), personnelType: String(fd.get('type')) as any, roles: [], skills: [], email: null, phone: null, dayRate: null } }]));
+        };
+      } else if (operationsSubTab === 'Vendors') {
+        el<HTMLFormElement>('add-vendor').onsubmit = (e) => {
+          e.preventDefault(); const fd = new FormData(e.target as HTMLFormElement);
+          run(() => transact('Vendor added', [{ type: 'put', record: { id: createRecordId('vendor'), kind: 'vendor', label: String(fd.get('name')), locked: false, name: String(fd.get('name')), vendorType: String(fd.get('type')) as any, contactName: null, email: null, phone: null } }]));
+        };
+      } else if (operationsSubTab === 'Inventory') {
+        const form = panel.querySelector<HTMLFormElement>('#allocate-form');
+        if (form) form.onsubmit = (e) => {
+          e.preventDefault();
+          const fd = new FormData(e.target as HTMLFormElement);
+          const serial = String(fd.get('serial')).trim();
+          run(() => {
+            const record = selectedRecord()!;
+            let itemId = (record as any).inventoryItemId || createRecordId('inventory_item');
+            const ops: Operation[] = [];
+            ops.push({ type: 'put', record: { id: itemId, kind: 'inventory_item', label: 'Item ' + serial, locked: false, definitionId: (record as any).definitionId, serialNumber: serial || null, serviceStatus: String(fd.get('serviceStatus')) as any, ownership: String(fd.get('ownership')) as any, vendorId: null, containerId: null } });
+            if ((record as any).inventoryItemId !== itemId) ops.push({ type: 'put', record: { ...(record as any), inventoryItemId: itemId } });
+            transact('Item updated', ops);
+          });
+        };
+      }
+    };
+    renderOps();
   } else {
     const rows = state.project.records.filter(r => r.kind === 'asset_instance');
     panel.innerHTML = `<h2>Current draft · revision ${state.project.revision}</h2><p>Local design quantities, not warehouse availability. Export project includes the exact graph, checks, history and any previously issued snapshots.</p><table><thead><tr><th>Placed equipment</th><th>Inventory allocation</th></tr></thead><tbody>${rows.map(r => {
@@ -608,4 +613,5 @@ async function initialize(): Promise<void> {
   document.body.dataset['ready'] = 'true';
 }
 run(initialize);
+
 

@@ -6,12 +6,16 @@ import type { WorkspaceState } from './WorkspaceState.ts';
 const vocabulary = new Set([
   'spatial-previs-workspace', 'right_handed_y_up_meters', 'known', 'unknown',
   'placeholder', 'user', 'manufacturer', 'measured', 'checked', 'available', 'unavailable',
+  'prepped', 'outbound', 'show', 'returning', 'maintenance', 'missing',
   'asset_definition', 'inventory_item', 'stock_pool', 'asset_instance', 'assembly',
   'surface', 'zone', 'port', 'connection', 'mechanical_attachment', 'document_snapshot',
+  'container', 'personnel', 'vendor',
   'plane', 'box', 'audience', 'keep_out', 'listening', 'target', 'termination', 'routing',
   'power', 'video', 'audio', 'data', 'input', 'output', 'bidirectional', 'draft', 'issued',
   'pass', 'fail', 'needs_data', 'not_evaluated', 'stale', 'current', 'application/json',
   'm', 'cm', 'mm', 'kg', 'g', 'W', 'kW', 'V', 'A', 'Hz', 'deg', 'rad', 'lm', 'cd',
+  'owned', 'subrented', 'roadcase', 'meatrack', 'trunk', 'bag', 'in-house', 'overhire',
+  'rental', 'supplier', 'freelance_agency'
 ]);
 
 /** Local export only; never uploads anything. Geometry and numbers remain diagnostic inputs. */
@@ -29,7 +33,7 @@ export function createDiagnosticBundle(state: WorkspaceState, publicCatalogIds: 
       if (key === 'reviewedAt' || key === 'issuedAt') return '2000-01-01T00:00:00.000Z';
       if (key === 'catalogId' && publicCatalogIds.includes(value)) return value;
       // Values in identifiers, labels, evidence, sources and protocols always stay opaque.
-      if (['kind', 'format', 'coordinateFrame', 'status', 'provenance', 'serviceStatus', 'shape', 'role', 'domain', 'direction', 'unit', 'mediaType'].includes(key)
+      if (['kind', 'format', 'coordinateFrame', 'status', 'provenance', 'serviceStatus', 'shape', 'role', 'domain', 'direction', 'unit', 'mediaType', 'ownership', 'containerType', 'personnelType', 'vendorType'].includes(key)
         && vocabulary.has(value)) return value;
       return alias(value);
     }

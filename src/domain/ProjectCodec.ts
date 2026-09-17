@@ -56,7 +56,10 @@ function quantity(value: unknown, path: string): void {
 
 const fields: Record<ProductionRecord['kind'], string[]> = {
   asset_definition: ['catalogId', 'category', 'specifications'],
-  inventory_item: ['definitionId', 'serialNumber', 'serviceStatus'],
+  inventory_item: ['definitionId', 'serialNumber', 'serviceStatus', 'ownership', 'vendorId', 'containerId'],
+  container: ['containerType', 'weightKg', 'dimensionsMm'],
+  personnel: ['personnelType', 'name', 'roles', 'skills', 'email', 'phone', 'dayRate'],
+  vendor: ['vendorType', 'name', 'contactName', 'email', 'phone'],
   stock_pool: ['definitionId', 'quantity'],
   asset_instance: ['definitionId', 'inventoryItemId', 'transform'],
   assembly: ['instanceIds'],
@@ -101,11 +104,18 @@ function record(value: unknown, path: string): void {
       for (const [name, q] of Object.entries(specs)) { text(name, p); quantity(q, `${p}.${name}`); }
     } else if (field === 'domain') oneOf(val, domains, p);
     else if (field === 'direction') oneOf(val, ['input', 'output', 'bidirectional'], p);
-    else if (field === 'serviceStatus') oneOf(val, ['available', 'unavailable', 'unknown'], p);
+    else if (field === 'serviceStatus') oneOf(val, ['available', 'prepped', 'outbound', 'show', 'returning', 'maintenance', 'missing', 'unavailable', 'unknown'], p);
+    else if (field === 'ownership') oneOf(val, ['owned', 'subrented'], p);
+    else if (field === 'containerType') oneOf(val, ['roadcase', 'meatrack', 'trunk', 'bag'], p);
+    else if (field === 'personnelType') oneOf(val, ['in-house', 'overhire'], p);
+    else if (field === 'vendorType') oneOf(val, ['rental', 'supplier', 'freelance_agency'], p);
     else if (field === 'status') oneOf(val, ['draft', 'issued'], p);
     else if (field === 'shape') oneOf(val, [kind === 'surface' ? 'plane' : 'box'], p);
     else if (field === 'role') oneOf(val, ['audience', 'keep_out', 'listening', 'target', 'termination', 'routing'], p);
-    else if (['inventoryItemId', 'serialNumber', 'connector', 'protocol'].includes(field) && val === null) { /* Explicit unknown/unallocated. */ }
+    else if (['roles', 'skills'].includes(field)) strings(val, p);
+    else if (field === 'dimensionsMm') { if (val !== null) { tuple(val, 3, p); if (val.some(x => x <= 0)) fail(p, 'expected positive dimension'); } }
+    else if (field === 'weightKg' || field === 'dayRate') { if (val !== null) { if (typeof val !== 'number' || !Number.isFinite(val) || val <= 0) fail(p, 'expected positive number'); } }
+    else if (['inventoryItemId', 'serialNumber', 'connector', 'protocol', 'vendorId', 'containerId', 'email', 'phone', 'contactName'].includes(field) && val === null) { /* Explicit unknown/unallocated. */ }
     else text(val, p);
   }
 }
@@ -136,6 +146,10 @@ export function validateProject(value: unknown): asserts value is ProductionProj
   const sockets = new Set<string>();
   for (const r of records) {
     if ('definitionId' in r) reference(r.definitionId, 'asset_definition', r.id);
+    if (r.kind === 'inventory_item') {
+      if (r.vendorId !== null) reference(r.vendorId, 'vendor', r.id);
+      if (r.containerId !== null) reference(r.containerId, 'container', r.id);
+    }
     if (r.kind === 'asset_instance' && r.inventoryItemId !== null) {
       const item = reference(r.inventoryItemId, 'inventory_item', r.id);
       if (item.definitionId !== r.definitionId) fail(r.id, 'inventory definition mismatch');

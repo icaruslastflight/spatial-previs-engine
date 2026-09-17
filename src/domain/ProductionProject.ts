@@ -34,7 +34,37 @@ export interface InventoryItem extends RecordBase {
   kind: 'inventory_item';
   definitionId: string;
   serialNumber: string | null;
-  serviceStatus: 'available' | 'unavailable' | 'unknown';
+  serviceStatus: 'available' | 'prepped' | 'outbound' | 'show' | 'returning' | 'maintenance' | 'missing' | 'unavailable' | 'unknown';
+  ownership: 'owned' | 'subrented';
+  vendorId: string | null;
+  containerId: string | null;
+}
+
+export interface Container extends RecordBase {
+  kind: 'container';
+  containerType: 'roadcase' | 'meatrack' | 'trunk' | 'bag';
+  weightKg: number | null;
+  dimensionsMm: [number, number, number] | null;
+}
+
+export interface Personnel extends RecordBase {
+  kind: 'personnel';
+  personnelType: 'in-house' | 'overhire';
+  name: string;
+  roles: string[];
+  skills: string[];
+  email: string | null;
+  phone: string | null;
+  dayRate: number | null;
+}
+
+export interface Vendor extends RecordBase {
+  kind: 'vendor';
+  vendorType: 'rental' | 'supplier' | 'freelance_agency';
+  name: string;
+  contactName: string | null;
+  email: string | null;
+  phone: string | null;
 }
 
 export interface StockPool extends RecordBase {
@@ -114,7 +144,8 @@ export interface RasterMapping extends RecordBase {
 }
 
 export type ProductionRecord = AssetDefinition | InventoryItem | StockPool | AssetInstance
-  | Assembly | Surface | Zone | Port | Connection | MechanicalAttachment | DocumentSnapshot | RasterMapping;
+  | Assembly | Surface | Zone | Port | Connection | MechanicalAttachment | DocumentSnapshot | RasterMapping
+  | Container | Personnel | Vendor;
 
 export interface ProductionProject {
   schemaVersion: typeof PROJECT_SCHEMA_VERSION;

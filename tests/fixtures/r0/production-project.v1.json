@@ -39,7 +39,10 @@
       "label": "Panel serial 001",
       "definitionId": "def:panel",
       "serialNumber": "001",
-      "serviceStatus": "unknown"
+      "serviceStatus": "unknown",
+      "ownership": "owned",
+      "vendorId": null,
+      "containerId": null
     },
     {
       "locked": false,

@@ -123,7 +123,7 @@ add('valid.historical-issued-snapshot', true, project => {
   });
 });
 add('valid.all-service-statuses-and-zone-roles', true, project => {
-  for (const serviceStatus of ['available', 'unavailable', 'unknown']) {
+  for (const serviceStatus of ['available', 'prepped', 'outbound', 'show', 'returning', 'maintenance', 'missing', 'unavailable', 'unknown']) {
     project.records.push({ ...get(project, 'stock:panel1'), id: `inventory:${serviceStatus}`, serviceStatus });
   }
   for (const role of ['audience', 'keep_out', 'listening', 'target', 'termination', 'routing']) {
