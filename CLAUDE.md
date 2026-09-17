@@ -544,3 +544,102 @@ straight-down beam sanity check in `tests/gdtf.test.ts` exists because this
 exact page first rendered with every beam pointing sideways, which is what
 found the fixed-vs-composed-quaternion bug in `GDTFAssetResolver`'s pan/tilt
 drive.
+
+## 13. AI planning and model selection
+
+Every non-trivial AI-driven change (three or more distinct steps, or any work
+that spans multiple modules) starts with a written plan. The plan is the
+artifact you carry into the PR body or commit message so a reviewer can see
+what was thought before it was typed. Trial-and-error tool loops burn far more
+API cost than the one round of thinking that would have avoided them.
+
+### 13.1 What every plan states
+
+1. **Phases and steps in order.** Break the work into a small number of phases;
+   list the steps in each. A step names its file(s) and the change type
+   (read / edit / add / delete / verify).
+2. **Model choice per phase, with a reason.** Say which class of model is
+   right for that phase (§13.2). "Default 4.7" is a valid line; the point is
+   that a 5-class choice is deliberate, not silent.
+3. **Verification per phase.** What proves the phase is done — a test name,
+   a build target, a specific tool run, an inspected artifact. A phase
+   without a verification line is not planned, it is speculated.
+
+The plan lives inline in the PR or commit body (or, for
+autonomous/agent-mode work, in a task list the agent maintains). Keep it
+tight: bullets, not prose. If a phase changes shape mid-work, rewrite the
+plan and note why — do not silently drift.
+
+### 13.2 Choosing the model per phase
+
+Two rough classes. Names may drift; the reasoning stays.
+
+- **4.7-class** (Sonnet 4.7, Opus 4.7, or the current equivalent) — the
+  workhorse. Use for anything routine: mechanical refactors, doc edits,
+  following a written plan step by step, single-file bug fixes with clear
+  symptoms, adding a test that mirrors an existing one, chores, most
+  glue-code and file-plumbing work.
+- **5-class** (Opus 5, or the current top-of-line reasoning model) — reserve
+  for phases whose success actually depends on deeper reasoning:
+  - **Root-cause hunts where the symptom does not point at the cause.**
+    (The `TMap<FString>` case-collision bug on this repo — `mass`/`Mass`/`MASS`
+    all collapse silently because Unreal's default map key funcs hash and
+    compare `FString` case-insensitively — was exactly this class.)
+  - Architecture calls where two viable shapes need real trade-off analysis.
+  - Cross-file refactors that require holding the whole call graph in mind.
+  - Algorithms you are deriving rather than adapting from a known reference.
+  - Hard-to-reverse or safety-critical code where "close enough" is not enough.
+
+If neither list clearly fits, pick 4.7 and note in the plan why 5 might be
+warranted if it stalls. Do not switch mid-phase without amending the plan.
+
+### 13.3 Cost discipline
+
+The purpose of §13 is fewer tokens per shipped change, not more ceremony.
+Two heuristics:
+
+- **A short plan beats a long trial-and-error loop.** If you are on your
+  third speculative tool call trying to figure out what a file contains,
+  stop and write the plan.
+- **Do not pay 5-class rates for 4.7-class work.** Reading a file, running
+  a known command, applying a named edit — none of these need the deeper
+  reasoning model. Reserve it for the reasoning-heavy phase and drop back
+  down for the mechanical follow-through.
+
+Trivial one-file, one-symptom changes are exempt — write the fix, not the
+plan.
+
+## 14. Local $0 AI memory
+
+A per-workstation vector + graph index of this repo lives at
+`.memory/`. The scripts under `scripts/memory/` build it and query it — no
+servers, no paid embeddings, no committed binaries. See
+`scripts/memory/README.md` for the full contract; the short version:
+
+- **Vector store:** ChromaDB `PersistentClient` under `.memory/chroma/`,
+  using its built-in ONNX embedder (`all-MiniLM-L6-v2`, ~80 MB, auto-
+  downloaded on first ingest into the user's `~/.cache/chroma/`). No
+  `sentence-transformers`, no `torch`.
+- **Graph:** NetworkX `DiGraph` of file→file import edges, persisted as
+  `.memory/graph.pickle`.
+- **Storage location:** the entire `.memory/` tree is git-ignored per §11.
+  Both artifacts regenerate deterministically from source. Do not commit
+  either.
+
+```bash
+pip install -r scripts/memory/requirements.txt
+python scripts/memory/ingest.py                          # ~30 s on this repo
+python scripts/memory/query.py "detent step radians"
+python scripts/memory/query.py --with-neighbors "GDTF pan tilt"
+```
+
+The ingest chunks 80-line windows with 15-line overlap and upserts by a
+content-hashed id so incremental re-runs stay cheap. The query prints
+`path:line` citations with a cosine-distance score; `--with-neighbors` walks
+one graph hop.
+
+**What this is not:** it is retrieval, not reasoning. It surfaces relevant
+chunks and lets any model or human read them. It is intentionally a CLI
+rather than an MCP server — MCP wiring is a separate concern and lives (if
+added) beside the query script rather than replacing it. Do not swap it for
+a paid vector API; that would cross the §1.2 hard budget.
