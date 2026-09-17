@@ -133,10 +133,10 @@ function festivalPwa(): Plugin[] {
     // and serve stale tiles during a hot reload.
     devOptions: { enabled: false },
     manifest: {
-      name: 'Festival Visualizer — Point State Park',
-      short_name: 'Festival Viz',
+      name: 'Spatial Previs Engine',
+      short_name: 'Spatial Previs',
       description:
-        'Browser-native spatial twin and live-event pre-visualization for Point State Park, Pittsburgh.',
+        'Live-event design and pre-visualization for real and virtual venues.',
       lang: 'en',
       // Both derive from the deploy base, so the installed app scopes correctly
       // under the GitHub Pages subpath as well as at the domain root.
@@ -195,6 +195,7 @@ export default defineConfig({
     // Cesium, Three and the splat renderer are individually large by nature.
     chunkSizeWarningLimit: 4096,
     rollupOptions: {
+      input: { main: resolve('index.html'), r0: resolve('r0.html') },
       output: {
         // Rollup 5 accepts only the function form of manualChunks.
         manualChunks(id: string) {

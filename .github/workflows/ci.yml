@@ -34,6 +34,20 @@ jobs:
       - name: Foundation verify
         run: npm run verify
 
+      - name: Install Chromium for R0 acceptance
+        run: npx playwright install --with-deps chromium
+
+      - name: R0 production browser workflows
+        run: npm run test:r0:browser
+
+      - name: Retain R0 browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r0-browser-evidence
+          path: test-results/r0/
+          if-no-files-found: ignore
+
   # The geospatial splat pipeline (scripts/cleanup_splat.py + scripts/splatlib/)
   # is Python, outside npm run verify's reach. Every script is byte-compiled
   # (not just the one entrypoint the pipeline docs happen to name), then the

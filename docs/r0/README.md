@@ -1,43 +1,96 @@
-# R0 first increment
+# R0 shared production foundation
 
-Status: experimental CORE-01 foundation, prepared for review. R0 is not complete.
-Baseline: 37b1f3b74ccb8b16c97c69521ed0190edffa4f95.
+Status: **web implementation prepared for review; release acceptance remains open**.
+Base: `37b1f3b74ccb8b16c97c69521ed0190edffa4f95`. The earlier CORE-01
+contract at `13647b0` is extended without changing project schema v1.
 
-## What this increment provides
+## Run and verify
 
-`src/domain/ProductionProject.ts` defines renderer-independent records for asset definitions, serialized inventory, bulk stock, placed instances, ordered assemblies, planar surfaces, box zones, ports, logical connections, mechanical attachments and document snapshot identities. IDs persist verbatim through JSON; new IDs can use namespaced UUIDs. Catalog IDs remain distinct from record and inventory IDs. Unknown quantities carry explicit units and remain unknown after serialization.
+```bash
+npm ci
+npm run dev
+# Open http://localhost:5173/r0.html
+npm run verify
+npx playwright install chromium
+npm run test:r0:browser
+```
 
-`src/domain/ProjectCodec.ts` validates the full input before returning it. It rejects unsupported schema versions and fields, duplicate IDs, dangling or wrongly typed references, conflicting serialized inventory allocation, invalid transforms, connection direction/domain/protocol conflicts, mechanical cycles, occupied sockets and future document revisions. Mechanical attachments never create power or signal links.
+The browser command starts a production preview on port 4175 and writes
+`test-results/r0/results.json` and screenshots. `R0_TEST_URL` can select an
+already running production preview. Offline tests require the production service
+worker, which is disabled in Vite dev. Windows preflight is available at
+`scripts/verify-r0-windows.ps1`.
 
-This is a pure JSON boundary, not implemented project storage or a scene restore UI. Unknown connection metadata may be retained but does not establish equipment compatibility. Socket existence, gender and physical mating remain the existing engine's responsibility. The fixture's connection candidates and mechanical attachment are synthetic, not an equipment design.
+## Implemented behavior
 
-## Next bounded work
+| Area | Behavior |
+| --- | --- |
+| CORE-01 | Stable records, typed relationships, strict whole-graph validation; unknown quantities retain units. |
+| CORE-02 | Atomic commands, stale revision and duplicate-key rejection, permissions and endpoint locks, detached previews, cancel, monotonic undo/redo. |
+| CORE-03 | IndexedDB compare-and-swap saves and atomic active-project pointer; explicit project-v1 migration; persistent history, renderer reconciliation and immutable issued bytes. |
+| CORE-04 | Named check model/version, exact-input SHA-256 hashes, five result states, dependency invalidation and human authorization boundary. |
+| UI-01 | Linked Build / Map / Connect / Check / Deliver contexts; catalog search, selection, numeric editing, drag/snaps, unlink, locks, removal previews and JSON recovery. |
+| AI-01 | Strict read-only `scene.summary` and `scene.inspect` tools; detached evidence with revision, sources, unknown values and freshly checked input hashes. No model account required. |
+| QA-01 | Domain/scene regressions, redacted diagnostic replay, browser acceptance script, Windows preflight and native evidence checklist. |
 
-1. CORE-02: atomic commands with revision checks, idempotency, lock enforcement, preview/cancel, and undo of relationships and inventory allocation.
-2. CORE-03: version migrations, durable storage, renderer reconciliation, dependency invalidation and immutable issued document bytes.
-3. CORE-04: calculations, evidence, review authority and exact-input invalidation.
-4. UI-01: adopt the reviewed responsive shell and shared selection after state behavior is proven.
+Only recorded-data presence is calculated. Populated data does not establish
+engineering performance. Structural, electrical, optical, acoustic and laser-safety
+calculations return `not_evaluated` through scene tools. Local editing does not
+allow specialist review/issuance; a host must supply that authenticated authority.
 
-Cable runs, mappings, calculations and approval records require their own domain contracts. The first schema intentionally rejects unsupported kinds rather than accepting opaque payloads. No existing editor code, sockets, coordinates, events, bridge, assets or dependencies were changed. The current counter-based spawn IDs remain until command-backed scene creation is integrated.
+## Operator walkthrough
 
-## Open UE5 conformance checkpoint
+1. Search the catalog and place two objects. Select and edit exact X/Y/Z metres.
+2. Drag equipment to move/snap. Two fingers operate the camera; a second contact,
+   pointer cancellation or Escape cancels a move. Numeric fields provide a non-drag alternative.
+3. Use Preview nearby socket snap or Preview unlink, then cancel/apply and undo.
+4. Lock equipment and verify edits are blocked. Preview removal, cancel, then apply
+   and undo; relationships and allocations return with the geometry.
+5. In Connect, add an output port to one object and an input to another. Preview
+   and apply a logical connection. Mechanical edges never imply power or signal.
+6. Run Check recorded data. Missing values remain `needs_data`; changing their
+   inputs makes checks stale. Inspect evidence identifies the recorded data and revision.
+7. Save, reload and check records/history. Export a portable JSON backup. Saving
+   an imported project makes that project the next startup project.
+8. Deliver exports scene evidence and redacted diagnostics locally. Nothing is
+   uploaded automatically. Diagnostics retain geometry/numbers; inspect before sharing.
 
-The current repository is the web client; no UE5 project was available for execution. This contract is experimental and must not be advertised as cross-platform conforming or activated as the shared production format until the desktop implementation passes the same fixtures. No parity requirement is relaxed.
+## Integrity and recovery
 
-Use `tests/fixtures/r0/production-project.v1.json` as the portable contract input. A UE5 adapter must retain IDs, unknown quantities, units, locks, ordered membership and relationship kinds exactly. Convert the declared right-handed Y-up metre frame explicitly at the UE boundary; do not reinterpret positions as UE centimetres or reuse quaternion components without a tested basis conversion. Compare canonical JSON semantically, not by whitespace or property order.
+- Canceled/rejected proposals leave records, relationships, allocations and history intact.
+- Invalid imports and changes made while import loads preserve the current project.
+- Failed saves keep the previous stored project. Export current edits before reopening.
+- Concurrent tabs get a save conflict instead of silently overwriting each other.
+- Imported histories must connect to the current graph, not just contain valid snapshots.
+- Loaded/imported reviews require reauthorization; files cannot prove reviewer identity.
+  Historical issued artifacts retain their exact bytes.
+- Renderer asset loads replace the scene atomically. Failed loads retain the prior scene
+  with an explicit error and suspend geometry interaction until recovery.
+- Drag proposals resolve on cloned geometry using the existing socket engine. Committed
+  transforms/edges use the same command boundary as numeric edits. Imported attachment
+  sockets that are missing block dragging with an explicit error; unlink remains available.
+- Moving a parent carries descendants; moving an attached child unlinks it. Origin-based
+  queries are not collision tests. Snaps are geometric, not structural approval.
+- Diagnostics alias names, sources, identifiers and review metadata. Redacted issued
+  content is a diagnostic copy; the original stored artifact is never modified.
 
-The existing site-anchor divergence in CLAUDE.md remains open. This work changes no anchor values. See `REMOTE_UE5_WORKSTATION.md` for the requested rented development host.
+## Verification and release gates
 
-## Executed verification
+`VERIFICATION.md` records executed checks and environment limits. CI runs the production
+browser suite and retains results/screenshots. A configured workflow is not proof it ran.
 
-- Baseline: 284 tests passed.
-- Updated: 301 tests passed, including 17 new domain contract tests.
-- TypeScript typecheck and production build passed.
-- No UE5 build, hosted GPU session, browser integration, actual-phone test or visual approval is claimed.
+R0 cannot be called complete until all of these are evidenced:
 
-## Source trail
+1. Production browser acceptance passes and its actual screens are inspected, including
+   interrupted gestures, offline reopen, malformed imports, concurrent saves and narrow controls.
+2. The actual UE5 implementation passes shared fixtures and rejection cases. No native
+   project was found in the inspected branches; see `UE5_CONFORMANCE.md`.
+3. The actual Android device is tested and the owner/operator reviews the visual result.
 
-- PRODUCTION_WORKSPACE_SPEC.md: sections 3, 4, 14, 15; IMPLEMENTATION_BACKLOG.json: CORE-01 through CORE-04, supplied project artifacts dated 2026-09-16.
-- COMMERCIAL_DESIGN_STANDARD.md: visual direction remains pending owner review.
-- Drive project entry: https://drive.google.com/file/d/1zgcVljTe_2G5Pnrx1YfY_3DV7IX3AtfG/view
-- Drive conflict register: https://drive.google.com/file/d/1Evkce9P_ZfeABD4-egH7tgjuQOGE__Du/view
+The root sample viewport remains intact; `/r0.html` is the experimental shared-state
+workspace. No snap constants, parser semantics or sample anchor values were changed.
+Do not merge it as a conforming cross-platform release before those gates close.
+
+Point State Park is only an optional sample venue. Local R0 projects require no geographic
+anchor, map, point cloud, service account or paid API. LED mapping, specialist calculations,
+stock reservations and crew-pack generation remain R1+ scope.

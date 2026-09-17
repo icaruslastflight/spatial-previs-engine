@@ -1,7 +1,8 @@
 # Festival Visualizer — Project Guidelines
 
-Browser-native spatial twin and live-event pre-visualization client for
-**Point State Park, Pittsburgh, PA**. This is the *Parallel High-Capability Web
+Venue-independent spatial twin and live-event pre-visualization client for
+real and virtual environments. **Point State Park, Pittsburgh, PA is a sample
+venue for optional point-cloud context, not the product's scope.** This is the *Parallel High-Capability Web
 Application* line: it targets maximum browser feature parity with the Unreal
 Engine 5 desktop architecture.
 
@@ -67,6 +68,11 @@ under touch before it is considered done.
 ---
 
 ## 2. Site anchor — Point State Park
+
+These constants describe the existing sample venue only. Do not use them as
+mandatory defaults for new projects. Local unreferenced scenes must remain
+usable without maps, geographic coordinates, scans, accounts or API keys.
+Other venues require their own geographic reference and source evidence.
 
 ```
 Latitude    40.4417° N        →  +40.4417
