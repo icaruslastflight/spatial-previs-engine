@@ -12,7 +12,7 @@ Guidelines for retrieving domain-specific knowledge from the local vector memory
 Always check `03_CONFLICT_REGISTER.md` before finalizing calculations or implementations:
 
 - **C01 (Coordinates & Mode)**: Real-world mode uses WGS84 coordinates and geographic anchor; Virtual mode uses local origin (0,0,0) without mandatory basemap.
-- **C02 (Point State Park Anchor)**: The verified test anchor elevation is **184.963 m ellipsoidal height** (Point State Park, Pittsburgh: 40.4418° N, 80.0076° W). Do NOT use uncorrected 220m or 186.6m values without distinguishing ellipsoidal vs orthometric height.
+- **C02 (Point State Park Anchor)**: The verified test anchor elevation is **184.963 m ellipsoidal height** (Point State Park, Pittsburgh: 40.4417° N, -80.0075° W — signed, west negative, per CLAUDE.md §2; `POINT_STATE_PARK` in `src/geo/GeoAnchor.ts` is the single source of truth, never re-declare it). Do NOT use uncorrected 220m or 186.6m values without distinguishing ellipsoidal vs orthometric height. The UE5 georeferencing actor has not taken the 186.6→184.963 correction yet (CLAUDE.md §1.1 "OPEN PARITY DIVERGENCE") — record both platforms' values and the open delta rather than assuming parity.
 - **C03 (Strict Parity)**: Native desktop and browser maintain consistent IDs, units, frames, and socket snapping math.
 - **C07 (GDTF / MVR Schemas)**: Use DIN SPEC 15800 GDTF and MVR specifications; geometry units are meters; rotation in degrees.
 - **C08 (Model-Neutral MCP Gateway)**: Use JSON-RPC 2.0 endpoint at `POST /mcp` with methods: `previs/getSceneGraph`, `previs/snapAsset`, `previs/triggerDMXCue`, `previs/getElectricalStatus`, `previs/memorySearch`.

@@ -697,6 +697,18 @@ servers, no paid embeddings, no committed binaries. See
 - **Storage location:** the entire `.memory/` tree is git-ignored per §11.
   Both artifacts regenerate deterministically from source. Do not commit
   either.
+- **Beyond the repo tree:** `ingest.py` also walks two hardcoded, per-
+  workstation Google-Drive-synced roots (`G:\My Drive\spatial-previs-engine`,
+  `G:\My Drive\Spatial Previs Engine - Master Archive`) when present, tagging
+  their chunks `origin: drive`. This is workstation-specific and not
+  reproducible from a fresh checkout — see `scripts/memory/README.md` before
+  relying on Drive-sourced results.
+- **MCP server, registered.** `scripts/memory/mcp_memory_server.py` is a
+  stdio JSON-RPC 2.0 server (session start/observe/note/end plus
+  `vector_memory_search`/`vector_memory_graph`), persisting agent session
+  state to `.agents/memory/sessions.json` (also git-ignored). Registered as
+  `spatial-previs-memory` in the repo's `.mcp.json`, so any MCP-aware agent
+  session opened against this repo can launch it directly.
 
 ```bash
 pip install -r scripts/memory/requirements.txt
@@ -711,10 +723,11 @@ content-hashed id so incremental re-runs stay cheap. The query prints
 one graph hop.
 
 **What this is not:** it is retrieval, not reasoning. It surfaces relevant
-chunks and lets any model or human read them. It is intentionally a CLI
-rather than an MCP server — MCP wiring is a separate concern and lives (if
-added) beside the query script rather than replacing it. Do not swap it for
-a paid vector API; that would cross the §1.2 hard budget.
+chunks and lets any model or human read them. `ingest.py`/`query.py` remain
+the CLI source of truth; `mcp_memory_server.py` (above) is additive MCP
+wiring beside them, not a replacement — it shells into the same `query_memory()`
+rather than reimplementing retrieval. Do not swap either for a paid vector
+API; that would cross the §1.2 hard budget.
 
 ## 15. Local prompt-drafting tool
 

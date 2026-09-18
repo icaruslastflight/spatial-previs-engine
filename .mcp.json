@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "spatial-previs-memory": {
+      "command": "python",
+      "args": ["scripts/memory/mcp_memory_server.py"]
+    }
+  }
+}
