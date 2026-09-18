@@ -23,6 +23,25 @@ documents any agent reads before the matching task:
   failure, review comment or check-suite event.
 - `.claude/skills/babysit/SKILL.md` — when watching or monitoring a PR here.
 
+There is also a second checklist tree under `.agents/` —
+`.agents/rules/memory.md` and `.agents/skills/{elite-agent-memory-system,
+rag-implementation, spatial-previs-memory}/SKILL.md` — describing a richer
+memory-note workflow (decision/pattern/debug/learning/architecture notes,
+tagging conventions) built around `scripts/memory/mcp_memory_server.py`'s
+session tools (§14). **Owner decision, 18 September 2026: `.agents/skills/`
+and `.agents/rules/memory.md` are the canonical source for memory-system
+usage guidance**, not `.claude/skills/`. Practically: `.claude/skills/` is
+still the tree Claude Code's own harness auto-discovers as invocable Skills
+(the four files above), so `.claude/skills/memory-system/SKILL.md` exists
+only as a thin pointer into `.agents/rules/memory.md` and `.agents/skills/*`
+— mirroring how `phased-plan` and `domain-correctness-review` already point
+into `scripts/ai-tools/metaprompt.py` rather than duplicating content. Any
+other agent/tool without that auto-discovery convention should read
+`.agents/skills/*` directly. CLAUDE.md §2's Point State Park anchor
+(40.4417°N/-80.0075°W) remains authoritative for that number regardless of
+which skill tree is canonical — `.agents/skills/spatial-previs-memory` was
+corrected to match rather than treated as a second source of truth.
+
 ## Desktop capability
 
 Desktop keeps its full capability. Do not simplify or delay a native feature solely
