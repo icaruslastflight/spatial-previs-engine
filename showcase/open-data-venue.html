@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>Spatial Previs Engine — Open-Data Venue Model</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --ink: #e8eaf0;
+        --dim: #8b93a7;
+        --accent: #7dd3a8;
+        --warn: #ffd166;
+        --panel: rgba(8, 11, 16, 0.86);
+        --line: rgba(125, 211, 168, 0.22);
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; height: 100%; background: #070a10; color: var(--ink); font: 12px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace; overflow: hidden; }
+      #stage { position: fixed; inset: 0; touch-action: none; }
+      .panel { position: fixed; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+      #title { top: 18px; left: 18px; max-width: 400px; }
+      #title h1 { margin: 0 0 2px; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+      #title .sub { color: var(--dim); font-size: 10.5px; line-height: 1.6; }
+      #title .tag { display: inline-block; margin: 5px 4px 0 0; padding: 2px 7px; border-radius: 4px; font-size: 9.5px; font-weight: 700; letter-spacing: .06em; background: rgba(125,211,168,.12); color: var(--accent); border: 1px solid rgba(125,211,168,.25); }
+      #datum { top: 18px; right: 18px; width: 320px; }
+      #datum h2, #legend h2 { margin: 0 0 8px; font-size: 9px; letter-spacing: .16em; text-transform: uppercase; color: var(--dim); }
+      table { border-collapse: collapse; width: 100%; font-size: 10.5px; }
+      td { padding: 2px 0; vertical-align: top; }
+      td.k { color: var(--dim); padding-right: 12px; white-space: nowrap; }
+      td.v { color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
+      td.v.warn { color: var(--warn); }
+      #legend { left: 18px; bottom: 18px; min-width: 300px; max-width: 420px; }
+      .row { display: flex; align-items: flex-start; gap: 8px; font-size: 10.5px; margin: 3px 0; }
+      .swatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; margin-top: 3px; }
+      .row .src { color: var(--dim); }
+      #layer1 { right: 18px; bottom: 18px; width: 320px; border-color: rgba(255,209,102,.3); }
+      #layer1 h2 { color: var(--warn); }
+      #layer1 p { margin: 0; font-size: 10.5px; color: var(--dim); line-height: 1.55; }
+      #status { left: 50%; bottom: 18px; transform: translateX(-50%); font-size: 10.5px; color: var(--dim); white-space: nowrap; }
+      #status b { color: var(--accent); }
+    </style>
+  </head>
+  <body>
+    <canvas id="stage"></canvas>
+
+    <div class="panel" id="title">
+      <h1>Spatial Previs Engine</h1>
+      <div class="sub">Phase 5 shape check &mdash; <b>Layer 2: persistent open-data site model</b> of Point State Park, built from live-fetched public sources and placed through the repo&rsquo;s own <code>SITE_FRAME</code> anchor chain. No scan, no key, no stand-in geometry.</div>
+      <div>
+        <span class="tag">AWS Terrain Tiles</span>
+        <span class="tag">USGS NAIP</span>
+        <span class="tag">OpenStreetMap</span>
+        <span class="tag">GeoAnchor.ts</span>
+      </div>
+    </div>
+
+    <div class="panel" id="datum">
+      <h2>Anchor &amp; datum chain</h2>
+      <table id="datum-table"></table>
+    </div>
+
+    <div class="panel" id="legend">
+      <h2>What is drawn, and where it came from</h2>
+      <div id="legend-rows"></div>
+    </div>
+
+    <div class="panel" id="layer1">
+      <h2>Layer 1 &mdash; not drawn here</h2>
+      <p>Google Photorealistic 3D Tiles is the streamed, key-gated photorealism layer (web via <code>CesiumGlobe.ts</code>, native via Cesium for Unreal). This environment has no key, and the tiles&rsquo; terms do not permit baking them into a persistent asset &mdash; so this page shows only what we can <em>own</em>: the open-data model fixtures interact with.</p>
+    </div>
+
+    <div class="panel" id="status">loading&hellip;</div>
+
+    <script type="module" src="./open-data-venue.ts"></script>
+  </body>
+</html>

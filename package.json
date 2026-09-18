@@ -16,6 +16,7 @@
     "bridge": "node scripts/foh_bridge_daemon.js",
     "build:assets": "node scripts/build-asset-library.js",
     "fetch:gdtf": "node scripts/fetch_gdtf_library.js",
+    "fetch:open-data": "node scripts/fetch_open_data_venue.mjs",
     "render:wall-loop": "node scripts/render_wall_loop.mjs",
     "showcase:capture": "node scripts/capture_showcase.mjs",
     "bundle": "node scripts/build-installation-bundle.mjs",

@@ -254,6 +254,7 @@ npm run verify      # full foundation health check — structure + all three gat
 npm run build:assets # compile the modular asset library to GLB
 npm run bridge      # FOH Art-Net/sACN → WebSocket daemon (lands in Phase 4)
 npm run fetch:gdtf  # sync GDTF fixture profiles into the local cache
+npm run fetch:open-data # fetch the open-data venue layers (terrain, NAIP, OSM) for showcase/open-data-venue.html
 npm run render:wall-loop # regenerate public/assets/video/edm_wall_loop.mp4 (needs ffmpeg + a dev server)
 ```
 
@@ -552,6 +553,15 @@ Each showcase page sets `document.body.dataset.ready = 'true'` once its scene
 has finished building (`'error'` if it threw) — `capture_showcase.mjs` waits on
 that flag rather than a fixed delay, so a slow parse or a silent failure shows
 up as a timeout, not a screenshot of a half-built scene.
+
+`showcase/open-data-venue.html` renders the persistent open-data site model
+("Layer 2" of the outdoor-venue design): an AWS Terrain Tiles DEM, USGS NAIP
+orthoimagery and OpenStreetMap massing for Point State Park, every vertex
+placed through `SITE_FRAME` with the §2 orthometric → ellipsoidal corrections
+taken from `SITE_ELEVATION`. Its data is fetched, not committed
+(`npm run fetch:open-data`, §11); Google 3D Tiles ("Layer 1") is deliberately
+absent because its terms do not permit baking tiles into a persistent asset.
+The HUD prints the DEM-vs-spec residual at the anchor rather than hiding it.
 
 A render surfacing a real bug is the point, not a failure of the showcase: the
 straight-down beam sanity check in `tests/gdtf.test.ts` exists because this
