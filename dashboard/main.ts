@@ -22,7 +22,12 @@ import {
   type WorkflowRunSummary,
   type RepoActivitySnapshot,
 } from '../src/dashboard/GitHubActivity.ts';
-import { parseRoadmapMilestones, type RoadmapMilestone } from '../src/dashboard/RoadmapStatus.ts';
+import {
+  parseRoadmapMilestones,
+  parseRoadmapReleaseDetails,
+  type RoadmapMilestone,
+  type RoadmapReleaseDetail,
+} from '../src/dashboard/RoadmapStatus.ts';
 
 const OWNER = 'icaruslastflight';
 const REPO = 'spatial-previs-engine';
@@ -96,14 +101,19 @@ function saveToken(value: string): void {
 /* Panel renderers                                                     */
 /* ─────────────────────────────────────────────────────────────────── */
 
-function renderRoadmap(milestones: RoadmapMilestone[]): void {
-  setCount('roadmap-count', milestones.length);
-  const body = el('roadmap-body');
-  if (milestones.length === 0) {
-    body.innerHTML = '<div class="error">Could not parse docs/ROADMAP.md\'s milestone table.</div>';
-    return;
+// Module-level: the roadmap panel is tabbed (Overview + one tab per release),
+// and the active tab needs to survive a re-render triggered by clicking a
+// different tab -- there's no framework here, just direct DOM writes, so the
+// currently-fetched data and the selected tab both live here between calls.
+let roadmapMilestones: RoadmapMilestone[] = [];
+let roadmapDetails: RoadmapReleaseDetail[] = [];
+let activeRoadmapTab = 'overview';
+
+function renderRoadmapOverview(): string {
+  if (roadmapMilestones.length === 0) {
+    return '<div class="error">Could not parse docs/ROADMAP.md\'s milestone table.</div>';
   }
-  body.innerHTML = milestones
+  return roadmapMilestones
     .map(
       (m) => `
         <div class="row">
@@ -116,6 +126,58 @@ function renderRoadmap(milestones: RoadmapMilestone[]): void {
         </div>`,
     )
     .join('');
+}
+
+/** One release's individual roadmap: its status/docs-link header plus the
+ * full `## R<n> — ...` section body from docs/ROADMAP.md, rendered to HTML
+ * by `renderRoadmapDetailHtml` -- the real committed prose, not a summary. */
+function renderRoadmapReleaseTab(release: string): string {
+  const milestone = roadmapMilestones.find((m) => m.release === release);
+  const detail = roadmapDetails.find((d) => d.release === release);
+  if (!milestone && !detail) {
+    return `<div class="error">No roadmap content found for ${escapeHtml(release)}.</div>`;
+  }
+  const docsLink = milestone?.docsPath
+    ? `<a href="https://github.com/${OWNER}/${REPO}/blob/${BRANCH}/docs/${escapeHtml(milestone.docsPath)}" target="_blank" rel="noopener">${escapeHtml(milestone.name)} docs &rarr;</a>`
+    : escapeHtml(milestone?.name ?? release);
+  const header = milestone
+    ? `<div class="roadmap-release-header"><span class="badge ${milestone.status}">${escapeHtml(milestone.statusLabel || milestone.status)}</span>${docsLink}</div>`
+    : '';
+  const body = detail
+    ? detail.bodyHtml
+    : '<div class="empty">No detail section found for this release in docs/ROADMAP.md.</div>';
+  return `${header}<div class="roadmap-detail">${body}</div>`;
+}
+
+function renderRoadmapBody(): void {
+  const body = el('roadmap-body');
+  body.innerHTML = activeRoadmapTab === 'overview' ? renderRoadmapOverview() : renderRoadmapReleaseTab(activeRoadmapTab);
+}
+
+function renderRoadmapTabs(): void {
+  const tabsEl = el('roadmap-tabs');
+  const tabs = ['overview', ...roadmapMilestones.map((m) => m.release)];
+  tabsEl.innerHTML = tabs
+    .map((tab) => {
+      const label = tab === 'overview' ? 'Overview' : tab;
+      return `<button type="button" class="tab${tab === activeRoadmapTab ? ' active' : ''}" data-tab="${escapeHtml(tab)}">${escapeHtml(label)}</button>`;
+    })
+    .join('');
+  tabsEl.querySelectorAll<HTMLButtonElement>('.tab').forEach((button) => {
+    button.addEventListener('click', () => {
+      activeRoadmapTab = button.dataset['tab'] ?? 'overview';
+      renderRoadmapTabs();
+      renderRoadmapBody();
+    });
+  });
+}
+
+function renderRoadmap(milestones: RoadmapMilestone[], details: RoadmapReleaseDetail[]): void {
+  roadmapMilestones = milestones;
+  roadmapDetails = details;
+  setCount('roadmap-count', milestones.length);
+  renderRoadmapTabs();
+  renderRoadmapBody();
 }
 
 function renderPullRequests(section: RepoActivitySnapshot['openPullRequests']): void {
@@ -275,11 +337,15 @@ function renderRateLimit(rateLimit: RepoActivitySnapshot['rateLimit']): void {
 /* Boot                                                                 */
 /* ─────────────────────────────────────────────────────────────────── */
 
-async function fetchRoadmapMilestones(): Promise<RoadmapMilestone[]> {
+async function fetchRoadmapData(): Promise<{ milestones: RoadmapMilestone[]; details: RoadmapReleaseDetail[] }> {
   const url = `https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}/docs/ROADMAP.md`;
   const response = await fetch(url);
   if (!response.ok) throw new Error(`docs/ROADMAP.md fetch failed: ${response.status}`);
-  return parseRoadmapMilestones(await response.text());
+  const markdown = await response.text();
+  return {
+    milestones: parseRoadmapMilestones(markdown),
+    details: parseRoadmapReleaseDetails(markdown),
+  };
 }
 
 async function fetchDecisions(): Promise<DecisionEntry[]> {
@@ -312,10 +378,10 @@ async function main(): Promise<void> {
   }
 
   try {
-    const [milestones, decisions] = await Promise.all([
-      fetchRoadmapMilestones().catch((error: Error) => {
+    const [roadmap, decisions] = await Promise.all([
+      fetchRoadmapData().catch((error: Error) => {
         console.error(error);
-        return [] as RoadmapMilestone[];
+        return { milestones: [] as RoadmapMilestone[], details: [] as RoadmapReleaseDetail[] };
       }),
       fetchDecisions().catch((error: Error) => {
         console.error(error);
@@ -323,7 +389,7 @@ async function main(): Promise<void> {
       }),
       refreshGitHubPanels(),
     ]);
-    renderRoadmap(milestones);
+    renderRoadmap(roadmap.milestones, roadmap.details);
     renderDecisions(decisions);
 
     statusBar.innerHTML = `<span><b>ready</b> · ${OWNER}/${REPO}@${BRANCH} · refresh the page for the latest data</span><span>${new Date().toLocaleString()}</span>`;

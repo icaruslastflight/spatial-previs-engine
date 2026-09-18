@@ -23,6 +23,33 @@ import chromadb
 import networkx as nx
 
 
+def query_entity(name: str, repo_root: Path) -> dict:
+    """Look up a shared-constant entity node (unit, per-platform value,
+    parity_status) added by ingest.py's SHARED_CONSTANT_ENTITIES list --
+    a direct lookup instead of a vector-similarity guess for values that
+    are known, named constants rather than free text."""
+    graph_path = repo_root / ".memory" / "graph.pickle"
+    if not graph_path.exists():
+        return {"error": f"No graph at {graph_path}. Run scripts/memory/ingest.py first."}
+    with graph_path.open("rb") as handle:
+        graph = pickle.load(handle)
+
+    node_id = f"entity::{name}"
+    if node_id not in graph:
+        matches = [
+            n for n, data in graph.nodes(data=True)
+            if data.get("kind") == "entity" and name.lower() in n.lower()
+        ]
+        if not matches:
+            entities = [n for n, d in graph.nodes(data=True) if d.get("kind") == "entity"]
+            return {"error": f"No entity named '{name}'. Known entities: {entities}"}
+        node_id = matches[0]
+
+    data = dict(graph.nodes[node_id])
+    data.pop("kind", None)
+    return {"entity": data}
+
+
 def query_memory(
     query_text: str,
     repo_root: Path,
@@ -67,10 +94,22 @@ def query_memory(
         end = meta.get("end_line", 1)
         cat = meta.get("category", "general")
         origin = meta.get("origin", "repo")
-        
+        platform = meta.get("platform", "docs")
+
         neighbors = []
+        parity_neighbors = []
         if graph is not None and path in graph:
-            neighbors = list(graph.successors(path))[:10]
+            for target in list(graph.successors(path))[:20]:
+                edge = graph.get_edge_data(path, target) or {}
+                if edge.get("kind") == "parity":
+                    parity_neighbors.append({
+                        "path": target,
+                        "note": edge.get("note", ""),
+                        "caveat": edge.get("caveat", ""),
+                    })
+                else:
+                    neighbors.append(target)
+            neighbors = neighbors[:10]
 
         hits.append({
             "id": chunk_id,
@@ -79,9 +118,11 @@ def query_memory(
             "end_line": end,
             "distance": round(distance, 4),
             "category": cat,
+            "platform": platform,
             "origin": origin,
             "body": doc,
             "neighbors": neighbors,
+            "parity_neighbors": parity_neighbors,
         })
 
     return {
@@ -94,12 +135,16 @@ def query_memory(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("query", nargs="+", help="Free-form query text.")
+    parser.add_argument("query", nargs="*", help="Free-form query text.")
     parser.add_argument("--root", type=Path, default=None,
                         help="Repo root (default: parent of scripts/ directory).")
     parser.add_argument("-k", type=int, default=5, help="Top-k chunks (default 5).")
     parser.add_argument("--category", type=str, default=None,
                         help="Filter by category (code, docs, context, standards, safety_manual, planning).")
+    parser.add_argument("--entity", type=str, default=None,
+                        help="Direct lookup of a shared-constant entity node by name "
+                             "(e.g. POINT_STATE_PARK_HEIGHT, SNAP_THRESHOLD_METERS) "
+                             "instead of a vector-similarity search.")
     parser.add_argument("--with-neighbors", action="store_true",
                         help="Also print files reached by one graph hop.")
     parser.add_argument("--body", action="store_true",
@@ -110,6 +155,24 @@ def main() -> int:
 
     here = Path(__file__).resolve()
     repo_root = args.root or here.parents[2]
+
+    if args.entity:
+        res = query_entity(args.entity, repo_root)
+        if "error" in res:
+            print(res["error"], file=sys.stderr)
+            return 2
+        if args.json:
+            print(json.dumps(res, indent=2))
+            return 0
+        entity = res["entity"]
+        print(f"{entity['name']}  [{entity['unit']}]  parity_status={entity['parity_status']}")
+        print(f"  web:    {entity['web_value']}")
+        print(f"  native: {entity['native_value']}  ({entity['native_value_confidence']})")
+        print(f"  source: {entity['source']}")
+        return 0
+
+    if not args.query:
+        parser.error("query text is required unless --entity is given")
     query_str = " ".join(args.query)
 
     res = query_memory(
@@ -137,7 +200,7 @@ def main() -> int:
     print(f"Top {len(hits)} matches for: '{query_str}'{cat_label}\n")
 
     for i, hit in enumerate(hits, start=1):
-        print(f"[{i}] {hit['path']}:{hit['start_line']}-{hit['end_line']}  (distance: {hit['distance']}) [{hit['category']}]")
+        print(f"[{i}] {hit['path']}:{hit['start_line']}-{hit['end_line']}  (distance: {hit['distance']}) [{hit['category']}/{hit['platform']}]")
         if args.body:
             snippet = "\n    ".join(hit["body"].splitlines()[:15])
             print(f"    {snippet}")
@@ -145,6 +208,9 @@ def main() -> int:
                 print("    ...")
         if hit["neighbors"]:
             print(f"    graph -> {', '.join(hit['neighbors'][:6])}")
+        for pn in hit["parity_neighbors"]:
+            print(f"    parity -> {pn['path']}  ({pn['note']})")
+            print(f"      caveat: {pn['caveat']}")
         print()
 
     return 0

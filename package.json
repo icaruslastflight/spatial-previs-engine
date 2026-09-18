@@ -14,6 +14,7 @@
     "test": "vitest run",
     "test:r0:browser": "node scripts/test-r0-browser.mjs",
     "bridge": "node scripts/foh_bridge_daemon.js",
+    "telegram-bot": "node scripts/telegram_bot_daemon.js",
     "build:assets": "node scripts/build-asset-library.js",
     "fetch:gdtf": "node scripts/fetch_gdtf_library.js",
     "fetch:open-data": "node scripts/fetch_open_data_venue.mjs",

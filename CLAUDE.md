@@ -253,6 +253,7 @@ npm test            # vitest: core engine, geodetic, CP-1, snapping, asset libra
 npm run verify      # full foundation health check — structure + all three gates
 npm run build:assets # compile the modular asset library to GLB
 npm run bridge      # FOH Art-Net/sACN → WebSocket daemon (lands in Phase 4)
+npm run telegram-bot # read-only /status Telegram bot — see §17
 npm run fetch:gdtf  # sync GDTF fixture profiles into the local cache
 npm run fetch:open-data # fetch the open-data venue layers (terrain, NAIP, OSM) for showcase/open-data-venue.html
 npm run render:wall-loop # regenerate public/assets/video/edm_wall_loop.mp4 (needs ffmpeg + a dev server)
@@ -715,6 +716,18 @@ servers, no paid embeddings, no committed binaries. See
 - **Storage location:** the entire `.memory/` tree is git-ignored per §11.
   Both artifacts regenerate deterministically from source. Do not commit
   either.
+- **Beyond the repo tree:** `ingest.py` also walks two hardcoded, per-
+  workstation Google-Drive-synced roots (`G:\My Drive\spatial-previs-engine`,
+  `G:\My Drive\Spatial Previs Engine - Master Archive`) when present, tagging
+  their chunks `origin: drive`. This is workstation-specific and not
+  reproducible from a fresh checkout — see `scripts/memory/README.md` before
+  relying on Drive-sourced results.
+- **MCP server, registered.** `scripts/memory/mcp_memory_server.py` is a
+  stdio JSON-RPC 2.0 server (session start/observe/note/end plus
+  `vector_memory_search`/`vector_memory_graph`), persisting agent session
+  state to `.agents/memory/sessions.json` (also git-ignored). Registered as
+  `spatial-previs-memory` in the repo's `.mcp.json`, so any MCP-aware agent
+  session opened against this repo can launch it directly.
 
 ```bash
 pip install -r scripts/memory/requirements.txt
@@ -729,10 +742,11 @@ content-hashed id so incremental re-runs stay cheap. The query prints
 one graph hop.
 
 **What this is not:** it is retrieval, not reasoning. It surfaces relevant
-chunks and lets any model or human read them. It is intentionally a CLI
-rather than an MCP server — MCP wiring is a separate concern and lives (if
-added) beside the query script rather than replacing it. Do not swap it for
-a paid vector API; that would cross the §1.2 hard budget.
+chunks and lets any model or human read them. `ingest.py`/`query.py` remain
+the CLI source of truth; `mcp_memory_server.py` (above) is additive MCP
+wiring beside them, not a replacement — it shells into the same `query_memory()`
+rather than reimplementing retrieval. Do not swap either for a paid vector
+API; that would cross the §1.2 hard budget.
 
 ## 15. Local prompt-drafting tool
 
@@ -836,3 +850,42 @@ Unchanged project JSON round-trips through this codec unnormalized — it is
 not passed through Three.js renderer transforms first. `domain/R0Boundaries.test.ts`
 and `domain/NativeConformance.test.ts` are the regression checks; extend those,
 don't hand-verify a new conversion path.
+
+## 17. Telegram status bot
+
+A deliberately narrow, read-only `/status` bot lives at
+`scripts/telegram_bot_daemon.js` — no server, no paid hosting, $0 beyond
+running the process. It mirrors a subset of the AI development coordination
+dashboard (§16): open pull requests and the latest commit's CI check runs,
+fetched from the same real, public, keyless GitHub REST API. It never reads
+or writes previs project data (patches, cues, chases, aim solves), never
+touches `native/`, and triggers nothing — extending it beyond status
+visibility is new scope to plan and gate separately, not something to grow
+into silently.
+
+```bash
+npm run telegram-bot                              # long-polls and answers /status, /help
+node scripts/telegram_bot_daemon.js --print-updates # discover your own chat ID, then exit
+```
+
+**Required environment (workstation-level, never a repo file — same
+`setx`/password-manager convention as `ANTHROPIC_API_KEY` and
+`GDTF_SHARE_USER`/`PASSWORD`, §10, §15):**
+
+- `TELEGRAM_BOT_TOKEN` — from @BotFather. Creating the bot itself is a manual,
+  one-time step only the owner can do (it needs their own Telegram account).
+- `TELEGRAM_ALLOWED_CHAT_IDS` — comma-separated numeric chat IDs. Required,
+  not optional: a bot's username is discoverable on Telegram, so without an
+  allowlist anyone who finds it could query this repo's status. The daemon
+  refuses to start without it.
+
+Optional: `GITHUB_TOKEN`, raising the unauthenticated 60/hour ceiling to
+5000/hour, same as the dashboard's own optional token field.
+
+**What this is not:** a general-purpose bot framework or "all possible
+connections" integration hub. Scope is intentionally the smallest useful
+slice — phone-based visibility into CI/PR status, matching whatever the
+dashboard (§16) already proves safe to expose keylessly. A materially
+different purpose (writing to previs project data, triggering builds,
+relaying lighting patch/cue/chase data) is a new, separately-planned and
+separately-gated feature, not an extension of this one.
