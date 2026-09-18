@@ -337,8 +337,11 @@ src/
              ProductionScene.ts        3D projection of the committed project graph
              ProductionViewport.ts     R0's viewport composition (camera presets, screen mapping, LED/DMX patch)
              CablingInspector.ts       power/signal connection editor
+  dashboard/ GitHubActivity.ts         GitHub REST fetch + parsing for dashboard/
+             RoadmapStatus.ts          docs/ROADMAP.md milestone-table parser
   main.ts                              composition root for the legacy sample viewport (index.html)
 public/assets/scans/                   scan registry + placeholder site bounds
+dashboard/                             AI dev coordination dashboard (§16)
 ```
 
 Tests sit beside the module they cover as `<Module>.test.ts`. Each of
@@ -755,6 +758,33 @@ contract; the short version:
   project's canonical checklist wording; the `domain-correctness-review`
   skill (`.claude/skills/`) reuses the same checklist text rather than
   re-deriving it, so the two must not drift apart.
+
+## 16. AI development coordination dashboard
+
+`dashboard/` — a live, $0, keyless dev-facing page (`npm run dev`, then
+`/dashboard/`) showing the state of AI-agent-driven development on this
+repo: roadmap progress, open pull requests, recent commits (with
+`Co-Authored-By: Claude …` trailers parsed into an agent badge), CI status
+and a hand-maintained decisions ledger. See `dashboard/README.md` for the
+full contract; the short version:
+
+- **All GitHub data is live**, fetched client-side from the real,
+  unauthenticated public REST API (this repo is public — 60 requests/hour
+  per IP is enough for personal use, matching §1.2's keyless-by-default
+  basemap-tier pattern). An optional personal access token, kept only in
+  `localStorage` and sent only to `api.github.com`, raises the ceiling to
+  5000/hour. Each panel fails independently — a rate-limited one names when
+  the limit resets rather than blanking the whole page.
+- **The roadmap panel parses the real `docs/ROADMAP.md`**, fetched from
+  `raw.githubusercontent.com` — not a hand-maintained JSON mirror that could
+  drift from the actual table the way §1.1 warns shared constants must not.
+- **The decisions ledger** (`dashboard/data/decisions.json`) is the one
+  hand-maintained part: a short, honest list of open owner decisions raised
+  across sessions, edited directly by whoever raises or resolves one.
+- **Fetch/parse logic lives under `src/dashboard/`**, not inside
+  `dashboard/` itself, so it's tested the way every other `src/` module is
+  (`<Module>.test.ts` beside it, §7) rather than needing a `vitest.config.ts`
+  change.
 
 ```bash
 pip install -r scripts/ai-tools/requirements.txt

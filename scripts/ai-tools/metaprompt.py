@@ -67,15 +67,29 @@ PROMPTS_DIR = AI_TOOLS_DIR / "prompts"
 CLAUDE_MD = REPO_ROOT / "CLAUDE.md"
 MEMORY_QUERY = REPO_ROOT / "scripts" / "memory" / "query.py"
 
-# Models the upstream notebook pins as of the 2026-09-18 fetch. Overridable via
-# env vars so a future model rename doesn't require editing this file.
+# Model defaults for this project's two roles, mirroring CLAUDE.md §13.2's
+# default-tier / deep-reasoning-tier split: DRAFT_MODEL is the fast, capable
+# workhorse that writes the actual prompt template; TEST_MODEL is the cheap
+# tier used only to sanity-check the drafted template reads sensibly.
+# Overridable via env vars so a future model rollover doesn't need a code edit.
 #
-# Upstream's own comment is explicit and current -- do not "helpfully" swap in
-# whatever the newest chat model is for the draft role without re-checking
-# that comment: some generations reject this call's temperature=0 request.
-DRAFT_MODEL = os.environ.get("METAPROMPT_DRAFT_MODEL", "claude-sonnet-4-6")
+# Upstream's own comment warned not to swap in a newer chat model for the
+# draft role without re-checking it still accepts `temperature=0`. That
+# check is now moot for every current-generation model this project would
+# reach for here: sampling controls (temperature/top_p/top_k) were removed
+# outright starting with the Sonnet 5 / Opus 5 / Fable 5 generation -- Sonnet
+# 5 rejects a non-default temperature with a 400, and the 1.x `anthropic`
+# SDK doesn't even expose the keyword client-side anymore (a `TypeError`
+# before any request is sent). Adaptive extended thinking (on by default)
+# plus `output_config.effort` replaces it as the quality/determinism knob.
+# Do not add `temperature=` back to the `messages.create()` call below.
+DRAFT_MODEL = os.environ.get("METAPROMPT_DRAFT_MODEL", "claude-sonnet-5")
 TEST_MODEL = os.environ.get("METAPROMPT_TEST_MODEL", "claude-haiku-4-5")
-MAX_TOKENS = int(os.environ.get("METAPROMPT_MAX_TOKENS", "4096"))
+# Non-streaming default. 4096 was too low: a full <Inputs>/<Instructions
+# Structure>/<Instructions> response can run long, and getting cut off by
+# max_tokens fails extract_prompt()'s closing-tag search rather than just
+# looking short. ~16000 is current guidance for a non-streaming call.
+MAX_TOKENS = int(os.environ.get("METAPROMPT_MAX_TOKENS", "16000"))
 
 
 # --------------------------------------------------------------------------
@@ -360,6 +374,9 @@ class DraftResult:
     raw_response: str
     instructions: str
     variables_found: set[str]
+    input_tokens: int = 0
+    cache_read_input_tokens: int = 0
+    cache_creation_input_tokens: int = 0
 
 
 def _anthropic_client():
@@ -383,12 +400,25 @@ def draft(
     variables = variables or []
     client = _anthropic_client()
 
-    prefix = ""
+    # CLAUDE.md is by far the largest and most stable part of every draft
+    # call -- byte-identical on every invocation unless the file itself
+    # changes -- so it goes in `system` with its own cache_control
+    # breakpoint rather than folded into the user turn. Repeated `draft` /
+    # `full` runs (the normal iterate-on-a-prompt workflow this tool is
+    # built for) then pay full input-token price for it once per 5-minute
+    # TTL instead of on every call. No beta header needed for this.
+    system_blocks: list[dict[str, object]] = []
     if project_context:
-        prefix += _project_rules_block()
-    if memory_context:
-        prefix += _memory_context_block(task)
+        rules = _project_rules_block()
+        if rules:
+            system_blocks.append(
+                {"type": "text", "text": rules, "cache_control": {"type": "ephemeral"}}
+            )
 
+    # Memory grounding is task-specific, so it can't share the cached system
+    # prefix above -- it stays in the (uncached) user turn alongside the
+    # metaprompt itself.
+    prefix = _memory_context_block(task) if memory_context else ""
     prompt = prefix + METAPROMPT.replace("{{TASK}}", task)
 
     # Claude models from the 4.6 generation onward reject assistant-message
@@ -406,16 +436,27 @@ def draft(
         )
     prompt += response_steering
 
-    response = client.messages.create(
-        model=DRAFT_MODEL,
-        max_tokens=MAX_TOKENS,
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0,
-    )
+    create_kwargs: dict[str, object] = {
+        "model": DRAFT_MODEL,
+        "max_tokens": MAX_TOKENS,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    if system_blocks:
+        create_kwargs["system"] = system_blocks
+
+    response = client.messages.create(**create_kwargs)
+
     if response.stop_reason == "max_tokens":
         raise SystemExit(
             "The response hit MAX_TOKENS before the prompt template was complete. "
             "Increase METAPROMPT_MAX_TOKENS and re-run."
+        )
+    if response.stop_reason == "refusal":
+        category = response.stop_details.category if response.stop_details else None
+        raise SystemExit(
+            "The model declined to draft this prompt template (safety refusal"
+            + (f", category={category}" if category else "")
+            + "). Rephrase --task and try again."
         )
     text_block = next((block for block in response.content if block.type == "text"), None)
     if text_block is None:
@@ -428,12 +469,16 @@ def draft(
 
     instructions = extract_prompt(message)
     found_variables = extract_variables(instructions)
+    usage = response.usage
     return DraftResult(
         task=task,
         variables_requested=variables,
         raw_response=message,
         instructions=instructions,
         variables_found=found_variables,
+        input_tokens=usage.input_tokens,
+        cache_read_input_tokens=usage.cache_read_input_tokens or 0,
+        cache_creation_input_tokens=usage.cache_creation_input_tokens or 0,
     )
 
 
@@ -518,6 +563,20 @@ def _parse_values(raw: Optional[str]) -> dict[str, str]:
     return values
 
 
+def _print_cache_note(result: DraftResult) -> None:
+    # Only prints once a draft call has actually hit the cache (write or
+    # read) -- a first run in a fresh 5-minute TTL window writes but can't
+    # yet read; the note names both so a $0-budget caller can see the tool
+    # is amortizing the CLAUDE.md cost across an iterate-on-a-prompt session.
+    if result.cache_read_input_tokens or result.cache_creation_input_tokens:
+        print(
+            f"(CLAUDE.md context: {result.cache_read_input_tokens} tokens served from "
+            f"cache, {result.cache_creation_input_tokens} written to cache, "
+            f"{result.input_tokens} billed at full price)",
+            file=sys.stderr,
+        )
+
+
 def cmd_draft(args: argparse.Namespace) -> None:
     variables = [v.strip() for v in args.variables.split(",")] if args.variables else None
     result = draft(
@@ -527,6 +586,7 @@ def cmd_draft(args: argparse.Namespace) -> None:
         memory_context=not args.no_memory,
         show_raw=args.show_raw,
     )
+    _print_cache_note(result)
     out_path = save_draft(result, Path(args.out) if args.out else None)
     print(f"Variables: {', '.join('{' + v + '}' for v in sorted(result.variables_found)) or '(none)'}")
     print(f"\nSaved to {out_path.relative_to(REPO_ROOT)}\n")
@@ -550,6 +610,7 @@ def cmd_full(args: argparse.Namespace) -> None:
         memory_context=not args.no_memory,
         show_raw=args.show_raw,
     )
+    _print_cache_note(result)
     out_path = save_draft(result)
     print(f"Saved draft to {out_path.relative_to(REPO_ROOT)}\n")
     print(result.instructions)

@@ -45,6 +45,12 @@
     OpenAI-compatible API. This is what actually makes the local model usable
     for in-editor AI assistance, rather than just sitting idle behind `ollama run`.
 
+.PARAMETER CreateDesktopShortcut
+    Also creates a Desktop shortcut to launch-desktop.cmd (see
+    scripts\create-desktop-shortcut.ps1), so the launcher menu is a
+    double-click away instead of something you have to find inside the
+    cloned folder.
+
 .PARAMETER SkipBaseTools / SkipNode / SkipPython / SkipRepo / SkipOllama / SkipMetaprompt
     Skip that step entirely (e.g. re-running after a partial success).
 
@@ -63,6 +69,7 @@ param(
     [string]$RepoPath = (Join-Path $env:USERPROFILE 'Documents\SpatialPrevisEngine'),
     [string]$OllamaModel,
     [switch]$InstallContinueExtension,
+    [switch]$CreateDesktopShortcut,
     [switch]$SkipBaseTools,
     [switch]$SkipNode,
     [switch]$SkipPython,
@@ -190,6 +197,13 @@ if (!$SkipRepo) {
     Invoke-Step -Name 'Phase 6 -- VS Code cpptools' -Required $false -Action {
         code --install-extension ms-vscode.cpptools
         if ($LASTEXITCODE -ne 0) { throw "code --install-extension exited $LASTEXITCODE" }
+    }
+}
+
+# --- Desktop shortcut for launch-desktop.cmd (opt-in) -----------------------
+if ($CreateDesktopShortcut) {
+    Invoke-Step -Name 'Desktop shortcut for launch-desktop.cmd' -Required $false -Action {
+        & (Join-Path $PSScriptRoot '..\create-desktop-shortcut.ps1') -RepoPath $RepoPath
     }
 }
 

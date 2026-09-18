@@ -90,11 +90,32 @@ see why.
 
 ## Models
 
-Pinned to upstream's current choices as of the fetch date above:
-`claude-sonnet-4-6` to draft (upstream's own comment: don't swap in a newer
-chat-tier model here without checking it still accepts `temperature=0`),
-`claude-haiku-4-5` (fast/cheap) to test-drive the result. Override with the
-`METAPROMPT_DRAFT_MODEL` / `METAPROMPT_TEST_MODEL` env vars if you need to.
+`claude-sonnet-5` drafts the template (the fast, capable workhorse tier —
+CLAUDE.md §13.2's "default tier"), `claude-haiku-4-5` test-drives the result
+(cheap/fast). Override either with `METAPROMPT_DRAFT_MODEL` /
+`METAPROMPT_TEST_MODEL`.
+
+Upstream's notebook pins its own draft model with a warning not to swap in a
+newer chat model without checking it still accepts `temperature=0`. That
+check no longer applies here: sampling controls (temperature/top_p/top_k)
+were removed outright starting with the Sonnet 5 / Opus 5 / Fable 5
+generation — Sonnet 5 rejects a non-default temperature with a 400, and the
+`anthropic` 1.x SDK doesn't even expose the keyword client-side anymore.
+Adaptive extended thinking (on by default on every current model this tool
+uses) plus `output_config.effort` is the current quality/determinism knob —
+don't reintroduce `temperature=`.
+
+**CLAUDE.md is prompt-cached.** It's by far the largest and most stable part
+of every `draft` call, so it's sent as a separate `system` block with its own
+5-minute cache breakpoint rather than folded into the user turn. A `draft`
+run prints a one-line note to stderr once the cache has actually been
+written to or read from, e.g. `(CLAUDE.md context: 14219 tokens served from
+cache, 0 written, 340 billed at full price)` — repeated runs within the same
+prompt-engineering session should show most of it coming from cache.
+
+**Safety refusals are handled explicitly.** If the model declines to draft a
+template (`stop_reason: "refusal"`), the tool exits with the refusal category
+rather than crashing on an empty response — rephrase `--task` and re-run.
 
 ## What this is not
 

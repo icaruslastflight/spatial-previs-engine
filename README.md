@@ -67,6 +67,11 @@ vector + graph index of this repo, and
 [`scripts/ai-tools/`](./scripts/ai-tools/README.md), a project-customized
 prompt-drafting tool built on Anthropic's metaprompt technique.
 
+[`dashboard/`](./dashboard/README.md) is a live, keyless dev page
+(`npm run dev`, then `/dashboard/`) showing roadmap progress, open PRs,
+recent commits and CI status pulled from the real GitHub API, plus a
+hand-maintained log of open owner decisions.
+
 ## Deploying (free tier only)
 
 ```bash
