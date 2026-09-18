@@ -35,15 +35,19 @@ Run it with `-WhatIf` first to preview every mutating step. It deliberately
 leaves Phase 2 (interactive account auth), Phase 7 (multi-GB interactive
 installers with real choices to make) and Phase 11 (verification, not
 provisioning) as manual steps — the phases below remain the reference for
-what each of those actually does and why. It also adds one thing not in the
+what each of those actually does and why. It also adds two things not in the
 prose runbook: an optional `-InstallContinueExtension` switch that wires the
 pulled Ollama model into VS Code via the Continue.dev extension, so the
 local model is something you actually use for in-editor assistance rather
-than a process idling behind `ollama run`.
+than a process idling behind `ollama run`; and an optional
+`-CreateDesktopShortcut` switch (see also Phase 5 below) that puts a real
+Windows Desktop icon on `launch-desktop.cmd`, via
+[`scripts/create-desktop-shortcut.ps1`](../scripts/create-desktop-shortcut.ps1)
+— idempotent, safe to re-run.
 
 ```powershell
 .\scripts\workflows\bootstrap_dev_workstation.ps1 -WhatIf
-.\scripts\workflows\bootstrap_dev_workstation.ps1 -OllamaModel qwen2.5-coder:14b -InstallContinueExtension
+.\scripts\workflows\bootstrap_dev_workstation.ps1 -OllamaModel qwen2.5-coder:14b -InstallContinueExtension -CreateDesktopShortcut
 ```
 
 ---
@@ -157,6 +161,18 @@ npm run verify
 **Verify:** all of the above exit 0. Also run `scripts\verify-r0-windows.ps1`
 — it separately checks `node --version` and the UE5.8 editor path, bridging
 into Phase 7 below.
+
+Optionally, put a Desktop icon on the launcher menu (Production Workspace,
+Development Dashboard, UE5 Editor) instead of finding `launch-desktop.cmd`
+inside the clone every time:
+
+```powershell
+.\scripts\create-desktop-shortcut.ps1
+```
+
+**Verify:** a `Spatial Previs Desktop Launcher.lnk` appears on the Desktop
+and double-clicking it opens the same menu `launch-desktop.cmd` does when
+run directly.
 
 ---
 
