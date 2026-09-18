@@ -19,7 +19,7 @@ root.innerHTML = `<header class="project-bar"><div class="wordmark"><span class=
   <div class="project-identity"><span id="project-name">Local production</span><span id="revision">Revision 0</span></div>
   <span class="mode">Design only</span></header>
   <nav class="workspace-nav" aria-label="Workspace">${['Build', 'Map', 'Connect', 'Check', 'Operations', 'Deliver'].map((name, i) => `<button data-workspace="${name}" aria-pressed="${i === 0}"><span>0${i + 1}</span>${name}</button>`).join('')}</nav>
-  <div class="command-bar"><button id="save">Save project</button><button id="open">Open file</button><button id="export">Export project</button><span class="separator"></span><button id="undo" disabled>Undo</button><button id="redo" disabled>Redo</button><button id="equipment-toggle" aria-expanded="false">Equipment</button><button id="inspector-toggle" aria-expanded="false">Inspector</button><button id="continue-desktop" aria-haspopup="dialog">Continue on desktop</button></div>
+  <div class="command-bar"><button id="save">Save project</button><button id="open">Open file</button><button id="export">Export project</button><span class="separator"></span><button id="undo" disabled>Undo</button><button id="redo" disabled>Redo</button><button id="equipment-toggle" aria-expanded="false">Equipment</button><button id="inspector-toggle" aria-expanded="false">Inspector</button><button id="continue-desktop" aria-haspopup="dialog">Continue on desktop</button><button id="launch-showcase-btn" title="Launch concert stage showcase with Claypaky Sharpy rig and EDM video wall">Stage showcase</button></div>
   <main class="work-area"><aside class="equipment"><h2>Equipment</h2><label class="search-label">Search catalog<input id="search" type="search" placeholder="Truss, panel, speaker…"></label><label>Category<select id="category"><option value="">All categories</option></select></label><div id="catalog" class="catalog"></div><div class="section-heading"><h2>Scene</h2><span id="scene-count">0 objects</span></div><div id="scene-list" class="scene-list"></div></aside>
   <section class="center"><div class="view-heading"><div><h1 id="view-title">Build the production</h1><p id="view-subtitle">Local scene · metres · optional venue context</p></div><button id="frame">Frame all</button></div>
   <div class="viewport"><canvas id="scene-canvas" aria-label="Production 3D scene"></canvas><div id="empty-scene"><strong>A venue starts with your design</strong><span>Add equipment from the catalog. A map or point cloud can come later.</span></div><span class="view-note">Catalog geometry is a planning placeholder</span><span id="render-status" role="status"></span></div>
@@ -36,6 +36,11 @@ root.innerHTML = `<header class="project-bar"><div class="wordmark"><span class=
     <li><h3>Bring your project with you</h3><p>Files do not transfer automatically. Move the backup to your PC, then use <strong>Open file</strong> in the desktop browser workspace. Native UE5 import of this complete workspace is still in development; keep the original backup and its history.</p></li></ol>
     <form id="desktop-url-form" novalidate><label for="desktop-url">Your desktop access URL <span class="muted">(optional)</span></label><input id="desktop-url" type="url" inputmode="url" autocomplete="off" spellcheck="false" maxlength="2048" placeholder="https://your-desktop-portal.example/" aria-describedby="desktop-url-help desktop-url-status"><p id="desktop-url-help">Use an HTTPS address without a password, sign-in token, query string or fragment. Saved only in this browser; excluded from project exports.</p><div class="handoff-actions"><button type="submit">Save desktop URL</button><button id="open-desktop-url" type="button" disabled>Open desktop link</button><button id="clear-desktop-url" type="button" hidden>Forget link</button></div><p id="desktop-url-status" role="status"></p></form>
     <details class="handoff-provider"><summary>Already using AirGPU?</summary><p><a href="https://app.airgpu.com/" target="_blank" rel="noopener noreferrer">Open AirGPU dashboard</a> to manage your existing cloud PC. Your project is not sent to AirGPU.</p></details>
+    <div class="desktop-showcase" style="margin-top:16px;padding:12px;background:rgba(157,78,221,0.12);border:1px solid rgba(157,78,221,0.35);border-radius:8px;">
+      <h3 style="margin:0 0 6px;color:#e2caff;font-size:0.95rem;">Concert Stage Showcase</h3>
+      <p style="margin:0 0 10px;font-size:0.8rem;color:#b0b8c8;line-height:1.4;">Launch the interactive concert stage showcase with the authored 4m&times;4.29m F34 box rig, Claypaky Sharpy moving heads, EDM video wall, volumetric beams, and live EN 60825-1 laser MPE safety evaluation.</p>
+      <button id="handoff-launch-showcase" type="button" style="background:#9d4edd;color:#fff;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-weight:600;">Launch Stage Showcase</button>
+    </div>
     <div class="desktop-capability"><span class="capability-badge">Desktop-only · planned</span><p>Full-fidelity rendering, dense scenes and advanced production tools belong on the desktop roadmap. Web and mobile support a subset; they do not limit desktop capability. These native features are still in development.</p></div>
   </dialog>`;
 
@@ -545,6 +550,9 @@ el('continue-desktop').onclick = () => {
 };
 el('close-desktop-handoff').onclick = () => el<HTMLDialogElement>('desktop-handoff').close();
 el('handoff-export').onclick = () => run(exportProject);
+const openShowcase = () => window.open(`${import.meta.env.BASE_URL}showcase/concert-stage-demo.html`, '_blank');
+el('launch-showcase-btn').onclick = openShowcase;
+el('handoff-launch-showcase').onclick = openShowcase;
 el<HTMLFormElement>('desktop-url-form').onsubmit = event => {
   event.preventDefault();
   try {

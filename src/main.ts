@@ -271,6 +271,15 @@ requireElement<HTMLButtonElement>('add-deck').addEventListener('click', () =>
   spawnFromPalette('deck'),
 );
 
+const showcaseUrl = `${import.meta.env.BASE_URL}showcase/concert-stage-demo.html`;
+if (new URLSearchParams(window.location.search).has('showcase')) {
+  window.location.href = showcaseUrl;
+}
+
+requireElement<HTMLButtonElement>('launch-showcase').addEventListener('click', () => {
+  window.open(showcaseUrl, '_blank');
+});
+
 /* Paraflex spec modal. */
 const paraflexModal = requireElement<HTMLDivElement>('paraflex-modal');
 const paraflexForm = requireElement<HTMLFormElement>('paraflex-form');

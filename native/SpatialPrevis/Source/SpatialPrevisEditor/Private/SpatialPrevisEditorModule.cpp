@@ -8,6 +8,7 @@
 #include "Framework/Commands/UIAction.h"
 #include "Framework/Docking/TabManager.h"
 #include "HAL/FileManager.h"
+#include "HAL/PlatformProcess.h"
 #include "IDesktopPlatform.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Guid.h"
@@ -139,12 +140,19 @@ public:
                         .IsEnabled(this, &SProjectInspectionPanel::HasProject)
                         .OnClicked(this, &SProjectInspectionPanel::SpawnLevelActors)
                     ]
-                    + SHorizontalBox::Slot().AutoWidth()
+                    + SHorizontalBox::Slot().AutoWidth().Padding(0, 0, 8, 0)
                     [
                         SNew(SButton)
                         .Text(LOCTEXT("ClearActors", "Clear Level Actors"))
                         .ToolTipText(LOCTEXT("ClearActorsTooltip", "Remove all spawned Spatial Previs actors from the active level."))
                         .OnClicked(this, &SProjectInspectionPanel::ClearLevelActors)
+                    ]
+                    + SHorizontalBox::Slot().AutoWidth()
+                    [
+                        SNew(SButton)
+                        .Text(LOCTEXT("LaunchShowcase", "Launch Stage Showcase"))
+                        .ToolTipText(LOCTEXT("LaunchShowcaseTooltip", "Launch the concert stage showcase in your default desktop browser (Claypaky Sharpys, EDM video wall, volumetric beams, and laser MPE evaluation)."))
+                        .OnClicked(this, &SProjectInspectionPanel::LaunchStageShowcase)
                     ]
                 ]
                 + SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 8)
@@ -520,6 +528,14 @@ private:
         return FReply::Handled();
     }
 
+    FReply LaunchStageShowcase()
+    {
+        const FString ShowcaseUrl = TEXT("http://localhost:5173/showcase/concert-stage-demo.html");
+        FPlatformProcess::LaunchURL(*ShowcaseUrl, nullptr, nullptr);
+        Status = LOCTEXT("ShowcaseLaunched", "Concert stage showcase opened in desktop browser (http://localhost:5173/showcase/concert-stage-demo.html).");
+        return FReply::Handled();
+    }
+
     void RefreshSummary()
     {
         int32 UnknownQuantities = 0;
@@ -618,6 +634,13 @@ private:
             LOCTEXT("OpenMenu", "Spatial Previs R0"),
             LOCTEXT("OpenMenuTooltip", "Open CORE-01 production project inspection."),
             FSlateIcon(), FUIAction(FExecuteAction::CreateRaw(this, &FSpatialPrevisEditorModule::OpenTab)));
+        Section.AddMenuEntry(TEXT("LaunchStageShowcase"),
+            LOCTEXT("LaunchShowcaseMenu", "Launch Concert Stage Showcase"),
+            LOCTEXT("LaunchShowcaseMenuTooltip", "Open the concert stage showcase in your default desktop browser."),
+            FSlateIcon(), FUIAction(FExecuteAction::CreateLambda([]()
+            {
+                FPlatformProcess::LaunchURL(TEXT("http://localhost:5173/showcase/concert-stage-demo.html"), nullptr, nullptr);
+            })));
     }
 
     void OpenTab()

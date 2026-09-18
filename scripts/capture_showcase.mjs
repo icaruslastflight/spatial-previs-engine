@@ -37,6 +37,7 @@ function parseArgs(argv) {
     width: 1600,
     height: 900,
     timeout: 45_000,
+    wait: 500,
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -52,7 +53,8 @@ function parseArgs(argv) {
         break;
       case '--width':
       case '--height':
-      case '--timeout': {
+      case '--timeout':
+      case '--wait': {
         if (value === undefined) throw new Error(`${flag} requires a value.`);
         const parsed = Number(value);
         if (!Number.isFinite(parsed) || parsed <= 0) {
@@ -145,7 +147,7 @@ async function main() {
 
   // One settle frame past the ready flag so the last animation/material
   // update lands before the shot.
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(options.wait);
   await page.screenshot({ path: outPath });
   await browser.close();
 

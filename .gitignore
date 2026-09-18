@@ -64,3 +64,12 @@ native/**/Build/Windows/
 # downloads on first ingest (~80 MB, into %USERPROFILE%\.cache\chroma). Not
 # committed per CLAUDE.md §11 — see §14 for stack details.
 .memory/
+
+# Packaging artifacts
+installation-bundle/
+installer-build/
+*.zip
+*.exe
+*.obj
+SpatialPrevis-Linux-Installer.sh
+
