@@ -9,6 +9,11 @@ npm run dev
 # then open http://localhost:5173/dashboard/
 ```
 
+On the desktop, `launch-desktop.cmd` has it as option **[4] Launch Development
+Dashboard**, or run it directly with `launch-desktop.cmd --dashboard` (`-d`).
+It only opens the browser tab — `npm run dev` still needs to be running
+already, same as the launcher's other web entries.
+
 ## What it shows
 
 | Panel | Source | Live? |
