@@ -792,9 +792,15 @@ full contract; the short version:
 - **The roadmap panel parses the real `docs/ROADMAP.md`**, fetched from
   `raw.githubusercontent.com` — not a hand-maintained JSON mirror that could
   drift from the actual table the way §1.1 warns shared constants must not.
-- **The decisions ledger** (`dashboard/data/decisions.json`) is the one
-  hand-maintained part: a short, honest list of open owner decisions raised
-  across sessions, edited directly by whoever raises or resolves one.
+- **The decisions ledger** (`public/dashboard/data/decisions.json`) is the
+  one hand-maintained part: a short, honest list of open owner decisions
+  raised across sessions, edited directly by whoever raises or resolves one.
+  It lives under `public/` — not `dashboard/data/` — because `main.ts` fetches
+  it by a bare relative URL at runtime rather than a static import, and Vite's
+  build only copies files it can trace (`public/` verbatim, or an actual
+  `import`/`new URL()`); a file only `npm run dev`'s filesystem-serving mode
+  can find silently 404s once deployed. It shipped broken this way once —
+  `npm run build` now has its own gate for this file specifically.
 - **Fetch/parse logic lives under `src/dashboard/`**, not inside
   `dashboard/` itself, so it's tested the way every other `src/` module is
   (`<Module>.test.ts` beside it, §7) rather than needing a `vitest.config.ts`
