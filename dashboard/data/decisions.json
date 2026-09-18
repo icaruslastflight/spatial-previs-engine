@@ -1,0 +1,54 @@
+{
+  "$schema": "decision-ledger-v1",
+  "description": "Open and recently-resolved owner decisions surfaced across AI-driven development sessions on this repo. Hand-maintained by whichever agent or the owner raises or resolves one -- not auto-generated, so it stays honest rather than complete. See dashboard/README.md.",
+  "entries": [
+    {
+      "id": "phase5-shape",
+      "raised": "2026-09-18",
+      "status": "open",
+      "title": "Is the two-layer outdoor-venue model the right shape for Phase 5?",
+      "detail": "Layer 1 (Google Photorealistic 3D Tiles, streamed, key-gated) + Layer 2 (persistent open-data model from AWS Terrain Tiles / USGS NAIP / OpenStreetMap, PR #17). Open question: does \"true to life, ultra realistic\" mean this owned-geometry-under-streamed-photorealism split, or does the persistent layer itself need to look photographic?",
+      "relatedPRs": [17]
+    },
+    {
+      "id": "roadmap-fold-in",
+      "raised": "2026-09-18",
+      "status": "open",
+      "title": "Fold the geo-referencing workstream and Phase 0 drift fixes into docs/ROADMAP.md?",
+      "detail": "The R0-R5 roadmap doesn't currently name the georeferencing/open-data work as its own row, and the stale 186 m anchor references (§1.1's open parity divergence) are documented but not yet tracked as a roadmap item.",
+      "relatedPRs": []
+    },
+    {
+      "id": "previs-updade-deletion",
+      "raised": "2026-09-17",
+      "status": "open",
+      "title": "Delete the icaruslastflight/previs-updade scratch repo?",
+      "detail": "Assessed as a dead-end (3 commits, no shared history with this repo, stray unrelated .gitattributes) but not deleted without the owner's explicit word.",
+      "relatedPRs": []
+    },
+    {
+      "id": "ue5-anchor-port",
+      "raised": "2026-09-17",
+      "status": "open",
+      "title": "Port the corrected 184.963 m site anchor height to the UE5 georeferencing actor",
+      "detail": "CLAUDE.md §1.1's open parity divergence: the web anchor was corrected from 186.6 m to 184.963 m (missing NAD83->ITRF2014 frame offset); no equivalent UE5 georeferencing actor exists yet to receive the same fix. Needs a Windows workstation with UE5.8 installed.",
+      "relatedPRs": []
+    },
+    {
+      "id": "shadow-pc-pairing",
+      "raised": "2026-09-17",
+      "status": "open",
+      "title": "Shadow PC device pairing and UE5 install",
+      "detail": "docs/DESKTOP_DEV_SETUP.md's bootstrap script covers everything up to Phase 2 (pairing) and Phase 7 (UE5/Visual Studio) as manual steps -- both still need the owner at the physical/remote desktop session.",
+      "relatedPRs": [13]
+    },
+    {
+      "id": "merge-auto-pr17",
+      "raised": "2026-09-18",
+      "status": "resolved",
+      "resolvedNote": "Owner said \"proceed\"; merged. A later auto-merge attempt on a subsequent PR was blocked by the session's own permission classifier (\"Merge Without Review\"), so PRs opened after that point are left in draft for explicit review instead of auto-merged.",
+      "title": "Merge PR #17 (open-data venue showcase) once green?",
+      "relatedPRs": [17]
+    }
+  ]
+}

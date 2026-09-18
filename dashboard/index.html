@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>Spatial Previs Engine — Development Dashboard</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --ink: #e8eaf0;
+        --dim: #8b93a7;
+        --accent: #7dd3a8;
+        --warn: #ffd166;
+        --bad: #ff6b6b;
+        --agent: #b48cff;
+        --panel: rgba(15, 18, 26, 0.92);
+        --line: rgba(125, 211, 168, 0.18);
+        --chip: rgba(125, 211, 168, 0.1);
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0; min-height: 100%; background: #05070b; color: var(--ink);
+        font: 13px/1.55 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      }
+      body { padding: 22px; max-width: 1400px; margin: 0 auto; }
+      a { color: var(--accent); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+
+      header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px; margin-bottom: 20px; }
+      header h1 { margin: 0 0 4px; font-size: 16px; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+      header .sub { color: var(--dim); font-size: 11.5px; max-width: 620px; }
+
+      #token-box { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; font-size: 10.5px; color: var(--dim); }
+      #token-box input {
+        background: #0b0e14; border: 1px solid var(--line); color: var(--ink); border-radius: 6px;
+        padding: 6px 8px; font: inherit; width: 240px;
+      }
+      #rate-limit { font-size: 10px; }
+      #rate-limit.warn { color: var(--warn); }
+      #rate-limit.bad { color: var(--bad); }
+
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
+      .panel {
+        background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+        padding: 16px 18px; backdrop-filter: blur(10px);
+      }
+      .panel.wide { grid-column: 1 / -1; }
+      .panel h2 {
+        margin: 0 0 12px; font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase;
+        color: var(--dim); display: flex; align-items: center; justify-content: space-between;
+      }
+      .panel h2 .count { color: var(--accent); font-variant-numeric: tabular-nums; }
+      .panel .error { color: var(--warn); font-size: 11.5px; line-height: 1.5; }
+      .panel .empty { color: var(--dim); font-size: 11.5px; font-style: italic; }
+
+      .row { padding: 8px 0; border-top: 1px solid rgba(255,255,255,.05); }
+      .row:first-child { border-top: none; padding-top: 0; }
+      .row-title { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+      .row-title a { font-weight: 600; }
+      .row-meta { color: var(--dim); font-size: 10.5px; margin-top: 3px; }
+
+      .badge {
+        display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 9.5px;
+        font-weight: 700; letter-spacing: .04em; text-transform: uppercase; line-height: 1.6;
+      }
+      .badge.complete { background: rgba(125,211,168,.15); color: var(--accent); }
+      .badge.planned { background: rgba(139,147,167,.15); color: var(--dim); }
+      .badge.in-progress { background: rgba(255,209,102,.15); color: var(--warn); }
+      .badge.unknown { background: rgba(139,147,167,.15); color: var(--dim); }
+      .badge.open { background: rgba(125,211,168,.15); color: var(--accent); }
+      .badge.draft { background: rgba(139,147,167,.15); color: var(--dim); }
+      .badge.merged { background: rgba(180,140,255,.18); color: var(--agent); }
+      .badge.closed { background: rgba(139,147,167,.15); color: var(--dim); }
+      .badge.success { background: rgba(125,211,168,.15); color: var(--accent); }
+      .badge.failure { background: rgba(255,107,107,.15); color: var(--bad); }
+      .badge.agent { background: rgba(180,140,255,.18); color: var(--agent); }
+
+      .roadmap-list .row { display: flex; align-items: center; gap: 10px; }
+      .roadmap-list .release { color: var(--accent); font-weight: 700; width: 26px; flex-shrink: 0; }
+      .roadmap-list .name { flex: 1 1 auto; }
+      .roadmap-list .outcome { color: var(--dim); font-size: 10.5px; flex-basis: 100%; margin-top: 2px; }
+
+      #status-bar {
+        margin-top: 20px; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--line);
+        font-size: 10.5px; color: var(--dim); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+      }
+      #status-bar b { color: var(--accent); }
+      #status-bar.error b { color: var(--bad); }
+
+      .tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+      .tag { background: var(--chip); border: 1px solid var(--line); color: var(--dim); border-radius: 5px; padding: 1px 6px; font-size: 9.5px; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Spatial Previs Engine — Development Dashboard</h1>
+        <div class="sub">
+          Live coordination view for AI-agent-driven development on this repo: roadmap progress
+          parsed from <code>docs/ROADMAP.md</code>, pull requests, commits and CI status fetched
+          from the real, public, keyless GitHub API, and a hand-maintained ledger of owner
+          decisions still open. No server, no committed key.
+        </div>
+      </div>
+      <div id="token-box">
+        <label for="token-input">GitHub token (optional, raises 60/hr → 5000/hr)</label>
+        <input id="token-input" type="password" placeholder="ghp_… — kept in this browser only" autocomplete="off" />
+        <div id="rate-limit">rate limit: —</div>
+      </div>
+    </header>
+
+    <div class="grid">
+      <section class="panel wide" id="panel-roadmap">
+        <h2>Roadmap <span class="count" id="roadmap-count"></span></h2>
+        <div class="roadmap-list" id="roadmap-body">loading…</div>
+      </section>
+
+      <section class="panel" id="panel-prs">
+        <h2>Pull requests <span class="count" id="prs-count"></span></h2>
+        <div id="prs-body">loading…</div>
+      </section>
+
+      <section class="panel" id="panel-commits">
+        <h2>Recent commits <span class="count" id="commits-count"></span></h2>
+        <div id="commits-body">loading…</div>
+      </section>
+
+      <section class="panel" id="panel-ci">
+        <h2>CI — latest commit <span class="count" id="ci-count"></span></h2>
+        <div id="ci-body">loading…</div>
+      </section>
+
+      <section class="panel" id="panel-workflows">
+        <h2>Recent workflow runs <span class="count" id="workflows-count"></span></h2>
+        <div id="workflows-body">loading…</div>
+      </section>
+
+      <section class="panel wide" id="panel-decisions">
+        <h2>Open decisions <span class="count" id="decisions-count"></span></h2>
+        <div id="decisions-body">loading…</div>
+      </section>
+    </div>
+
+    <div id="status-bar">loading…</div>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
