@@ -81,6 +81,32 @@
       .roadmap-list .name { flex: 1 1 auto; }
       .roadmap-list .outcome { color: var(--dim); font-size: 10.5px; flex-basis: 100%; margin-top: 2px; }
 
+      .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+      .tabs .tab {
+        background: transparent; border: 1px solid var(--line); color: var(--dim);
+        border-radius: 6px; padding: 4px 11px; font: inherit; font-size: 11px;
+        letter-spacing: .03em; cursor: pointer;
+      }
+      .tabs .tab:hover { color: var(--ink); border-color: var(--accent); }
+      .tabs .tab.active { background: var(--chip); color: var(--accent); border-color: var(--accent); font-weight: 700; }
+
+      .roadmap-release-header {
+        display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+        padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.05);
+      }
+      .roadmap-detail { font-size: 12px; line-height: 1.6; color: var(--ink); }
+      .roadmap-detail p { margin: 0 0 10px; }
+      .roadmap-detail ul, .roadmap-detail ol { margin: 0 0 10px; padding-left: 20px; }
+      .roadmap-detail li { margin-bottom: 4px; }
+      .roadmap-detail code {
+        background: rgba(255,255,255,.06); border-radius: 3px; padding: 1px 4px; font-size: 11px;
+      }
+      .roadmap-detail blockquote {
+        margin: 0 0 10px; padding: 8px 12px; border-left: 3px solid var(--warn);
+        background: rgba(255,209,102,.08); color: var(--warn);
+      }
+      .roadmap-detail blockquote p { margin: 0; }
+
       #status-bar {
         margin-top: 20px; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--line);
         font-size: 10.5px; color: var(--dim); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
@@ -113,6 +139,7 @@
     <div class="grid">
       <section class="panel wide" id="panel-roadmap">
         <h2>Roadmap <span class="count" id="roadmap-count"></span></h2>
+        <div class="tabs" id="roadmap-tabs"></div>
         <div class="roadmap-list" id="roadmap-body">loading…</div>
       </section>
 
