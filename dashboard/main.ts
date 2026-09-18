@@ -101,83 +101,40 @@ function saveToken(value: string): void {
 /* Panel renderers                                                     */
 /* ─────────────────────────────────────────────────────────────────── */
 
-// Module-level: the roadmap panel is tabbed (Overview + one tab per release),
-// and the active tab needs to survive a re-render triggered by clicking a
-// different tab -- there's no framework here, just direct DOM writes, so the
-// currently-fetched data and the selected tab both live here between calls.
-let roadmapMilestones: RoadmapMilestone[] = [];
-let roadmapDetails: RoadmapReleaseDetail[] = [];
-let activeRoadmapTab = 'overview';
-
-function renderRoadmapOverview(): string {
-  if (roadmapMilestones.length === 0) {
-    return '<div class="error">Could not parse docs/ROADMAP.md\'s milestone table.</div>';
-  }
-  return roadmapMilestones
-    .map(
-      (m) => `
-        <div class="row">
-          <div class="release">${escapeHtml(m.release)}</div>
-          <div class="name">
-            ${m.docsPath ? `<a href="https://github.com/${OWNER}/${REPO}/blob/${BRANCH}/docs/${escapeHtml(m.docsPath)}" target="_blank" rel="noopener">${escapeHtml(m.name)}</a>` : escapeHtml(m.name)}
-          </div>
-          <span class="badge ${m.status}">${escapeHtml(m.statusLabel || m.status)}</span>
-          <div class="outcome">${escapeHtml(m.outcome)}</div>
-        </div>`,
-    )
-    .join('');
-}
-
-/** One release's individual roadmap: its status/docs-link header plus the
- * full `## R<n> — ...` section body from docs/ROADMAP.md, rendered to HTML
- * by `renderRoadmapDetailHtml` -- the real committed prose, not a summary. */
-function renderRoadmapReleaseTab(release: string): string {
-  const milestone = roadmapMilestones.find((m) => m.release === release);
-  const detail = roadmapDetails.find((d) => d.release === release);
-  if (!milestone && !detail) {
-    return `<div class="error">No roadmap content found for ${escapeHtml(release)}.</div>`;
-  }
-  const docsLink = milestone?.docsPath
-    ? `<a href="https://github.com/${OWNER}/${REPO}/blob/${BRANCH}/docs/${escapeHtml(milestone.docsPath)}" target="_blank" rel="noopener">${escapeHtml(milestone.name)} docs &rarr;</a>`
-    : escapeHtml(milestone?.name ?? release);
-  const header = milestone
-    ? `<div class="roadmap-release-header"><span class="badge ${milestone.status}">${escapeHtml(milestone.statusLabel || milestone.status)}</span>${docsLink}</div>`
+/** One release's full card: status badge, docs link, and the complete
+ * `## R<n> — ...` section body from docs/ROADMAP.md rendered to HTML by
+ * `renderRoadmapDetailHtml` -- the real committed prose, not a summary.
+ * All six render at once in a grid rather than behind a click, so every
+ * phase's roadmap stays visible side by side. */
+function renderRoadmapCard(milestone: RoadmapMilestone, detail: RoadmapReleaseDetail | undefined): string {
+  const docsLink = milestone.docsPath
+    ? `<a href="https://github.com/${OWNER}/${REPO}/blob/${BRANCH}/docs/${escapeHtml(milestone.docsPath)}" target="_blank" rel="noopener">docs &rarr;</a>`
     : '';
   const body = detail
     ? detail.bodyHtml
-    : '<div class="empty">No detail section found for this release in docs/ROADMAP.md.</div>';
-  return `${header}<div class="roadmap-detail">${body}</div>`;
-}
-
-function renderRoadmapBody(): void {
-  const body = el('roadmap-body');
-  body.innerHTML = activeRoadmapTab === 'overview' ? renderRoadmapOverview() : renderRoadmapReleaseTab(activeRoadmapTab);
-}
-
-function renderRoadmapTabs(): void {
-  const tabsEl = el('roadmap-tabs');
-  const tabs = ['overview', ...roadmapMilestones.map((m) => m.release)];
-  tabsEl.innerHTML = tabs
-    .map((tab) => {
-      const label = tab === 'overview' ? 'Overview' : tab;
-      return `<button type="button" class="tab${tab === activeRoadmapTab ? ' active' : ''}" data-tab="${escapeHtml(tab)}">${escapeHtml(label)}</button>`;
-    })
-    .join('');
-  tabsEl.querySelectorAll<HTMLButtonElement>('.tab').forEach((button) => {
-    button.addEventListener('click', () => {
-      activeRoadmapTab = button.dataset['tab'] ?? 'overview';
-      renderRoadmapTabs();
-      renderRoadmapBody();
-    });
-  });
+    : `<p class="empty">${escapeHtml(milestone.outcome)}</p>`;
+  return `
+    <div class="roadmap-card">
+      <div class="roadmap-card-header">
+        <span class="release">${escapeHtml(milestone.release)}</span>
+        <span class="name">${escapeHtml(milestone.name)}</span>
+        <span class="badge ${milestone.status}">${escapeHtml(milestone.statusLabel || milestone.status)}</span>
+      </div>
+      <div class="roadmap-detail">${body}</div>
+      ${docsLink ? `<div class="roadmap-card-footer">${docsLink}</div>` : ''}
+    </div>`;
 }
 
 function renderRoadmap(milestones: RoadmapMilestone[], details: RoadmapReleaseDetail[]): void {
-  roadmapMilestones = milestones;
-  roadmapDetails = details;
   setCount('roadmap-count', milestones.length);
-  renderRoadmapTabs();
-  renderRoadmapBody();
+  const body = el('roadmap-body');
+  if (milestones.length === 0) {
+    body.innerHTML = '<div class="error">Could not parse docs/ROADMAP.md\'s milestone table.</div>';
+    return;
+  }
+  body.innerHTML = milestones
+    .map((m) => renderRoadmapCard(m, details.find((d) => d.release === m.release)))
+    .join('');
 }
 
 function renderPullRequests(section: RepoActivitySnapshot['openPullRequests']): void {
