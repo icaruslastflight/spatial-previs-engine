@@ -6,6 +6,23 @@ These rules apply to every agent/chat working in this repository. Read `CLAUDE.m
 Git state and preserve other work. Source and executed evidence take precedence over
 older prose when determining what is implemented; correct stale prose explicitly.
 
+## Agent checklists
+
+The owner works with several coding agents interchangeably, so every AI-facing
+document in this repository is written for any agent, not one product. The
+repo-specific checklists live as plain markdown under `.claude/skills/`; that
+directory name is one tool's discovery convention, but the files are ordinary
+documents any agent reads before the matching task:
+
+- `.claude/skills/phased-plan/SKILL.md` — before any change spanning three-plus
+  steps or multiple modules (CLAUDE.md §13 plan shape).
+- `.claude/skills/domain-correctness-review/SKILL.md` — when a diff touches
+  socket definitions, `SocketSnappingEngine` callers, `GDTFParser`,
+  `GDTFAssetResolver` or any `SpotLight.intensity` assignment.
+- `.claude/skills/steward/SKILL.md` — when driving a PR to green after a CI
+  failure, review comment or check-suite event.
+- `.claude/skills/babysit/SKILL.md` — when watching or monitoring a PR here.
+
 ## Desktop capability
 
 Desktop keeps its full capability. Do not simplify or delay a native feature solely
