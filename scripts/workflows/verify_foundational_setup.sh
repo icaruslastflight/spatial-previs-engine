@@ -149,12 +149,15 @@ else
   pass "no cross-origin isolation assumed"
 fi
 
-# A committed API key is unrecoverable once pushed.
-if [[ -f .env.local ]] && git ls-files --error-unmatch .env.local >/dev/null 2>&1; then
-  fail ".env.local is tracked by git -- it holds API keys"
-else
-  pass "no tracked .env.local"
-fi
+# A committed API key is unrecoverable once pushed. .env is checked as well as
+# .env.local: it was committed once before and had to be purged.
+for envfile in .env .env.local; do
+  if git ls-files --error-unmatch "$envfile" >/dev/null 2>&1; then
+    fail "$envfile is tracked by git -- it holds API keys"
+  else
+    pass "no tracked $envfile"
+  fi
+done
 
 # ------------------------------------------------------------ [5] toolchain ---
 section "[5] Toolchain"
