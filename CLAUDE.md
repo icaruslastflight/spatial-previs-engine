@@ -253,7 +253,7 @@ npm test            # vitest: core engine, geodetic, CP-1, snapping, asset libra
 npm run verify      # full foundation health check — structure + all three gates
 npm run build:assets # compile the modular asset library to GLB
 npm run bridge      # FOH Art-Net/sACN → WebSocket daemon (lands in Phase 4)
-npm run telegram-bot # read-only /status Telegram bot — see §17
+npm run telegram-bot # read-only /status Telegram bot — see §18
 npm run fetch:gdtf  # sync GDTF fixture profiles into the local cache
 npm run fetch:open-data # fetch the open-data venue layers (terrain, NAIP, OSM) for showcase/open-data-venue.html
 npm run render:wall-loop # regenerate public/assets/video/edm_wall_loop.mp4 (needs ffmpeg + a dev server)
@@ -857,7 +857,7 @@ not passed through Three.js renderer transforms first. `domain/R0Boundaries.test
 and `domain/NativeConformance.test.ts` are the regression checks; extend those,
 don't hand-verify a new conversion path.
 
-## 17. Telegram status bot
+## 18. Telegram status bot
 
 A deliberately narrow, read-only `/status` bot lives at
 `scripts/telegram_bot_daemon.js` — no server, no paid hosting, $0 beyond
