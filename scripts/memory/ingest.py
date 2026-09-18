@@ -184,6 +184,48 @@ def add_entity_nodes(graph: nx.DiGraph) -> None:
         )
 
 
+# Cross-platform parity edges: web file <-> native file pairs that implement
+# the SAME documented contract (CLAUDE.md sec. 16's coordinate-boundary table),
+# sourced only from that table -- never inferred from filename similarity.
+# `query.py --with-neighbors` labels these distinctly from ordinary `imports`
+# edges and always prints the manual-verification caveat, because a graph
+# edge here means "these two files implement the same documented contract",
+# never "this has been checked equal" -- native conformance stays manual per
+# docs/r0/UE5_CONFORMANCE.md regardless of what the graph can discover.
+MANUAL_VERIFICATION_CAVEAT = (
+    "parity edge: same documented contract (CLAUDE.md sec. 16), NOT independently "
+    "verified equal -- native conformance is manual-only per docs/r0/UE5_CONFORMANCE.md"
+)
+
+PARITY_EDGES = (
+    (
+        "src/domain/ProjectTransforms.ts",
+        "native/SpatialPrevis/Source/SpatialPrevisCore/Public/SpatialPrevisCoordinates.h",
+        "coordinate-boundary codec: position/direction/quaternion conversion "
+        "(CLAUDE.md sec. 16's axes/units/quaternion table)",
+    ),
+    (
+        "src/domain/ProjectTransforms.ts",
+        "native/SpatialPrevis/Source/SpatialPrevisCore/Public/SpatialPrevisUnrealTransform.h",
+        "coordinate-boundary codec: FTransform construction wrapping "
+        "SpatialPrevisCoordinates' conversion functions",
+    ),
+)
+
+
+def add_parity_edges(graph: nx.DiGraph) -> None:
+    for web_path, native_path, note in PARITY_EDGES:
+        if web_path not in graph or native_path not in graph:
+            # One or both files are missing from this ingest (e.g. native/
+            # wasn't checked out, or the file moved) -- skip rather than add
+            # a dangling edge to a node that was never indexed.
+            continue
+        graph.add_edge(web_path, native_path, kind="parity", note=note,
+                       caveat=MANUAL_VERIFICATION_CAVEAT)
+        graph.add_edge(native_path, web_path, kind="parity", note=note,
+                       caveat=MANUAL_VERIFICATION_CAVEAT)
+
+
 def determine_category(path_str: str) -> str:
     lower = path_str.lower().replace("\\", "/")
     if "00_ai_context" in lower:
@@ -410,6 +452,7 @@ def main() -> int:
     flush()
 
     add_entity_nodes(graph)
+    add_parity_edges(graph)
 
     with graph_path.open("wb") as handle:
         pickle.dump(graph, handle)

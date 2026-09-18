@@ -97,8 +97,19 @@ def query_memory(
         platform = meta.get("platform", "docs")
 
         neighbors = []
+        parity_neighbors = []
         if graph is not None and path in graph:
-            neighbors = list(graph.successors(path))[:10]
+            for target in list(graph.successors(path))[:20]:
+                edge = graph.get_edge_data(path, target) or {}
+                if edge.get("kind") == "parity":
+                    parity_neighbors.append({
+                        "path": target,
+                        "note": edge.get("note", ""),
+                        "caveat": edge.get("caveat", ""),
+                    })
+                else:
+                    neighbors.append(target)
+            neighbors = neighbors[:10]
 
         hits.append({
             "id": chunk_id,
@@ -111,6 +122,7 @@ def query_memory(
             "origin": origin,
             "body": doc,
             "neighbors": neighbors,
+            "parity_neighbors": parity_neighbors,
         })
 
     return {
@@ -196,6 +208,9 @@ def main() -> int:
                 print("    ...")
         if hit["neighbors"]:
             print(f"    graph -> {', '.join(hit['neighbors'][:6])}")
+        for pn in hit["parity_neighbors"]:
+            print(f"    parity -> {pn['path']}  ({pn['note']})")
+            print(f"      caveat: {pn['caveat']}")
         print()
 
     return 0

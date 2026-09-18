@@ -74,6 +74,26 @@ The full current list lives in `SHARED_CONSTANT_ENTITIES` in `ingest.py` —
 extend it there; it is deliberately not a generalized symbol parser (see
 "Extending" below).
 
+### Cross-platform parity edges
+
+The graph also carries `kind: "parity"` edges (bidirectional) between web
+files and their native counterparts that implement the *same documented
+contract* — currently just the CLAUDE.md §16 coordinate boundary:
+`src/domain/ProjectTransforms.ts` ↔
+`native/.../SpatialPrevisCore/Public/SpatialPrevisCoordinates.h` and
+`SpatialPrevisUnrealTransform.h`. Sourced only from §16's own table, never
+inferred from filename similarity. A parity edge means "these implement the
+same contract per CLAUDE.md," **never** "this has been checked equal" —
+`query.py --with-neighbors` always prints the manual-verification caveat
+alongside it, since native conformance stays manual-only per
+`docs/r0/UE5_CONFORMANCE.md` regardless of what the graph can discover. The
+event-vocabulary mirroring CLAUDE.md §7.1 also mentions (`EngineEventMap` ↔
+"the desktop dispatcher") has no native-side edge yet — there is no
+dispatcher file under `native/` to point to (native is still CORE-01;
+CORE-02+ event/command dispatch is unimplemented per
+`docs/r0/UE5_CONFORMANCE.md`) — add the edge once that file exists rather
+than pointing it at nothing.
+
 ## Query
 
 ```bash
