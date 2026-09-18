@@ -6,8 +6,8 @@
   "description": "Spatial Previs Engine — venue-independent live event design and pre-visualization for real and virtual environments.",
   "scripts": {
     "dev": "vite --host",
-    "dev:showcase": "vite --host --open /showcase/concert-stage-demo.html",
-    "showcase": "vite --open /showcase/concert-stage-demo.html",
+    "showcase": "vite --open /r0.html?showcase=true",
+    "dev:showcase": "vite --host --open /r0.html?showcase=true",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",

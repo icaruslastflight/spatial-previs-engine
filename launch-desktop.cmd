@@ -12,8 +12,8 @@ if "%~1"=="--ue5" goto launch_ue5
 echo =======================================================
 echo          Spatial Previs Engine - Desktop Launcher
 echo =======================================================
-echo  [1] Launch Concert Stage Showcase (Authored Festival Rig)
-echo  [2] Launch Production Workspace (R0 Shared State)
+echo  [1] Launch Production Workspace with Concert Stage Showcase
+echo  [2] Launch Production Workspace (Blank Project)
 echo  [3] Launch Main Viewport (Point State Park Sample)
 echo  [4] Launch Unreal Engine 5.8 Editor
 echo  [5] Exit
@@ -28,8 +28,8 @@ if "%choice%"=="5" exit /b 0
 goto launch_showcase
 
 :launch_showcase
-echo Launching Concert Stage Showcase...
-start "" "http://localhost:5173/showcase/concert-stage-demo.html"
+echo Launching Production Workspace with Concert Stage Showcase...
+start "" "http://localhost:5173/r0.html?showcase=true"
 exit /b 0
 
 :launch_r0

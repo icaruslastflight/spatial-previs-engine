@@ -88,7 +88,7 @@ fi
 trap "kill -9 $SERVER_PID 2>/dev/null" EXIT
 sleep 0.8
 
-URL="http://127.0.0.1:$PORT"
+URL="http://127.0.0.1:$PORT/r0.html?showcase=true"
 if [ -d "/Applications/Google Chrome.app" ]; then
     open -na "Google Chrome" --args --app="$URL"
 elif [ -d "/Applications/Microsoft Edge.app" ]; then
@@ -175,7 +175,7 @@ fi
 trap "kill -9 $PID 2>/dev/null" EXIT
 sleep 0.8
 
-URL="http://127.0.0.1:$PORT"
+URL="http://127.0.0.1:$PORT/r0.html?showcase=true"
 if command -v google-chrome >/dev/null 2>&1; then
     google-chrome --app="$URL"
 elif command -v chromium >/dev/null 2>&1; then

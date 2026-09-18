@@ -271,7 +271,7 @@ requireElement<HTMLButtonElement>('add-deck').addEventListener('click', () =>
   spawnFromPalette('deck'),
 );
 
-const showcaseUrl = `${import.meta.env.BASE_URL}showcase/concert-stage-demo.html`;
+const showcaseUrl = `${import.meta.env.BASE_URL}r0.html?showcase=true`;
 if (new URLSearchParams(window.location.search).has('showcase')) {
   window.location.href = showcaseUrl;
 }

@@ -530,9 +530,9 @@ private:
 
     FReply LaunchStageShowcase()
     {
-        const FString ShowcaseUrl = TEXT("http://localhost:5173/showcase/concert-stage-demo.html");
+        const FString ShowcaseUrl = TEXT("http://localhost:5173/r0.html?showcase=true");
         FPlatformProcess::LaunchURL(*ShowcaseUrl, nullptr, nullptr);
-        Status = LOCTEXT("ShowcaseLaunched", "Concert stage showcase opened in desktop browser (http://localhost:5173/showcase/concert-stage-demo.html).");
+        Status = LOCTEXT("ShowcaseLaunched", "Concert stage showcase opened in Production Workspace (http://localhost:5173/r0.html?showcase=true).");
         return FReply::Handled();
     }
 
@@ -639,7 +639,7 @@ private:
             LOCTEXT("LaunchShowcaseMenuTooltip", "Open the concert stage showcase in your default desktop browser."),
             FSlateIcon(), FUIAction(FExecuteAction::CreateLambda([]()
             {
-                FPlatformProcess::LaunchURL(TEXT("http://localhost:5173/showcase/concert-stage-demo.html"), nullptr, nullptr);
+                FPlatformProcess::LaunchURL(TEXT("http://localhost:5173/r0.html?showcase=true"), nullptr, nullptr);
             })));
     }
 

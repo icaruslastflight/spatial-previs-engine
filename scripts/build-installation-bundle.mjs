@@ -147,10 +147,9 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, HOST, () => {
   console.log('=======================================================');
   console.log(' Spatial Previs Engine - Offline Local Server Running');
-  console.log('=======================================================');
-  console.log(\`  Local Viewport:      http://localhost:\${PORT}/\`);
-  console.log(\`  Production (R0):     http://localhost:\${PORT}/r0.html\`);
-  console.log(\`  Stage Showcase:      http://localhost:\${PORT}/showcase/concert-stage-demo.html\`);
+  console.log(\`  Production (Stage):  http://localhost:\${PORT}/r0.html?showcase=true\`);
+  console.log(\`  Production (Blank):  http://localhost:\${PORT}/r0.html\`);
+  console.log(\`  Sample Viewport:     http://localhost:\${PORT}/\`);
   console.log(\`  Network Access:      http://<your-lan-ip>:\${PORT}/\`);
   console.log('=======================================================');
   console.log(' Press Ctrl+C to stop.');
@@ -195,11 +194,9 @@ if __name__ == '__main__':
     os.chdir(APP_DIR)
     server = HTTPServer((HOST, PORT), PrevisHTTPRequestHandler)
     print("=======================================================")
-    print(" Spatial Previs Engine - Offline Python Server Running")
-    print("=======================================================")
-    print(f"  Local Viewport:      http://localhost:{PORT}/")
-    print(f"  Production (R0):     http://localhost:{PORT}/r0.html")
-    print(f"  Stage Showcase:      http://localhost:{PORT}/showcase/concert-stage-demo.html")
+    print(f"  Production (Stage):  http://localhost:{PORT}/r0.html?showcase=true")
+    print(f"  Production (Blank):  http://localhost:{PORT}/r0.html")
+    print(f"  Sample Viewport:     http://localhost:{PORT}/")
     print("=======================================================")
     try:
         server.serve_forever()
@@ -237,15 +234,15 @@ if %errorlevel% equ 0 (
 timeout /t 2 /nobreak >nul
 
 echo Select launch view:
-echo   [1] Concert Stage Showcase (with Sharpy Rig & EDM Video)
-echo   [2] Production Workspace (R0 Shared State)
+echo   [1] Production Workspace with Concert Stage Showcase
+echo   [2] Production Workspace (Blank Scene)
 echo   [3] Main Viewport (Point State Park Sample)
 echo.
 set /p choice="Selection [1-3] (default 1): "
 if "%choice%"=="" set choice=1
 if "%choice%"=="2" start "" "http://localhost:5173/r0.html" & exit /b 0
 if "%choice%"=="3" start "" "http://localhost:5173/" & exit /b 0
-start "" "http://localhost:5173/showcase/concert-stage-demo.html"
+start "" "http://localhost:5173/r0.html?showcase=true"
 exit /b 0
 `;
 writeFileSync(join(BUNDLE_DIR, 'windows', 'start-windows.cmd'), winStartCmd, 'utf8');
@@ -254,7 +251,7 @@ const winInstallEdgeCmd = `@echo off
 setlocal
 cd /d "%~dp0"
 echo Installing / Opening Spatial Previs as a Windows Standalone PWA via Microsoft Edge...
-start msedge --app="http://localhost:5173/showcase/concert-stage-demo.html"
+start msedge --app="http://localhost:5173/r0.html?showcase=true"
 exit /b 0
 `;
 writeFileSync(join(BUNDLE_DIR, 'windows', 'install-pwa-edge.cmd'), winInstallEdgeCmd, 'utf8');
@@ -263,7 +260,7 @@ const winInstallChromeCmd = `@echo off
 setlocal
 cd /d "%~dp0"
 echo Installing / Opening Spatial Previs as a Windows Standalone PWA via Google Chrome...
-start chrome --app="http://localhost:5173/showcase/concert-stage-demo.html"
+start chrome --app="http://localhost:5173/r0.html?showcase=true"
 exit /b 0
 `;
 writeFileSync(join(BUNDLE_DIR, 'windows', 'install-pwa-chrome.cmd'), winInstallChromeCmd, 'utf8');
@@ -303,9 +300,9 @@ sleep 2
 
 # Open in default browser or Google Chrome in app mode if present
 if [ -d "/Applications/Google Chrome.app" ]; then
-    open -na "Google Chrome" --args --app="http://localhost:5173/showcase/concert-stage-demo.html"
+    open -na "Google Chrome" --args --app="http://localhost:5173/r0.html?showcase=true"
 else
-    open "http://localhost:5173/showcase/concert-stage-demo.html"
+    open "http://localhost:5173/r0.html?showcase=true"
 fi
 
 echo "Server running (PID $SERVER_PID). Press Ctrl+C to stop."
@@ -321,7 +318,7 @@ const macReadme = `# Spatial Previs Engine — Apple macOS Installation Guide
    node ../server/serve.js
    \`\`\`
 2. Open Safari and navigate to:
-   \`http://localhost:5173/\` or \`http://localhost:5173/showcase/concert-stage-demo.html\`
+   \`http://localhost:5173/r0.html?showcase=true\` or \`http://localhost:5173/r0.html\`
 3. In Safari's menu bar, click **File** → **Add to Dock...**.
 4. Set the name to **Spatial Previs** and click **Add**.
 5. The application is now installed as a native standalone macOS application in your Dock and Launchpad!
@@ -486,7 +483,7 @@ fi
 
 sleep 2
 
-URL="http://localhost:5173/showcase/concert-stage-demo.html"
+URL="http://localhost:5173/r0.html?showcase=true"
 
 # Launch browser in app mode if supported
 if command -v google-chrome >/dev/null 2>&1; then

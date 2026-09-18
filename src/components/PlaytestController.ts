@@ -329,7 +329,7 @@ export class PlaytestController {
     root.appendChild(hint);
 
     const showcaseLink = document.createElement('a');
-    showcaseLink.href = `${import.meta.env.BASE_URL}showcase/concert-stage-demo.html`;
+    showcaseLink.href = `${import.meta.env.BASE_URL}r0.html?showcase=true`;
     showcaseLink.target = '_blank';
     showcaseLink.rel = 'noopener noreferrer';
     showcaseLink.textContent = '🎭 Launch Stage Showcase';

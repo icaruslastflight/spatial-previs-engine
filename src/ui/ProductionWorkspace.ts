@@ -57,6 +57,7 @@ let operationsSubTab: 'Inventory' | 'Crew' | 'Vendors' = 'Inventory';
 let cablingInspector: CablingInspector | null = null;
 let preview: Preview | null = null, dirty = false, serial = 0, busy = false;
 let isDemo = new URLSearchParams(window.location.search).has('demo');
+let isShowcase = new URLSearchParams(window.location.search).has('showcase');
 let detach = () => {};
 let opening = false;
 let renderSequence = 0;
@@ -548,11 +549,23 @@ el('continue-desktop').onclick = () => {
   el<HTMLDialogElement>('desktop-handoff').showModal();
   el('desktop-handoff').scrollTop = 0;
 };
-el('close-desktop-handoff').onclick = () => el<HTMLDialogElement>('desktop-handoff').close();
-el('handoff-export').onclick = () => run(exportProject);
-const openShowcase = () => window.open(`${import.meta.env.BASE_URL}showcase/concert-stage-demo.html`, '_blank');
-el('launch-showcase-btn').onclick = openShowcase;
-el('handoff-launch-showcase').onclick = openShowcase;
+async function loadStageShowcase(): Promise<void> {
+  if (dirty && !confirm('Load the concert stage showcase? Any unsaved changes to the current project will be replaced.')) return;
+  notice('Loading concert stage showcase…');
+  const res = await fetch(`${import.meta.env.BASE_URL}stage-showcase.json`);
+  if (!res.ok) throw new Error('Stage showcase file could not be loaded');
+  const { parseWorkspace } = await import('../domain/WorkspaceState.ts');
+  const state = parseWorkspace(await res.text());
+  store = new ProjectStore(state, authorizer);
+  generation = null; selected = null;
+  connectStore(); markDirty(); render();
+  await reconcile();
+  viewport?.frame();
+  notice('Concert stage showcase loaded! (157 stage objects)');
+  if (el<HTMLDialogElement>('desktop-handoff').open) el<HTMLDialogElement>('desktop-handoff').close();
+}
+el('launch-showcase-btn').onclick = () => run(loadStageShowcase);
+el('handoff-launch-showcase').onclick = () => run(loadStageShowcase);
 el<HTMLFormElement>('desktop-url-form').onsubmit = event => {
   event.preventDefault();
   try {
@@ -629,7 +642,20 @@ window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); 
 async function initialize(): Promise<void> {
   try {
     
-    if (isDemo) {
+    if (isShowcase) {
+      try {
+        const res = await fetch(`${import.meta.env.BASE_URL}stage-showcase.json`);
+        if (res.ok) {
+          const { parseWorkspace } = await import('../domain/WorkspaceState.ts');
+          const state = parseWorkspace(await res.text());
+          store = new ProjectStore(state, authorizer);
+          generation = null; dirty = true;
+          notice('Concert stage showcase loaded! (157 stage objects)');
+        }
+      } catch (e) {
+        console.warn('Stage showcase load failed', e);
+      }
+    } else if (isDemo) {
       try {
         const res = await fetch(`${import.meta.env.BASE_URL}demo.json`);
         if (res.ok) {
@@ -643,7 +669,7 @@ async function initialize(): Promise<void> {
         console.warn('Demo load failed', e);
       }
     }
-    if (!isDemo || dirty === false) {
+    if ((!isDemo && !isShowcase) || dirty === false) {
       const saved = await repository.load(await repository.lastProjectId() ?? 'local-production');
       if (saved) { store = new ProjectStore(saved.state, authorizer); generation = saved.generation; el('save-status').textContent = 'Saved on this device'; }
     }
@@ -660,6 +686,7 @@ async function initialize(): Promise<void> {
       notice(move.snapped ? 'Equipment snapped' : 'Equipment moved');
     }), message => notice(message));
     await reconcile();
+    if (isShowcase) viewport.frame();
   }
   catch (e) { el('render-status').textContent = `3D unavailable. Use the equipment list and numeric inspector. ${e instanceof Error ? e.message : ''}`; }
   if (!el('notice').classList.contains('error')) notice('Ready · local scene · no model or API required');

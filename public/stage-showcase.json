@@ -1,0 +1,3326 @@
+{
+  "schemaVersion": 1,
+  "projectId": "concert-stage-showcase",
+  "revision": 0,
+  "coordinateFrame": "right_handed_y_up_meters",
+  "records": [
+    {
+      "locked": false,
+      "kind": "asset_definition",
+      "id": "def:truss_f34_3m",
+      "label": "F34 Box Truss 3m",
+      "catalogId": "truss_f34_box_3m",
+      "category": "trussing",
+      "specifications": {
+        "mass": {
+          "status": "known",
+          "unit": "kg",
+          "value": 16.2,
+          "provenance": "manufacturer",
+          "source": "Authored rig plot"
+        }
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_definition",
+      "id": "def:truss_f34_2m",
+      "label": "F34 Box Truss 2m",
+      "catalogId": "truss_f34_box_2m",
+      "category": "trussing",
+      "specifications": {
+        "mass": {
+          "status": "known",
+          "unit": "kg",
+          "value": 11.5,
+          "provenance": "manufacturer",
+          "source": "Authored rig plot"
+        }
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_definition",
+      "id": "def:truss_f34_1m",
+      "label": "F34 Box Truss 1m",
+      "catalogId": "truss_f34_box_1m",
+      "category": "trussing",
+      "specifications": {
+        "mass": {
+          "status": "known",
+          "unit": "kg",
+          "value": 6.8,
+          "provenance": "manufacturer",
+          "source": "Authored rig plot"
+        }
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_definition",
+      "id": "def:truss_f34_corner",
+      "label": "F34 6-Way Corner Block",
+      "catalogId": "truss_f34_corner_6way",
+      "category": "trussing",
+      "specifications": {
+        "mass": {
+          "status": "known",
+          "unit": "kg",
+          "value": 9.5,
+          "provenance": "manufacturer",
+          "source": "Authored rig plot"
+        }
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_definition",
+      "id": "def:truss_baseplate",
+      "label": "24x24 in Steel Baseplate",
+      "catalogId": "truss_baseplate_24in",
+      "category": "trussing",
+      "specifications": {
+        "mass": {
+          "status": "known",
+          "unit": "kg",
+          "value": 35,
+          "provenance": "manufacturer",
+          "source": "Authored rig plot"
+        }
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_definition",
+      "id": "def:deck_4x8",
+      "label": "4x8 ft Stage Deck",
+      "catalogId": "deck_4x8",
+      "category": "staging",
+      "specifications": {
+        "mass": {
+          "status": "known",
+          "unit": "kg",
+          "value": 58,
+          "provenance": "manufacturer",
+          "source": "Authored rig plot"
+        }
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_definition",
+      "id": "def:sub_ks28",
+      "label": "KS28 Subwoofer (2x18\")",
+      "catalogId": "sub_ks28",
+      "category": "audio",
+      "specifications": {
+        "mass": {
+          "status": "known",
+          "unit": "kg",
+          "value": 79,
+          "provenance": "manufacturer",
+          "source": "Authored rig plot"
+        },
+        "power": {
+          "status": "known",
+          "unit": "W",
+          "value": 3200,
+          "provenance": "manufacturer",
+          "source": "Authored rig plot"
+        }
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_definition",
+      "id": "def:moving_head_beam",
+      "label": "Claypaky Sharpy Beam",
+      "catalogId": "moving_head_beam",
+      "category": "lighting",
+      "specifications": {
+        "mass": {
+          "status": "known",
+          "unit": "kg",
+          "value": 19,
+          "provenance": "manufacturer",
+          "source": "Authored rig plot"
+        },
+        "power": {
+          "status": "known",
+          "unit": "W",
+          "value": 350,
+          "provenance": "manufacturer",
+          "source": "Authored rig plot"
+        }
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_definition",
+      "id": "def:moving_head_wash",
+      "label": "Claypaky Sharpy Wash 330",
+      "catalogId": "moving_head_wash",
+      "category": "lighting",
+      "specifications": {
+        "mass": {
+          "status": "known",
+          "unit": "kg",
+          "value": 22.5,
+          "provenance": "manufacturer",
+          "source": "Authored rig plot"
+        },
+        "power": {
+          "status": "known",
+          "unit": "W",
+          "value": 480,
+          "provenance": "manufacturer",
+          "source": "Authored rig plot"
+        }
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_definition",
+      "id": "def:led_tile_500",
+      "label": "LED Video Tile 500x500mm",
+      "catalogId": "led_tile_500x500",
+      "category": "video",
+      "specifications": {
+        "mass": {
+          "status": "known",
+          "unit": "kg",
+          "value": 7.5,
+          "provenance": "manufacturer",
+          "source": "Authored rig plot"
+        },
+        "power": {
+          "status": "known",
+          "unit": "W",
+          "value": 150,
+          "provenance": "manufacturer",
+          "source": "Authored rig plot"
+        }
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0001",
+      "label": "Stage Deck Center",
+      "definitionId": "def:deck_4x8",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          0,
+          0.4,
+          -2.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0002",
+      "label": "Stage Deck Left",
+      "definitionId": "def:deck_4x8",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -1.22,
+          0.4,
+          -2.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0003",
+      "label": "Stage Deck Right",
+      "definitionId": "def:deck_4x8",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          1.22,
+          0.4,
+          -2.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0004",
+      "label": "Subwoofer L T1",
+      "definitionId": "def:sub_ks28",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -1.25,
+          0.4,
+          -0.4
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0005",
+      "label": "Subwoofer L T2",
+      "definitionId": "def:sub_ks28",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -1.25,
+          1.2,
+          -0.4
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0006",
+      "label": "Subwoofer C T1",
+      "definitionId": "def:sub_ks28",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          0,
+          0.4,
+          -0.4
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0007",
+      "label": "Subwoofer C T2",
+      "definitionId": "def:sub_ks28",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          0,
+          1.2,
+          -0.4
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0008",
+      "label": "Subwoofer R T1",
+      "definitionId": "def:sub_ks28",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          1.25,
+          0.4,
+          -0.4
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0009",
+      "label": "Subwoofer R T2",
+      "definitionId": "def:sub_ks28",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          1.25,
+          1.2,
+          -0.4
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0010",
+      "label": "Downstage Left Baseplate",
+      "definitionId": "def:truss_baseplate",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -2.145,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0011",
+      "label": "Upstage Left Baseplate",
+      "definitionId": "def:truss_baseplate",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -2.145,
+          0,
+          -4.29
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0012",
+      "label": "Downstage Left Column Lower (3m)",
+      "definitionId": "def:truss_f34_3m",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -2.145,
+          1.5,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0.7071067811865475,
+          0.7071067811865476
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0013",
+      "label": "Downstage Left Corner Block (3.14m)",
+      "definitionId": "def:truss_f34_corner",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -2.145,
+          3.145,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0014",
+      "label": "Downstage Left Column Upper (3m)",
+      "definitionId": "def:truss_f34_3m",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -2.145,
+          4.79,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0.7071067811865475,
+          0.7071067811865476
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0015",
+      "label": "Downstage Left Corner Block (6.43m)",
+      "definitionId": "def:truss_f34_corner",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -2.145,
+          6.435,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0016",
+      "label": "Upstage Left Column Lower (3m)",
+      "definitionId": "def:truss_f34_3m",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -2.145,
+          1.5,
+          -4.29
+        ],
+        "rotation": [
+          0,
+          0,
+          0.7071067811865475,
+          0.7071067811865476
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0017",
+      "label": "Upstage Left Corner Block (3.14m)",
+      "definitionId": "def:truss_f34_corner",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -2.145,
+          3.145,
+          -4.29
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0018",
+      "label": "Upstage Left Column Mid (1m)",
+      "definitionId": "def:truss_f34_1m",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -2.145,
+          3.79,
+          -4.29
+        ],
+        "rotation": [
+          0,
+          0,
+          0.7071067811865475,
+          0.7071067811865476
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0019",
+      "label": "Upstage Left Corner Block (4.43m)",
+      "definitionId": "def:truss_f34_corner",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -2.145,
+          4.435,
+          -4.29
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0020",
+      "label": "Upstage Left Column Top (2m)",
+      "definitionId": "def:truss_f34_2m",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -2.145,
+          5.58,
+          -4.29
+        ],
+        "rotation": [
+          0,
+          0,
+          0.7071067811865475,
+          0.7071067811865476
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0021",
+      "label": "Upstage Left Corner Block (6.72m)",
+      "definitionId": "def:truss_f34_corner",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -2.145,
+          6.725,
+          -4.29
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0022",
+      "label": "Downstage Right Baseplate",
+      "definitionId": "def:truss_baseplate",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          2.145,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0023",
+      "label": "Upstage Right Baseplate",
+      "definitionId": "def:truss_baseplate",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          2.145,
+          0,
+          -4.29
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0024",
+      "label": "Downstage Right Column Lower (3m)",
+      "definitionId": "def:truss_f34_3m",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          2.145,
+          1.5,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0.7071067811865475,
+          0.7071067811865476
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0025",
+      "label": "Downstage Right Corner Block (3.14m)",
+      "definitionId": "def:truss_f34_corner",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          2.145,
+          3.145,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0026",
+      "label": "Downstage Right Column Upper (3m)",
+      "definitionId": "def:truss_f34_3m",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          2.145,
+          4.79,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0.7071067811865475,
+          0.7071067811865476
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0027",
+      "label": "Downstage Right Corner Block (6.43m)",
+      "definitionId": "def:truss_f34_corner",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          2.145,
+          6.435,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0028",
+      "label": "Upstage Right Column Lower (3m)",
+      "definitionId": "def:truss_f34_3m",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          2.145,
+          1.5,
+          -4.29
+        ],
+        "rotation": [
+          0,
+          0,
+          0.7071067811865475,
+          0.7071067811865476
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0029",
+      "label": "Upstage Right Corner Block (3.14m)",
+      "definitionId": "def:truss_f34_corner",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          2.145,
+          3.145,
+          -4.29
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0030",
+      "label": "Upstage Right Column Mid (1m)",
+      "definitionId": "def:truss_f34_1m",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          2.145,
+          3.79,
+          -4.29
+        ],
+        "rotation": [
+          0,
+          0,
+          0.7071067811865475,
+          0.7071067811865476
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0031",
+      "label": "Upstage Right Corner Block (4.43m)",
+      "definitionId": "def:truss_f34_corner",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          2.145,
+          4.435,
+          -4.29
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0032",
+      "label": "Upstage Right Column Top (2m)",
+      "definitionId": "def:truss_f34_2m",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          2.145,
+          5.58,
+          -4.29
+        ],
+        "rotation": [
+          0,
+          0,
+          0.7071067811865475,
+          0.7071067811865476
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0033",
+      "label": "Upstage Right Corner Block (6.72m)",
+      "definitionId": "def:truss_f34_corner",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          2.145,
+          6.725,
+          -4.29
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0034",
+      "label": "Rear Span 4.43m Left (2m)",
+      "definitionId": "def:truss_f34_2m",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -1,
+          4.435,
+          -4.29
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0035",
+      "label": "Rear Top Span 6.72m Left (2m)",
+      "definitionId": "def:truss_f34_2m",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -1,
+          6.725,
+          -4.29
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0036",
+      "label": "Rear Span 4.43m Right (2m)",
+      "definitionId": "def:truss_f34_2m",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          1,
+          4.435,
+          -4.29
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0037",
+      "label": "Rear Top Span 6.72m Right (2m)",
+      "definitionId": "def:truss_f34_2m",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          1,
+          6.725,
+          -4.29
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0038",
+      "label": "Side Span 3.14m Left Front (2m)",
+      "definitionId": "def:truss_f34_2m",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -2.145,
+          3.145,
+          -1.145
+        ],
+        "rotation": [
+          0,
+          0.7071067811865475,
+          0,
+          0.7071067811865476
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0039",
+      "label": "Side Span 3.14m Left Rear (2m)",
+      "definitionId": "def:truss_f34_2m",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -2.145,
+          3.145,
+          -3.145
+        ],
+        "rotation": [
+          0,
+          0.7071067811865475,
+          0,
+          0.7071067811865476
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0040",
+      "label": "Side Span 3.14m Right Front (2m)",
+      "definitionId": "def:truss_f34_2m",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          2.145,
+          3.145,
+          -1.145
+        ],
+        "rotation": [
+          0,
+          0.7071067811865475,
+          0,
+          0.7071067811865476
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0041",
+      "label": "Side Span 3.14m Right Rear (2m)",
+      "definitionId": "def:truss_f34_2m",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          2.145,
+          3.145,
+          -3.145
+        ],
+        "rotation": [
+          0,
+          0.7071067811865475,
+          0,
+          0.7071067811865476
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0042",
+      "label": "Left Arm Truss Run 1",
+      "definitionId": "def:truss_f34_3m",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -2.9675,
+          3.145,
+          1.4246
+        ],
+        "rotation": [
+          0,
+          -0.8660254037844387,
+          0,
+          0.5
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0043",
+      "label": "Left Arm Corner 1",
+      "definitionId": "def:truss_f34_corner",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -3.79,
+          3.145,
+          2.8492
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0044",
+      "label": "Left Arm Totem 1",
+      "definitionId": "def:truss_f34_3m",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -3.79,
+          1.5,
+          2.8492
+        ],
+        "rotation": [
+          0,
+          0,
+          0.7071067811865475,
+          0.7071067811865476
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0045",
+      "label": "Left Arm Truss Run 2",
+      "definitionId": "def:truss_f34_3m",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -4.6125,
+          3.145,
+          4.2738
+        ],
+        "rotation": [
+          0,
+          -0.8660254037844387,
+          0,
+          0.5
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0046",
+      "label": "Left Arm Corner 2",
+      "definitionId": "def:truss_f34_corner",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -5.935,
+          3.145,
+          6.5645
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0047",
+      "label": "Left Arm Totem 2",
+      "definitionId": "def:truss_f34_3m",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -5.935,
+          1.5,
+          6.5645
+        ],
+        "rotation": [
+          0,
+          0,
+          0.7071067811865475,
+          0.7071067811865476
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0048",
+      "label": "Left Arm Inward Run",
+      "definitionId": "def:truss_f34_3m",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -4.5104,
+          3.145,
+          7.387
+        ],
+        "rotation": [
+          0,
+          -0.2588190451025209,
+          0,
+          0.9659258262890684
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0049",
+      "label": "Left Arm Corner 3",
+      "definitionId": "def:truss_f34_corner",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -3.0858,
+          3.145,
+          8.2095
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0050",
+      "label": "Left Arm Totem 3",
+      "definitionId": "def:truss_f34_3m",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -3.0858,
+          1.5,
+          8.2095
+        ],
+        "rotation": [
+          0,
+          0,
+          0.7071067811865475,
+          0.7071067811865476
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0051",
+      "label": "Left Arm Fixture 1 (Top Beam)",
+      "definitionId": "def:moving_head_beam",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -2.4675,
+          3.29,
+          0.5586
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0052",
+      "label": "Left Arm Fixture 1 (Bottom Wash)",
+      "definitionId": "def:moving_head_wash",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -2.4675,
+          3,
+          0.5586
+        ],
+        "rotation": [
+          0,
+          0,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0053",
+      "label": "Left Arm Fixture 2 (Top Beam)",
+      "definitionId": "def:moving_head_beam",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -2.9675,
+          3.29,
+          1.4246
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0054",
+      "label": "Left Arm Fixture 2 (Bottom Wash)",
+      "definitionId": "def:moving_head_wash",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -2.9675,
+          3,
+          1.4246
+        ],
+        "rotation": [
+          0,
+          0,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0055",
+      "label": "Left Arm Fixture 3 (Top Beam)",
+      "definitionId": "def:moving_head_beam",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -3.4675,
+          3.29,
+          2.2906
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0056",
+      "label": "Left Arm Fixture 3 (Bottom Wash)",
+      "definitionId": "def:moving_head_wash",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -3.4675,
+          3,
+          2.2906
+        ],
+        "rotation": [
+          0,
+          0,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0057",
+      "label": "Left Arm Fixture 4 (Top Beam)",
+      "definitionId": "def:moving_head_beam",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -4.1125,
+          3.29,
+          3.4078
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0058",
+      "label": "Left Arm Fixture 4 (Bottom Wash)",
+      "definitionId": "def:moving_head_wash",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -4.1125,
+          3,
+          3.4078
+        ],
+        "rotation": [
+          0,
+          0,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0059",
+      "label": "Left Arm Fixture 5 (Top Beam)",
+      "definitionId": "def:moving_head_beam",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -4.6125,
+          3.29,
+          4.2738
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0060",
+      "label": "Left Arm Fixture 5 (Bottom Wash)",
+      "definitionId": "def:moving_head_wash",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -4.6125,
+          3,
+          4.2738
+        ],
+        "rotation": [
+          0,
+          0,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0061",
+      "label": "Left Arm Fixture 6 (Top Beam)",
+      "definitionId": "def:moving_head_beam",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -5.1125,
+          3.29,
+          5.1399
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0062",
+      "label": "Left Arm Fixture 6 (Bottom Wash)",
+      "definitionId": "def:moving_head_wash",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -5.1125,
+          3,
+          5.1399
+        ],
+        "rotation": [
+          0,
+          0,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0063",
+      "label": "Left Arm Fixture 7 (Top Beam)",
+      "definitionId": "def:moving_head_beam",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -5.6125,
+          3.29,
+          6.0059
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0064",
+      "label": "Left Arm Fixture 7 (Bottom Wash)",
+      "definitionId": "def:moving_head_wash",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -5.6125,
+          3,
+          6.0059
+        ],
+        "rotation": [
+          0,
+          0,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0065",
+      "label": "Left Arm Fixture 8 (Top Beam)",
+      "definitionId": "def:moving_head_beam",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -5.3764,
+          3.29,
+          6.887
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0066",
+      "label": "Left Arm Fixture 8 (Bottom Wash)",
+      "definitionId": "def:moving_head_wash",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -5.3764,
+          3,
+          6.887
+        ],
+        "rotation": [
+          0,
+          0,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0067",
+      "label": "Left Arm Fixture 9 (Top Beam)",
+      "definitionId": "def:moving_head_beam",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -4.5104,
+          3.29,
+          7.387
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0068",
+      "label": "Left Arm Fixture 9 (Bottom Wash)",
+      "definitionId": "def:moving_head_wash",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -4.5104,
+          3,
+          7.387
+        ],
+        "rotation": [
+          0,
+          0,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0069",
+      "label": "Left Arm Fixture 10 (Top Beam)",
+      "definitionId": "def:moving_head_beam",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -3.6444,
+          3.29,
+          7.887
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0070",
+      "label": "Left Arm Fixture 10 (Bottom Wash)",
+      "definitionId": "def:moving_head_wash",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -3.6444,
+          3,
+          7.887
+        ],
+        "rotation": [
+          0,
+          0,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0071",
+      "label": "Right Arm Truss Run 1",
+      "definitionId": "def:truss_f34_3m",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          2.9675,
+          3.145,
+          1.4246
+        ],
+        "rotation": [
+          0,
+          -0.5,
+          0,
+          0.8660254037844386
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0072",
+      "label": "Right Arm Corner 1",
+      "definitionId": "def:truss_f34_corner",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          3.79,
+          3.145,
+          2.8492
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0073",
+      "label": "Right Arm Totem 1",
+      "definitionId": "def:truss_f34_3m",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          3.79,
+          1.5,
+          2.8492
+        ],
+        "rotation": [
+          0,
+          0,
+          0.7071067811865475,
+          0.7071067811865476
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0074",
+      "label": "Right Arm Truss Run 2",
+      "definitionId": "def:truss_f34_3m",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          4.6125,
+          3.145,
+          4.2738
+        ],
+        "rotation": [
+          0,
+          -0.5,
+          0,
+          0.8660254037844386
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0075",
+      "label": "Right Arm Corner 2",
+      "definitionId": "def:truss_f34_corner",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          5.935,
+          3.145,
+          6.5645
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0076",
+      "label": "Right Arm Totem 2",
+      "definitionId": "def:truss_f34_3m",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          5.935,
+          1.5,
+          6.5645
+        ],
+        "rotation": [
+          0,
+          0,
+          0.7071067811865475,
+          0.7071067811865476
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0077",
+      "label": "Right Arm Inward Run",
+      "definitionId": "def:truss_f34_3m",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          4.5104,
+          3.145,
+          7.387
+        ],
+        "rotation": [
+          0,
+          -0.9659258262890684,
+          0,
+          0.2588190451025206
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0078",
+      "label": "Right Arm Corner 3",
+      "definitionId": "def:truss_f34_corner",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          3.0858,
+          3.145,
+          8.2095
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0079",
+      "label": "Right Arm Totem 3",
+      "definitionId": "def:truss_f34_3m",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          3.0858,
+          1.5,
+          8.2095
+        ],
+        "rotation": [
+          0,
+          0,
+          0.7071067811865475,
+          0.7071067811865476
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0080",
+      "label": "Right Arm Fixture 1 (Top Beam)",
+      "definitionId": "def:moving_head_beam",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          2.4675,
+          3.29,
+          0.5586
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0081",
+      "label": "Right Arm Fixture 1 (Bottom Wash)",
+      "definitionId": "def:moving_head_wash",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          2.4675,
+          3,
+          0.5586
+        ],
+        "rotation": [
+          0,
+          0,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0082",
+      "label": "Right Arm Fixture 2 (Top Beam)",
+      "definitionId": "def:moving_head_beam",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          2.9675,
+          3.29,
+          1.4246
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0083",
+      "label": "Right Arm Fixture 2 (Bottom Wash)",
+      "definitionId": "def:moving_head_wash",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          2.9675,
+          3,
+          1.4246
+        ],
+        "rotation": [
+          0,
+          0,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0084",
+      "label": "Right Arm Fixture 3 (Top Beam)",
+      "definitionId": "def:moving_head_beam",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          3.4675,
+          3.29,
+          2.2906
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0085",
+      "label": "Right Arm Fixture 3 (Bottom Wash)",
+      "definitionId": "def:moving_head_wash",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          3.4675,
+          3,
+          2.2906
+        ],
+        "rotation": [
+          0,
+          0,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0086",
+      "label": "Right Arm Fixture 4 (Top Beam)",
+      "definitionId": "def:moving_head_beam",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          4.1125,
+          3.29,
+          3.4078
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0087",
+      "label": "Right Arm Fixture 4 (Bottom Wash)",
+      "definitionId": "def:moving_head_wash",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          4.1125,
+          3,
+          3.4078
+        ],
+        "rotation": [
+          0,
+          0,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0088",
+      "label": "Right Arm Fixture 5 (Top Beam)",
+      "definitionId": "def:moving_head_beam",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          4.6125,
+          3.29,
+          4.2738
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0089",
+      "label": "Right Arm Fixture 5 (Bottom Wash)",
+      "definitionId": "def:moving_head_wash",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          4.6125,
+          3,
+          4.2738
+        ],
+        "rotation": [
+          0,
+          0,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0090",
+      "label": "Right Arm Fixture 6 (Top Beam)",
+      "definitionId": "def:moving_head_beam",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          5.1125,
+          3.29,
+          5.1399
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0091",
+      "label": "Right Arm Fixture 6 (Bottom Wash)",
+      "definitionId": "def:moving_head_wash",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          5.1125,
+          3,
+          5.1399
+        ],
+        "rotation": [
+          0,
+          0,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0092",
+      "label": "Right Arm Fixture 7 (Top Beam)",
+      "definitionId": "def:moving_head_beam",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          5.6125,
+          3.29,
+          6.0059
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0093",
+      "label": "Right Arm Fixture 7 (Bottom Wash)",
+      "definitionId": "def:moving_head_wash",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          5.6125,
+          3,
+          6.0059
+        ],
+        "rotation": [
+          0,
+          0,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0094",
+      "label": "Right Arm Fixture 8 (Top Beam)",
+      "definitionId": "def:moving_head_beam",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          5.3764,
+          3.29,
+          6.887
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0095",
+      "label": "Right Arm Fixture 8 (Bottom Wash)",
+      "definitionId": "def:moving_head_wash",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          5.3764,
+          3,
+          6.887
+        ],
+        "rotation": [
+          0,
+          0,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0096",
+      "label": "Right Arm Fixture 9 (Top Beam)",
+      "definitionId": "def:moving_head_beam",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          4.5104,
+          3.29,
+          7.387
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0097",
+      "label": "Right Arm Fixture 9 (Bottom Wash)",
+      "definitionId": "def:moving_head_wash",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          4.5104,
+          3,
+          7.387
+        ],
+        "rotation": [
+          0,
+          0,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0098",
+      "label": "Right Arm Fixture 10 (Top Beam)",
+      "definitionId": "def:moving_head_beam",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          3.6444,
+          3.29,
+          7.887
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0099",
+      "label": "Right Arm Fixture 10 (Bottom Wash)",
+      "definitionId": "def:moving_head_wash",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          3.6444,
+          3,
+          7.887
+        ],
+        "rotation": [
+          0,
+          0,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0100",
+      "label": "Rear Top Gobo Beam 1",
+      "definitionId": "def:moving_head_beam",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -1.5,
+          6.58,
+          -4.29
+        ],
+        "rotation": [
+          0,
+          0,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0101",
+      "label": "Rear Top Gobo Beam 2",
+      "definitionId": "def:moving_head_beam",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -0.5,
+          6.58,
+          -4.29
+        ],
+        "rotation": [
+          0,
+          0,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0102",
+      "label": "Rear Top Gobo Beam 3",
+      "definitionId": "def:moving_head_beam",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          0.5,
+          6.58,
+          -4.29
+        ],
+        "rotation": [
+          0,
+          0,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0103",
+      "label": "Rear Top Gobo Beam 4",
+      "definitionId": "def:moving_head_beam",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          1.5,
+          6.58,
+          -4.29
+        ],
+        "rotation": [
+          0,
+          0,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0104",
+      "label": "LED Tile R1C1",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -1.75,
+          1.25,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0105",
+      "label": "LED Tile R1C2",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -1.25,
+          1.25,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0106",
+      "label": "LED Tile R1C3",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -0.75,
+          1.25,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0107",
+      "label": "LED Tile R1C4",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -0.25,
+          1.25,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0108",
+      "label": "LED Tile R1C5",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          0.25,
+          1.25,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0109",
+      "label": "LED Tile R1C6",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          0.75,
+          1.25,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0110",
+      "label": "LED Tile R1C7",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          1.25,
+          1.25,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0111",
+      "label": "LED Tile R1C8",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          1.75,
+          1.25,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0112",
+      "label": "LED Tile R2C1",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -1.75,
+          1.75,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0113",
+      "label": "LED Tile R2C2",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -1.25,
+          1.75,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0114",
+      "label": "LED Tile R2C3",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -0.75,
+          1.75,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0115",
+      "label": "LED Tile R2C4",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -0.25,
+          1.75,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0116",
+      "label": "LED Tile R2C5",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          0.25,
+          1.75,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0117",
+      "label": "LED Tile R2C6",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          0.75,
+          1.75,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0118",
+      "label": "LED Tile R2C7",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          1.25,
+          1.75,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0119",
+      "label": "LED Tile R2C8",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          1.75,
+          1.75,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0120",
+      "label": "LED Tile R3C1",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -1.75,
+          2.25,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0121",
+      "label": "LED Tile R3C2",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -1.25,
+          2.25,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0122",
+      "label": "LED Tile R3C3",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -0.75,
+          2.25,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0123",
+      "label": "LED Tile R3C4",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -0.25,
+          2.25,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0124",
+      "label": "LED Tile R3C5",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          0.25,
+          2.25,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0125",
+      "label": "LED Tile R3C6",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          0.75,
+          2.25,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0126",
+      "label": "LED Tile R3C7",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          1.25,
+          2.25,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0127",
+      "label": "LED Tile R3C8",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          1.75,
+          2.25,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0128",
+      "label": "LED Tile R4C1",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -1.75,
+          2.75,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0129",
+      "label": "LED Tile R4C2",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -1.25,
+          2.75,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0130",
+      "label": "LED Tile R4C3",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -0.75,
+          2.75,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0131",
+      "label": "LED Tile R4C4",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -0.25,
+          2.75,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0132",
+      "label": "LED Tile R4C5",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          0.25,
+          2.75,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0133",
+      "label": "LED Tile R4C6",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          0.75,
+          2.75,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0134",
+      "label": "LED Tile R4C7",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          1.25,
+          2.75,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0135",
+      "label": "LED Tile R4C8",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          1.75,
+          2.75,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0136",
+      "label": "LED Tile R5C1",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -1.75,
+          3.25,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0137",
+      "label": "LED Tile R5C2",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -1.25,
+          3.25,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0138",
+      "label": "LED Tile R5C3",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -0.75,
+          3.25,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0139",
+      "label": "LED Tile R5C4",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          -0.25,
+          3.25,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0140",
+      "label": "LED Tile R5C5",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          0.25,
+          3.25,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0141",
+      "label": "LED Tile R5C6",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          0.75,
+          3.25,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0142",
+      "label": "LED Tile R5C7",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          1.25,
+          3.25,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "asset_instance",
+      "id": "inst_0143",
+      "label": "LED Tile R5C8",
+      "definitionId": "def:led_tile_500",
+      "inventoryItemId": null,
+      "transform": {
+        "position": [
+          1.75,
+          3.25,
+          -4.145
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "locked": false,
+      "kind": "assembly",
+      "id": "assembly:led_wall",
+      "label": "Upstage LED Video Wall (4x2.5m)",
+      "instanceIds": [
+        "inst_0104",
+        "inst_0105",
+        "inst_0106",
+        "inst_0107",
+        "inst_0108",
+        "inst_0109",
+        "inst_0110",
+        "inst_0111",
+        "inst_0112",
+        "inst_0113",
+        "inst_0114",
+        "inst_0115",
+        "inst_0116",
+        "inst_0117",
+        "inst_0118",
+        "inst_0119",
+        "inst_0120",
+        "inst_0121",
+        "inst_0122",
+        "inst_0123",
+        "inst_0124",
+        "inst_0125",
+        "inst_0126",
+        "inst_0127",
+        "inst_0128",
+        "inst_0129",
+        "inst_0130",
+        "inst_0131",
+        "inst_0132",
+        "inst_0133",
+        "inst_0134",
+        "inst_0135",
+        "inst_0136",
+        "inst_0137",
+        "inst_0138",
+        "inst_0139",
+        "inst_0140",
+        "inst_0141",
+        "inst_0142",
+        "inst_0143"
+      ]
+    },
+    {
+      "locked": false,
+      "kind": "surface",
+      "id": "surface:led_wall_screen",
+      "label": "Upstage LED Video Screen Plane",
+      "shape": "plane",
+      "transform": {
+        "position": [
+          0,
+          2.25,
+          -4.1450000000000005
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      "width": {
+        "status": "known",
+        "unit": "m",
+        "value": 4,
+        "provenance": "manufacturer",
+        "source": "LED tile matrix (8x5)"
+      },
+      "height": {
+        "status": "known",
+        "unit": "m",
+        "value": 2.5,
+        "provenance": "manufacturer",
+        "source": "LED tile matrix (8x5)"
+      }
+    },
+    {
+      "locked": false,
+      "kind": "raster_mapping",
+      "id": "raster:edm_show_loop",
+      "label": "EDM Video Wall Visuals (Orange & Purple)",
+      "surfaceId": "surface:led_wall_screen",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "locked": false,
+      "kind": "zone",
+      "id": "zone:audience_safety",
+      "label": "Audience Safety Zone (EN 60825-1 MPE)",
+      "role": "audience",
+      "shape": "box",
+      "transform": {
+        "position": [
+          0,
+          1.5,
+          7
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ]
+      },
+      "sizeMeters": [
+        16,
+        3,
+        14
+      ]
+    }
+  ]
+}
