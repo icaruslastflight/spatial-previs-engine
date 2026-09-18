@@ -1,8 +1,9 @@
 # Lighting and interacting with Gaussian splat venue captures
 
-Research memo, 18 September 2026. Status: **Phase 0 spike in progress** (see the
-end of this file for results as they land). Nothing in this memo changes product
-behaviour; it records findings and a phased plan under CLAUDE.md §13.
+Research memo, 18 September 2026. Status: **Phase 0 spike run; naive depth-pass
+approach found broken, real cause identified, fix deferred to Phase 1** (§10,
+Phase 0 results below). Nothing in this memo changes product behaviour; it
+records findings and a phased plan under CLAUDE.md §13.
 
 Question, as the owner put it: *can splats be lit and interacted with?*
 
@@ -256,8 +257,8 @@ skipped.
 
 | Phase | Objective | Deliverable | Verification | Gate |
 | --- | --- | --- | --- | --- |
-| 0 | Prove or disprove the depth-only toggle on a synthesized capture | `showcase/splat-occlusion.html` with before/after/depth captures and a finding below | Captures via `npm run showcase:capture`; no production code touched | Owner approves or abandons |
-| 1 | One merged depth buffer on the web | Loader and viewport consolidated; depth pass in the frame tick; composite reorder; manifest `height` fix; README and CLAUDE.md synced | Showcase re-captured; manifest parser test; suite and build green | Screenshots and manifest contract approved |
+| 0 | Prove or disprove the depth-only toggle on a synthesized capture | **Done.** `showcase/splat-occlusion.html` with before/after/depth modes; finding above: the naive external-composite approach doesn't render splats at all (uniform-priming gap), root cause traced to `SplatMesh.updateUniforms()`, no production code touched | Interactive captures in this session; `before` saved to `showcase/splat-occlusion-before.png` | **Owner reviews this finding and approves proceeding to Phase 1 with the revised approach (monkey-patch `Viewer.prototype.render`), or redirects** |
+| 1 | One merged depth buffer on the web, fixing the Phase 0 uniform gap | Loader and viewport consolidated; depth pass implemented by patching `Viewer.prototype.render` (not by driving `renderer.render(mesh, camera)` externally); composite reorder; manifest `height` fix; README and CLAUDE.md synced | Showcase re-captured with a visible splat layer in all three modes; manifest parser test; suite and build green | Screenshots and manifest contract approved |
 | 2 | Proxy mesh through the pipeline | Pipeline emits a decimated proxy GLB; manifest schema v2 with migration; web loads it depth-only with shadows | Showcase with proxy shadows; pipeline self-test extended | Schema bump approved |
 | 3 | Fixture pools on the web | Batched deferred fixture pass in `TICK_PRIORITY.RENDER` | Showcase with GDTF fixtures at solved pan/tilt, reviewed on a phone | Look accepted or routed to flat-light capture |
 | 4 | Native anchor port (precondition for all native scan work) | Anchor constant in `SpatialPrevisCore`; landmark corpus case; §1.1 note deleted | `scripts/verify-r0-native.ps1` by hand; evidence in `test-results/native/` | Evidence folder reviewed |
@@ -274,7 +275,71 @@ and the look-and-feel verdicts at the Phase 0 and Phase 3 gates.
 
 ## Phase 0 results
 
-_Pending. Filled in when the spike captures land._
+**Run 18 September 2026.** Built `showcase/splat-occlusion.html` /
+`.ts`: the synthesized park capture (178,500 splats,
+`python scripts/cleanup_splat.py --synthesize public/assets/scans/point_state_park/synthetic_raw.splat`,
+5.7 MB, not committed), loaded through the real
+`@mkkellogg/gaussian-splats-3d` `Viewer`, with three beam cones from
+`SplatViewport.createBeamMesh` positioned in front of, behind, and through a
+synthesized pavilion wall, and two truss sticks. Three modes: `before` (the
+library's own `Viewer.render()`, unmodified), `after` (the depth-only toggle
+from §3(a) of this memo), `depth` (the depth-only pass alone, visualised).
+
+**Outcome: the naive implementation of the depth-only toggle does not work.**
+`before` mode renders correctly — full ground, canopy, pavilion, all visible,
+confirming the capture, loader, and viewer integration are sound end to end.
+`after` and `depth` mode render the beam cones and truss sticks (proving those
+draw calls run) but **no splats at all** — the splat layer is entirely absent,
+not just occluded wrong.
+
+**Root cause, traced to source, not guessed:** the splat vertex shader scales
+each splat's screen-space quad by a `basisViewport` uniform
+(`ndcOffset = ... * basisViewport * 2.0 * ...`). In every custom render
+sequence tested — calling `Viewer.update()` every frame (as the product's own
+`SplatSceneLoader`/`SplatViewport` do), then calling `Viewer.render()` once
+directly, then calling `Viewer.updateForRendererSizeChanges()` directly — the
+live splat mesh material's `viewport`, `basisViewport` and `focal` uniforms
+all stayed `[0, 0]`. A zeroed `basisViewport` collapses every splat quad to a
+single point, which is indistinguishable from "no splats" in a rasterizer.
+Reading the library source (`node_modules/@mkkellogg/gaussian-splats-3d`,
+0.4.7, MIT) confirms these uniforms are meant to be set by
+`SplatMesh.updateUniforms()`, called from `Viewer.prototype.updateSplatMesh()`,
+called from `Viewer.prototype.update(renderer, camera)` — the very method
+called every frame here. Why the values did not stick in this custom
+compositing sequence was not isolated within the Phase 0 budget; candidates
+include a material/mesh rebuild replacing the patched reference, or an
+undocumented dependency between `update()` and the library's own `render()`
+closure. This is deferred to Phase 1, not resolved here — consistent with
+Phase 0 being a cheap, abandonable spike rather than an implementation phase.
+
+**What this changes for Phase 1:** driving `renderer.render(mesh, camera)`
+directly, outside the library's own `Viewer.render()`, is not a safe
+composition point — this spike proves it concretely rather than assuming it.
+The more promising route for Phase 1 is monkey-patching
+`Viewer.prototype.render` itself (the one place these uniforms are confirmed
+valid) to inject the depth-only pre-pass immediately before the library's own
+colour draw, rather than reimplementing the update/render sequence externally.
+That keeps the same one-uniform, thirty-line shader patch from §3(a); only the
+call site changes.
+
+**What this does not change:** the underlying premise survives. The vertex
+shader genuinely does carry usable per-splat depth (`ndcCenter.z`, constant
+across each quad, confirmed by reading the source), the library is MIT
+licensed and its fragment shader is patchable, and `before` mode proves the
+whole load/render pipeline works. The obstacle found is a call-sequencing
+integration detail, not a dead end.
+
+**Environment note, unrelated to the finding above:** headless Playwright
+capture (`scripts/capture_showcase.mjs`) was unreliable on this workstation for
+this page, intermittently hitting `WEBGL_lose_context` under the sandboxed
+SwiftShader software renderer, independent of viewport size or device-pixel
+ratio. The interactive Browser pane did not show this. The `before` screenshot
+was captured headlessly and saved to
+`showcase/splat-occlusion-before.png`; the `after`/`depth` results above were
+confirmed and screenshotted interactively but are not saved as files, since
+headless capture of them was not reliable this session. Re-run
+`showcase:capture` once Phase 1's fix lands, when there will be an actual
+splat layer worth a saved screenshot.
 
 ---
 
