@@ -40,6 +40,13 @@ models/sam2/
 public/assets/fixtures/cache/
 *.gdtf
 
+# Fetched open-data venue layers (terrain grid, NAIP orthoimagery, OSM
+# vectors) for showcase/open-data-venue.html. About 1.2 MB per venue and
+# fully regenerable from public sources, so a local artifact per CLAUDE.md
+# §11. Repopulate with:
+#   npm run fetch:open-data
+public/assets/scans/open_data/
+
 # Python
 __pycache__/
 *.py[cod]
