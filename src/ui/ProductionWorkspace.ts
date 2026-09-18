@@ -549,6 +549,8 @@ el('continue-desktop').onclick = () => {
   el<HTMLDialogElement>('desktop-handoff').showModal();
   el('desktop-handoff').scrollTop = 0;
 };
+el('close-desktop-handoff').onclick = () => el<HTMLDialogElement>('desktop-handoff').close();
+el('handoff-export').onclick = () => run(exportProject);
 async function loadStageShowcase(): Promise<void> {
   if (dirty && !confirm('Load the concert stage showcase? Any unsaved changes to the current project will be replaced.')) return;
   notice('Loading concert stage showcase…');
