@@ -7,7 +7,7 @@ a pickle beside the vector store.
 
 Everything runs on the workstation with no server processes. The ChromaDB
 collection persists to `.memory/chroma/`; the graph pickle to
-`.memory/graph.pickle`. Both live outside the tracked tree per CLAUDE.md §11.
+`.memory/graph.pickle`. Both live outside the tracked tree per CLAUDE.md sec. 11.
 
 Usage:
     python scripts/memory/ingest.py                    # incremental upsert
@@ -76,6 +76,154 @@ def is_text_file(path: Path) -> bool:
     if path.name in INDEXED_ROOT_FILES:
         return True
     return False
+
+
+def determine_platform(path_str: str) -> str:
+    """Which platform a file belongs to -- web (src/vitest side), native
+    (UE5.8/C++), tooling (dev-time scripts, not shipped to either platform),
+    docs, or external (Drive-sourced, belongs to neither platform's source
+    tree). Coarse and directory-based on purpose: this is a retrieval hint,
+    not a build-system classification."""
+    lower = path_str.lower().replace("\\", "/")
+    top = lower.split("/", 1)[0]
+    if top == "native":
+        return "native"
+    if top == ".agents" or top == "docs":
+        return "docs"
+    if top in ("src", "tests", "showcase"):
+        return "web"
+    if top == "scripts":
+        return "tooling"
+    if path_str in ("package.json", "index.html"):
+        return "web"
+    if path_str in ("CLAUDE.md", "README.md", "AGENTS.md",
+                    "PRODUCTION_WORKSPACE_SPEC.md", "UE5_CONFORMANCE.md"):
+        return "docs"
+    return "docs"
+
+
+# Shared-constant entity nodes: a small, hand-maintained list rather than a
+# generalized symbol parser (see README's "Extending" section for why this
+# stays manual for now). Each carries its unit explicitly -- the whole point
+# is that a query should never hand back a bare, unit-less number for a
+# value CLAUDE.md defines in metres/degrees. `parity_status` distinguishes
+# CLAUDE.md's own documented-mirrored constants (sec. 3's snapping tolerances)
+# from the one open, unresolved divergence (sec. 1.1/sec. 2's site-anchor height) --
+# collapsing that distinction would be exactly the mistake sec. 1.1 warns against.
+SHARED_CONSTANT_ENTITIES = (
+    {
+        "name": "POINT_STATE_PARK_HEIGHT",
+        "unit": "metres, WGS84 ellipsoidal",
+        "web_value": 184.963,
+        "native_value": 186.6,
+        "native_value_confidence": "inferred from CLAUDE.md sec. 1.1 wording "
+            "('corrected from 186.6 m'); not directly confirmed in any "
+            "native/ source file as of this ingest",
+        "parity_status": "open",
+        "source": "CLAUDE.md sec. 1.1, sec. 2; src/geo/GeoAnchor.ts (POINT_STATE_PARK)",
+    },
+    {
+        "name": "POINT_STATE_PARK_LATITUDE",
+        "unit": "degrees, signed (north positive)",
+        "web_value": 40.4417,
+        "native_value": None,
+        "native_value_confidence": "not separately tracked; assumed shared "
+            "per CLAUDE.md sec. 1.1's shared-numeric-constants rule",
+        "parity_status": "assumed-shared",
+        "source": "CLAUDE.md sec. 2; src/geo/GeoAnchor.ts (POINT_STATE_PARK)",
+    },
+    {
+        "name": "POINT_STATE_PARK_LONGITUDE",
+        "unit": "degrees, signed (west negative)",
+        "web_value": -80.0075,
+        "native_value": None,
+        "native_value_confidence": "not separately tracked; assumed shared "
+            "per CLAUDE.md sec. 1.1's shared-numeric-constants rule",
+        "parity_status": "assumed-shared",
+        "source": "CLAUDE.md sec. 2; src/geo/GeoAnchor.ts (POINT_STATE_PARK)",
+    },
+    {
+        "name": "SNAP_THRESHOLD_METERS",
+        "unit": "metres",
+        "web_value": 0.15,
+        "native_value": 0.15,
+        "native_value_confidence": "documented as mirrored in CLAUDE.md sec. 3's "
+            "table; not independently verified against native/ source",
+        "parity_status": "documented-mirrored",
+        "source": "CLAUDE.md sec. 3; src/engine/SocketSnappingEngine.ts",
+    },
+    {
+        "name": "SNAP_ANGLE_RADIANS",
+        "unit": "degrees (angular CAPTURE WINDOW -- not the detent step)",
+        "web_value": 15,
+        "native_value": 15,
+        "native_value_confidence": "documented as mirrored in CLAUDE.md sec. 3's "
+            "table; not independently verified against native/ source",
+        "parity_status": "documented-mirrored",
+        "source": "CLAUDE.md sec. 3",
+    },
+    {
+        "name": "DETENT_STEP_RADIANS",
+        "unit": "degrees (roll DETENT STEP -- not the capture window)",
+        "web_value": 90,
+        "native_value": 90,
+        "native_value_confidence": "documented as mirrored in CLAUDE.md sec. 3's "
+            "table; not independently verified against native/ source",
+        "parity_status": "documented-mirrored",
+        "source": "CLAUDE.md sec. 3",
+    },
+)
+
+
+def add_entity_nodes(graph: nx.DiGraph) -> None:
+    for entity in SHARED_CONSTANT_ENTITIES:
+        graph.add_node(
+            f"entity::{entity['name']}",
+            kind="entity",
+            **entity,
+        )
+
+
+# Cross-platform parity edges: web file <-> native file pairs that implement
+# the SAME documented contract (CLAUDE.md sec. 16's coordinate-boundary table),
+# sourced only from that table -- never inferred from filename similarity.
+# `query.py --with-neighbors` labels these distinctly from ordinary `imports`
+# edges and always prints the manual-verification caveat, because a graph
+# edge here means "these two files implement the same documented contract",
+# never "this has been checked equal" -- native conformance stays manual per
+# docs/r0/UE5_CONFORMANCE.md regardless of what the graph can discover.
+MANUAL_VERIFICATION_CAVEAT = (
+    "parity edge: same documented contract (CLAUDE.md sec. 16), NOT independently "
+    "verified equal -- native conformance is manual-only per docs/r0/UE5_CONFORMANCE.md"
+)
+
+PARITY_EDGES = (
+    (
+        "src/domain/ProjectTransforms.ts",
+        "native/SpatialPrevis/Source/SpatialPrevisCore/Public/SpatialPrevisCoordinates.h",
+        "coordinate-boundary codec: position/direction/quaternion conversion "
+        "(CLAUDE.md sec. 16's axes/units/quaternion table)",
+    ),
+    (
+        "src/domain/ProjectTransforms.ts",
+        "native/SpatialPrevis/Source/SpatialPrevisCore/Public/SpatialPrevisUnrealTransform.h",
+        "coordinate-boundary codec: FTransform construction wrapping "
+        "SpatialPrevisCoordinates' conversion functions",
+    ),
+)
+
+
+def add_parity_edges(graph: nx.DiGraph) -> None:
+    for web_path, native_path, note in PARITY_EDGES:
+        if web_path not in graph or native_path not in graph:
+            # One or both files are missing from this ingest (e.g. native/
+            # wasn't checked out, or the file moved) -- skip rather than add
+            # a dangling edge to a node that was never indexed.
+            continue
+        graph.add_edge(web_path, native_path, kind="parity", note=note,
+                       caveat=MANUAL_VERIFICATION_CAVEAT)
+        graph.add_edge(native_path, web_path, kind="parity", note=note,
+                       caveat=MANUAL_VERIFICATION_CAVEAT)
 
 
 def determine_category(path_str: str) -> str:
@@ -237,7 +385,9 @@ def main() -> int:
             continue
         file_count += 1
         category = determine_category(rel)
-        graph.add_node(rel, kind="file", origin=origin, category=category, suffix=path.suffix.lower())
+        platform = determine_platform(rel)
+        graph.add_node(rel, kind="file", origin=origin, category=category,
+                       platform=platform, suffix=path.suffix.lower())
         for target in imports_from(text):
             graph.add_edge(rel, target, kind="imports")
         for start, end, body in chunk_lines(text):
@@ -248,6 +398,7 @@ def main() -> int:
                 "path": rel,
                 "origin": origin,
                 "category": category,
+                "platform": platform,
                 "start_line": start,
                 "end_line": end,
                 "suffix": path.suffix.lower(),
@@ -278,7 +429,8 @@ def main() -> int:
             file_count += 1
             drive_file_count += 1
             category = determine_category(display_path)
-            graph.add_node(display_path, kind="drive_doc", origin="drive", category=category, suffix=path.suffix.lower())
+            graph.add_node(display_path, kind="drive_doc", origin="drive", category=category,
+                           platform="external", suffix=path.suffix.lower())
             for start, end, body in chunk_lines(text):
                 chunk_id = f"drive::{display_path}#{start}-{end}#{content_hash(body)}"
                 batch_ids.append(chunk_id)
@@ -287,6 +439,7 @@ def main() -> int:
                     "path": display_path,
                     "origin": origin,
                     "category": category,
+                    "platform": "external",
                     "start_line": start,
                     "end_line": end,
                     "suffix": path.suffix.lower(),
@@ -297,6 +450,9 @@ def main() -> int:
                     flush()
 
     flush()
+
+    add_entity_nodes(graph)
+    add_parity_edges(graph)
 
     with graph_path.open("wb") as handle:
         pickle.dump(graph, handle)

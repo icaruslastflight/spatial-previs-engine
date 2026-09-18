@@ -79,3 +79,65 @@ jobs:
 
       - name: Splat clean-up self-test
         run: python3 scripts/cleanup_splat.py --self-test
+
+  # scripts/memory/ and scripts/ai-tools/ had zero CI coverage before this --
+  # the byte-compile above only globs scripts/*.py, one directory level, so
+  # neither subdirectory was ever touched. This runs the real ingest/query
+  # round-trip against the actual checked-out repo (not a synthetic fixture):
+  # on this ubuntu-latest runner the Drive roots in ingest.py are Windows
+  # paths that simply don't exist, so Drive ingestion self-skips with no
+  # extra flag needed, and metaprompt.py's Anthropic API call is never
+  # exercised beyond byte-compile (no ANTHROPIC_API_KEY is set here).
+  memory-stack:
+    name: Memory-stack scripts (scripts/memory, scripts/ai-tools)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -r scripts/memory/requirements.txt
+          pip install -r scripts/ai-tools/requirements.txt
+
+      - name: Byte-compile memory-stack and ai-tools scripts
+        run: python3 -m py_compile scripts/memory/*.py scripts/ai-tools/*.py
+
+      - name: Ingest this repo into a throwaway .memory/ index
+        run: python3 scripts/memory/ingest.py --rebuild --quiet
+
+      - name: Shared-constant entity lookup returns unit-tagged values
+        run: |
+          out="$(python3 scripts/memory/query.py --entity POINT_STATE_PARK_HEIGHT)"
+          echo "$out"
+          echo "$out" | grep -q "184.963"
+          echo "$out" | grep -q "open"
+
+      - name: Cross-platform parity edge exists between web/native boundary files
+        run: |
+          python3 - <<'PYEOF'
+          import pickle, sys
+          with open(".memory/graph.pickle", "rb") as f:
+              graph = pickle.load(f)
+          web = "src/domain/ProjectTransforms.ts"
+          native = "native/SpatialPrevis/Source/SpatialPrevisCore/Public/SpatialPrevisCoordinates.h"
+          edge = graph.get_edge_data(web, native)
+          assert edge is not None, f"expected a parity edge {web} -> {native}"
+          assert edge.get("kind") == "parity", edge
+          assert "caveat" in edge, "parity edge must carry the manual-verification caveat"
+          print("OK:", edge["note"])
+          PYEOF
+
+      - name: Vector search returns a well-formed result
+        # Asserts the pipeline runs end-to-end (a real match with a path:line
+        # citation), not which file ranks first -- MiniLM cosine similarity
+        # doesn't reliably rank an exact symbol's defining file at #1 (that's
+        # the README's own "retrieval, not reasoning" caveat), so pinning this
+        # to a specific filename would be a flaky assertion, not a real check.
+        run: |
+          out="$(python3 scripts/memory/query.py -k 3 "detent step radians roll quantize")"
+          echo "$out"
+          echo "$out" | grep -qE '\[[0-9]+\] .+:[0-9]+-[0-9]+'
