@@ -98,6 +98,21 @@ try {
   // Capture each real workspace after the tested connection is committed.
   for (const workspace of ['Build', 'Map', 'Connect', 'Check', 'Deliver']) {
     await page.locator(`[data-workspace=${workspace}]`).click();
+    if (workspace === 'Map') {
+      assert.equal(await page.locator('#view-title').textContent(), 'Video & Pixel Mapping');
+      assert.equal(await page.locator('#cam-orbit').isVisible(), true);
+      assert.equal(await page.locator('#cam-front').isVisible(), true);
+      assert.equal(await page.locator('#cam-screen').isVisible(), true);
+      assert.equal(await page.locator('#cam-top').isVisible(), true);
+      await page.locator('#cam-front').click();
+      await page.locator('#cam-orbit').click();
+      await page.locator('[data-map-tab="led"]').click();
+      assert.equal(await page.locator('#pitch-select').isVisible(), true);
+      await page.locator('[data-map-tab="dmx"]').click();
+      assert.equal(await page.locator('#export-dmx-pixels').isVisible(), true);
+      await page.locator('[data-map-tab="screens"]').click();
+      await page.locator('[data-vsrc="smpte"]').click();
+    }
     if (workspace === 'Check') await page.locator('#run-check').click();
     // ResizeObserver clears the WebGL buffer; let the live render loop redraw it.
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve)))));
@@ -168,6 +183,7 @@ try {
   await phone.locator('#desktop-url').fill(desktopAddress);
   await phone.locator('#desktop-url-form button[type=submit]').tap();
   await phone.locator('#close-desktop-handoff').tap();
+  assert.equal(await phone.locator('#desktop-handoff').isVisible(), false);
   await phone.reload(); await phone.waitForSelector('body[data-ready="true"]');
   await phone.locator('#continue-desktop').tap();
   assert.equal(await phone.locator('#desktop-url').inputValue(), desktopAddress);
@@ -223,4 +239,4 @@ try {
     screenshots: ['desktop', 'build', 'map', 'connect', 'check', 'deliver', 'phone', 'phone-inspector', 'phone-handoff'].map(name => `${output}/r0-${name}.png`) };
   await writeFile(`${output}/results.json`, JSON.stringify(result, null, 2));
   console.log(JSON.stringify(result, null, 2));
-} finally { await browser?.close(); server?.kill(); }
+} finally { await browser?.close(); server?.kill(); process.exit(0); }

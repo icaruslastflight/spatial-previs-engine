@@ -2,9 +2,11 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { engineLoop, TICK_PRIORITY } from '../core/EngineLoop.ts';
-import type { ProductionProject } from '../domain/ProductionProject.ts';
+import type { ProductionProject, Surface } from '../domain/ProductionProject.ts';
 import { liftSockets, prepareSceneMove } from './ProductionScene.ts';
 import type { SceneMove } from './ProductionScene.ts';
+import { createEdmLoop, createSmpteBars, createPixelGrid, createGradientSweep } from '../assets/VideoWallContent.ts';
+import type { VideoWallContent } from '../assets/VideoWallContent.ts';
 
 export interface CatalogAsset { id: string; name: string; category: string; url: string }
 
@@ -17,6 +19,10 @@ export class ProductionViewport {
   get scene() { return this.#scene; }
   get camera() { return this.#camera; }
   #layer = new THREE.Group();
+  #screenLayer = new THREE.Group();
+  #screenMeshes = new Map<string, THREE.Mesh>();
+  #videoContent: VideoWallContent | null = null;
+  #videoSourceType: 'edm' | 'smpte' | 'grid' | 'gradient' = 'edm';
   #highlight = new THREE.BoxHelper(new THREE.Object3D(), 0xe4bf79);
   #templates = new Map<string, Promise<THREE.Object3D>>();
   #objects = new Map<string, THREE.Object3D>();
@@ -35,7 +41,8 @@ export class ProductionViewport {
     this.#renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     this.#renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     this.#renderer.setClearColor(0x232827);
-    this.#scene.add(this.#layer, this.#highlight, new THREE.HemisphereLight(0xe3e9e8, 0x444843, 2.8));
+    this.#videoContent = createEdmLoop({ bpm: 128, width: 1024 });
+    this.#scene.add(this.#layer, this.#screenLayer, this.#highlight, new THREE.HemisphereLight(0xe3e9e8, 0x444843, 2.8));
     const sun = new THREE.DirectionalLight(0xfff1d7, 3); sun.position.set(8, 12, 6); this.#scene.add(sun);
     const grid = new THREE.GridHelper(40, 40, 0x68716b, 0x414843); grid.position.y = -0.01; this.#scene.add(grid);
     this.#camera.position.set(7, 6, 9);
@@ -59,6 +66,10 @@ export class ProductionViewport {
     const pick = (e: PointerEvent) => {
       let object: THREE.Object3D | null = ray(e).intersectObjects(this.#layer.children, true)[0]?.object ?? null;
       while (object && typeof object.userData['instance_id'] !== 'string') object = object.parent;
+      if (!object) {
+        const screenHit = ray(e).intersectObjects(this.#screenLayer.children, true)[0]?.object ?? null;
+        if (screenHit && typeof screenHit.userData['surface_id'] === 'string') return screenHit;
+      }
       return object;
     };
     const restore = () => {
@@ -115,10 +126,17 @@ export class ProductionViewport {
       }
       if (!this.#interactionReady || e.button !== 0 || multiple || Math.hypot(e.clientX - start[0], e.clientY - start[1]) > 6) return;
       const object = pick(e);
-      if (object) select(object.userData['instance_id'] as string);
+      if (object) {
+        const id = (object.userData['instance_id'] || object.userData['surface_id']) as string | undefined;
+        if (id) select(id);
+      }
     }, true);
     document.addEventListener('keydown', e => { if (e.key === 'Escape') { this.#cancelDrag(); notify('Gesture canceled; project unchanged'); } });
-    engineLoop.register(TICK_PRIORITY.RENDER, () => { this.#controls.update(); this.#renderer.render(this.#scene, this.#camera); });
+    engineLoop.register(TICK_PRIORITY.RENDER, () => {
+      this.#videoContent?.update(performance.now() / 1000);
+      this.#controls.update();
+      this.#renderer.render(this.#scene, this.#camera);
+    });
     engineLoop.start();
   }
   #resize(): void {
@@ -156,7 +174,44 @@ export class ProductionViewport {
     for (const { object, id } of loaded) { layer.add(object); objects.set(id, object); }
     // Replacement happens only once all assets exist. A failed or obsolete load keeps the previous scene.
     this.#scene.remove(this.#layer); this.#layer = layer; this.#objects = objects; this.#scene.add(layer);
-    layer.updateMatrixWorld(true); this.select(this.#selected);
+    layer.updateMatrixWorld(true);
+
+    // Synchronize display screen surfaces for video & pixel mapping
+    const screenLayer = new THREE.Group();
+    const screenMeshes = new Map<string, THREE.Mesh>();
+    const surfaces = project.records.filter((r): r is Surface => r.kind === 'surface');
+    const texture = this.#videoContent?.texture ?? null;
+
+    for (const surface of surfaces) {
+      if (surface.shape === 'plane') {
+        const width = surface.width.status === 'known' ? surface.width.value : 4.0;
+        const height = surface.height.status === 'known' ? surface.height.value : 2.5;
+        const geom = new THREE.PlaneGeometry(width, height);
+        const mat = new THREE.MeshStandardMaterial({
+          map: texture,
+          emissiveMap: texture,
+          emissive: new THREE.Color(0xffffff),
+          emissiveIntensity: 1.35,
+          roughness: 0.35,
+          metalness: 0.1,
+          side: THREE.DoubleSide,
+        });
+        const mesh = new THREE.Mesh(geom, mat);
+        mesh.userData['surface_id'] = surface.id;
+        mesh.position.fromArray(surface.transform.position);
+        mesh.quaternion.fromArray(surface.transform.rotation);
+        mesh.translateZ(0.05);
+        screenLayer.add(mesh);
+        screenMeshes.set(surface.id, mesh);
+      }
+    }
+    this.#scene.remove(this.#screenLayer);
+    this.#screenLayer = screenLayer;
+    this.#screenMeshes = screenMeshes;
+    this.#scene.add(screenLayer);
+    screenLayer.updateMatrixWorld(true);
+
+    this.select(this.#selected);
     this.#project = structuredClone(project); this.#interactionReady = true;
     return true;
   }
@@ -170,7 +225,7 @@ export class ProductionViewport {
   }
   select(id: string | null): void {
     this.#selected = id;
-    const object = id ? this.#objects.get(id) : undefined;
+    const object = id ? (this.#objects.get(id) || this.#screenMeshes.get(id)) : undefined;
     this.#highlight.visible = !!object;
     if (object) this.#highlight.setFromObject(object);
   }
@@ -183,11 +238,70 @@ export class ProductionViewport {
     this.#controls.update();
   }
   plan(enabled: boolean): void {
-    if (enabled === this.#plan) return;
     this.#plan = enabled;
-    this.#controls.enableRotate = !enabled;
-    if (enabled) this.#camera.position.copy(this.#controls.target).add(new THREE.Vector3(0, 18, 0.001));
-    else this.#camera.position.copy(this.#controls.target).add(new THREE.Vector3(7, 6, 9));
+    // Map mode keeps viewport fully movable (rotation enabled)
+    this.#controls.enableRotate = true;
+    if (enabled) {
+      this.setCameraView('front');
+    }
+  }
+  setCameraView(view: 'orbit' | 'front' | 'top' | 'screen'): void {
+    const box = this.#layer.children.length
+      ? new THREE.Box3().setFromObject(this.#layer)
+      : new THREE.Box3(new THREE.Vector3(-4, 0, -4), new THREE.Vector3(4, 4, 4));
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const radius = Math.max(size.length(), 4);
+
+    if (view === 'front') {
+      // Front elevation: looking directly at vertical screens / stage
+      this.#controls.target.set(center.x, Math.max(center.y, 2.2), center.z);
+      this.#camera.position.set(center.x, Math.max(center.y, 2.2), center.z + Math.max(size.x, size.y, 4) * 1.5);
+    } else if (view === 'top') {
+      // Overhead plan view with rotation still fully movable
+      this.#controls.target.copy(center);
+      this.#camera.position.set(center.x, center.y + radius * 1.6, center.z + 0.001);
+    } else if (view === 'screen') {
+      if (this.#screenLayer.children.length > 0) {
+        const screenBox = new THREE.Box3().setFromObject(this.#screenLayer);
+        const sCenter = screenBox.getCenter(new THREE.Vector3());
+        const sSize = screenBox.getSize(new THREE.Vector3());
+        this.#controls.target.copy(sCenter);
+        this.#camera.position.set(sCenter.x, sCenter.y, sCenter.z + Math.max(sSize.x, sSize.y, 2.5) * 1.35);
+      } else {
+        this.#controls.target.set(center.x, Math.max(center.y, 2.2), center.z);
+        this.#camera.position.set(center.x, Math.max(center.y, 2.2), center.z + radius * 1.2);
+      }
+    } else {
+      // 3D perspective orbit
+      this.#controls.target.copy(center);
+      this.#camera.position.set(center.x + radius * 0.75, center.y + radius * 0.6, center.z + radius * 0.85);
+    }
     this.#controls.update();
+  }
+  setVideoSource(type: 'edm' | 'smpte' | 'grid' | 'gradient', label?: string): void {
+    this.#videoSourceType = type;
+    this.#videoContent?.dispose();
+    if (type === 'smpte') {
+      this.#videoContent = createSmpteBars();
+    } else if (type === 'grid') {
+      this.#videoContent = createPixelGrid({ label });
+    } else if (type === 'gradient') {
+      this.#videoContent = createGradientSweep();
+    } else {
+      this.#videoContent = createEdmLoop({ bpm: 128, width: 1024 });
+    }
+    this.#videoContent.update(performance.now() / 1000);
+    const texture = this.#videoContent.texture;
+    texture.needsUpdate = true;
+    for (const mesh of this.#screenMeshes.values()) {
+      const mat = mesh.material as THREE.MeshStandardMaterial;
+      mat.map = texture;
+      mat.emissiveMap = texture;
+      mat.needsUpdate = true;
+    }
+  }
+  getVideoSource(): 'edm' | 'smpte' | 'grid' | 'gradient' {
+    return this.#videoSourceType;
   }
 }

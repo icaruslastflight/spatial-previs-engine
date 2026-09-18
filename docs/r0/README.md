@@ -29,8 +29,10 @@ worker, which is disabled in Vite dev. Windows preflight is available at
 | CORE-02 | Atomic commands, stale revision and duplicate-key rejection, permissions and endpoint locks, detached previews, cancel, monotonic undo/redo. |
 | CORE-03 | IndexedDB compare-and-swap saves and atomic active-project pointer; explicit project-v1 migration; persistent history, renderer reconciliation and immutable issued bytes. |
 | CORE-04 | Named check model/version, exact-input SHA-256 hashes, five result states, dependency invalidation and human authorization boundary. |
-| UI-01 | Linked Build / Map / Connect / Check / Deliver contexts; catalog search, selection, numeric editing, drag/snaps, unlink, locks, removal previews and JSON recovery. |
+| UI-01 | Linked Build / Map / Connect / Check / Operations / Deliver contexts; Map provides movable 3D viewport, camera presets (3D Orbit, Front, Screens, Top), screen surface video mapping (EDM loop, SMPTE bars, pixel grid, RGB sweep), LED pitch calculations, and DMX pixel patch; catalog search, selection, numeric editing, drag/snaps, unlink, locks, removal previews and JSON recovery. |
 | AI-01 | Strict read-only `scene.summary` and `scene.inspect` tools; detached evidence with revision, sources, unknown values and freshly checked input hashes. No model account required. |
+| MEM-01 | Multi-tier $0 memory architecture: local ChromaDB ONNX vector store (`.memory/chroma/`), NetworkX file import graph (`.memory/graph.pickle`), in-engine `VectorMemoryStore` and `SessionMemoryStore` (`src/memory/`), and workspace agent lifecycle rules/skills (`.agents/rules/memory.md`, `elite-agent-memory-system`, `rag-implementation`, `spatial-previs-memory`). |
+| MCP-01 | Express JSON-RPC 2.0 API gateway (`src/mcp/server.ts`) and stdio server (`scripts/memory/mcp_memory_server.py`) exposing `previs/getSceneGraph`, `previs/snapAsset`, `previs/triggerDMXCue`, `previs/getElectricalStatus`, `vector_memory_search`, and session lifecycle tools. |
 | QA-01 | Domain/scene regressions, redacted diagnostic replay, browser acceptance script, Windows preflight and native evidence checklist. |
 
 Only recorded-data presence is calculated. Populated data does not establish

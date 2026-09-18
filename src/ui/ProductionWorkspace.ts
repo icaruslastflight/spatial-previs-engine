@@ -21,14 +21,14 @@ root.innerHTML = `<header class="project-bar"><div class="wordmark"><span class=
   <nav class="workspace-nav" aria-label="Workspace">${['Build', 'Map', 'Connect', 'Check', 'Operations', 'Deliver'].map((name, i) => `<button data-workspace="${name}" aria-pressed="${i === 0}"><span>0${i + 1}</span>${name}</button>`).join('')}</nav>
   <div class="command-bar"><button id="save">Save project</button><button id="open">Open file</button><button id="export">Export project</button><span class="separator"></span><button id="undo" disabled>Undo</button><button id="redo" disabled>Redo</button><button id="equipment-toggle" aria-expanded="false">Equipment</button><button id="inspector-toggle" aria-expanded="false">Inspector</button><button id="continue-desktop" aria-haspopup="dialog">Continue on desktop</button><button id="launch-showcase-btn" title="Launch concert stage showcase with Claypaky Sharpy rig and EDM video wall">Stage showcase</button></div>
   <main class="work-area"><aside class="equipment"><h2>Equipment</h2><label class="search-label">Search catalog<input id="search" type="search" placeholder="Truss, panel, speaker…"></label><label>Category<select id="category"><option value="">All categories</option></select></label><div id="catalog" class="catalog"></div><div class="section-heading"><h2>Scene</h2><span id="scene-count">0 objects</span></div><div id="scene-list" class="scene-list"></div></aside>
-  <section class="center"><div class="view-heading"><div><h1 id="view-title">Build the production</h1><p id="view-subtitle">Local scene · metres · optional venue context</p></div><button id="frame">Frame all</button></div>
+  <section class="center"><div class="view-heading"><div><h1 id="view-title">Build the production</h1><p id="view-subtitle">Local scene · metres · optional venue context</p></div><div class="view-controls"><div id="camera-presets" class="button-group"><button id="cam-orbit" type="button" title="3D Free Orbit Perspective">3D Orbit</button><button id="cam-front" type="button" title="Front Screen Elevation View">Front</button><button id="cam-screen" type="button" title="Frame Video Screens">Screens</button><button id="cam-top" type="button" title="Top Plan View">Top</button></div><button id="frame">Frame all</button></div></div>
   <div class="viewport"><canvas id="scene-canvas" aria-label="Production 3D scene"></canvas><div id="empty-scene"><strong>A venue starts with your design</strong><span>Add equipment from the catalog. A map or point cloud can come later.</span></div><span class="view-note">Catalog geometry is a planning placeholder</span><span id="render-status" role="status"></span></div>
   <section id="workspace-panel" class="workspace-panel"></section></section>
   <aside class="inspector"><h2>Inspector</h2><div id="inspector-content"></div></aside></main>
   <section id="proposal" hidden aria-label="Proposed changes"></section>
   <footer><span id="notice" role="status">Opening local project…</span><span id="save-status">Unsaved</span><span class="gate">R0 preview · desktop conformance pending</span></footer>
   <input id="file-input" type="file" accept=".json,application/json" hidden>
-  <dialog id="desktop-handoff" aria-labelledby="desktop-handoff-title" aria-describedby="desktop-handoff-summary">
+  <dialog id="desktop-handoff" closedby="any" aria-labelledby="desktop-handoff-title" aria-describedby="desktop-handoff-summary">
     <div class="handoff-heading"><h2 id="desktop-handoff-title">Continue on desktop</h2><button id="close-desktop-handoff" aria-label="Close desktop handoff" autofocus>Close</button></div>
     <p id="desktop-handoff-summary">Keep working here, or connect to your desktop for the tools and scene detail available there.</p>
     <ol class="handoff-steps"><li><h3>Keep a complete backup</h3><p>Export the current project, checks, edit history and stored issued snapshots. Your edits stay here.</p><button id="handoff-export">Export project backup</button></li>
@@ -54,6 +54,8 @@ let store = new ProjectStore(createProject('local-production'), authorizer);
 let generation: number | null = null, selected: string | null = null, workspace = 'Build';
 let catalog: CatalogAsset[] = [], viewport: ProductionViewport | null = null;
 let operationsSubTab: 'Inventory' | 'Crew' | 'Vendors' = 'Inventory';
+let mapSubTab: 'screens' | 'led' | 'dmx' = 'screens';
+let selectedPitch = 3.91;
 let cablingInspector: CablingInspector | null = null;
 let preview: Preview | null = null, dirty = false, serial = 0, busy = false;
 let isDemo = new URLSearchParams(window.location.search).has('demo');
@@ -220,36 +222,287 @@ function renderPanel(): void {
     const instances = state.project.records.filter((r): r is AssetInstance => r.kind === 'asset_instance');
     const surfaces = state.project.records.filter((r): r is Surface => r.kind === 'surface');
     const mappings = state.project.records.filter((r): r is RasterMapping => r.kind === 'raster_mapping');
-    
-    panel.innerHTML = `<h2>Content Mapping</h2>
-      <p>Plan view shares the selected equipment and its exact metre coordinates. Group LED panels to define a surface, then map a video raster to it.</p>
-      
-      <h3>1. Define Surface</h3>
-      <form id="create-surface">
-        <p class="muted">Select equipment to group into a display surface.</p>
-        <div class="checkbox-list">
-          ${instances.map(r => `<label style="display:block"><input type="checkbox" name="instances" value="${escape(r.id)}"> ${escape(r.label)}</label>`).join('')}
+    const currentVideo = viewport?.getVideoSource() ?? 'edm';
+
+    const subTabs = [
+      { id: 'screens', label: 'Screen & Video Mapping' },
+      { id: 'led', label: 'LED Pitch & Modules' },
+      { id: 'dmx', label: 'DMX Pixel Mapping' },
+    ];
+
+    let html = `
+      <div class="map-tabs" style="display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--border);padding-bottom:8px;">
+        ${subTabs.map(t => `<button type="button" class="sub-tab ${mapSubTab === t.id ? 'selected' : ''}" data-map-tab="${t.id}" style="font-size:12px;padding:6px 10px;min-height:34px;background:${mapSubTab === t.id ? 'var(--accent)' : 'transparent'};color:${mapSubTab === t.id ? '#171b19' : 'inherit'};border:1px solid ${mapSubTab === t.id ? 'var(--accent)' : 'var(--border)'};font-weight:${mapSubTab === t.id ? '600' : 'normal'};border-radius:4px;">${t.label}</button>`).join('')}
+      </div>
+    `;
+
+    if (mapSubTab === 'screens') {
+      html += `
+        <h2>Display Surfaces & Video Mapping</h2>
+        <p>Map real-time video loops, calibration patterns, and raster resolutions onto 3D display surfaces in the movable viewport.</p>
+        
+        <div style="background:rgba(228,191,121,0.08);border:1px solid rgba(228,191,121,0.25);border-radius:6px;padding:10px;margin-bottom:14px;">
+          <h4 style="margin:0 0 6px;color:var(--accent);">Live Screen Video Source / Test Pattern</h4>
+          <p style="margin:0 0 8px;font-size:11px;color:var(--muted);">Select test pattern or visual feed rendering live on the 3D screens in the movable viewport:</p>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;" id="video-source-buttons">
+            <button type="button" data-vsrc="edm" class="${currentVideo === 'edm' ? 'active-vsrc' : ''}" style="min-height:32px;font-size:11px;padding:4px 9px;border-radius:4px;border:1px solid ${currentVideo === 'edm' ? 'var(--accent)' : 'var(--border)'};background:${currentVideo === 'edm' ? '#d6b476' : '#272d29'};color:${currentVideo === 'edm' ? '#171b19' : 'inherit'};font-weight:600;">🎵 EDM Visual Loop</button>
+            <button type="button" data-vsrc="smpte" class="${currentVideo === 'smpte' ? 'active-vsrc' : ''}" style="min-height:32px;font-size:11px;padding:4px 9px;border-radius:4px;border:1px solid ${currentVideo === 'smpte' ? 'var(--accent)' : 'var(--border)'};background:${currentVideo === 'smpte' ? '#d6b476' : '#272d29'};color:${currentVideo === 'smpte' ? '#171b19' : 'inherit'};font-weight:600;">📺 SMPTE Color Bars</button>
+            <button type="button" data-vsrc="grid" class="${currentVideo === 'grid' ? 'active-vsrc' : ''}" style="min-height:32px;font-size:11px;padding:4px 9px;border-radius:4px;border:1px solid ${currentVideo === 'grid' ? 'var(--accent)' : 'var(--border)'};background:${currentVideo === 'grid' ? '#d6b476' : '#272d29'};color:${currentVideo === 'grid' ? '#171b19' : 'inherit'};font-weight:600;">📐 Pixel Grid & 1:1</button>
+            <button type="button" data-vsrc="gradient" class="${currentVideo === 'gradient' ? 'active-vsrc' : ''}" style="min-height:32px;font-size:11px;padding:4px 9px;border-radius:4px;border:1px solid ${currentVideo === 'gradient' ? 'var(--accent)' : 'var(--border)'};background:${currentVideo === 'gradient' ? '#d6b476' : '#272d29'};color:${currentVideo === 'gradient' ? '#171b19' : 'inherit'};font-weight:600;">🌈 RGB Sweep</button>
+          </div>
         </div>
-        <button type="submit" ${!instances.length ? 'disabled' : ''}>Group into Surface</button>
-      </form>
-      
-      <h3>2. Map Raster</h3>
-      <form id="create-raster">
-        <label>Surface
-          <select name="surfaceId" required>
-            ${surfaces.map(s => `<option value="${escape(s.id)}">${escape(s.label)}</option>`).join('')}
+
+        <h3>Active Display Surfaces</h3>
+        ${surfaces.length ? surfaces.map(s => {
+          const w = s.width.status === 'known' ? s.width.value : 4.0;
+          const h = s.height.status === 'known' ? s.height.value : 2.5;
+          const mapping = mappings.find(m => m.surfaceId === s.id);
+          const ratio = (w / h).toFixed(2);
+          return `
+            <div class="data-row" style="padding:10px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <strong>${escape(s.label)}</strong>
+                <small style="color:var(--muted);">${w}m × ${h}m · ${ratio}:1 aspect · ${mapping ? `${mapping.width}×${mapping.height}px mapped` : 'No raster'}</small>
+              </div>
+              <div style="display:flex;gap:6px;">
+                <button type="button" data-focus-surface="${escape(s.id)}" style="min-height:30px;font-size:11px;padding:4px 8px;">Frame</button>
+              </div>
+            </div>
+          `;
+        }).join('') : '<p class="empty-copy">No display surfaces defined yet. Group placed LED panels below.</p>'}
+
+        <h3 style="margin-top:16px;">Map Video Raster</h3>
+        <form id="create-raster" style="margin-top:8px;">
+          <label>Target Surface
+            <select name="surfaceId" required>
+              ${surfaces.map(s => `<option value="${escape(s.id)}">${escape(s.label)}</option>`).join('')}
+            </select>
+          </label>
+          <div style="width:100%;display:flex;gap:8px;margin-bottom:6px;">
+            <button type="button" class="preset-res" data-w="1920" data-h="1080" style="min-height:28px;font-size:11px;padding:3px 8px;">1080p FHD</button>
+            <button type="button" class="preset-res" data-w="3840" data-h="2160" style="min-height:28px;font-size:11px;padding:3px 8px;">4K UHD</button>
+            <button type="button" class="preset-res" data-w="1024" data-h="640" style="min-height:28px;font-size:11px;padding:3px 8px;">P3.91 Native</button>
+          </div>
+          <div class="coordinates">
+            <label>Width <span>px</span><input id="raster-w" name="width" type="number" min="1" step="1" value="1920" required></label>
+            <label>Height <span>px</span><input id="raster-h" name="height" type="number" min="1" step="1" value="1080" required></label>
+          </div>
+          <button type="submit" ${!surfaces.length ? 'disabled' : ''} style="margin-top:10px;font-size:12px;">Map Video Raster</button>
+        </form>
+
+        <h3 style="margin-top:18px;">Group Equipment into Surface</h3>
+        <form id="create-surface" style="margin-top:8px;">
+          <p class="muted" style="margin:0 0 6px;">Select equipment instances to group into an LED display plane:</p>
+          <div class="checkbox-list" style="max-height:140px;overflow:auto;border:1px solid var(--border);padding:6px;border-radius:4px;margin-bottom:8px;">
+            ${instances.map(r => `<label style="display:block;padding:2px 0;"><input type="checkbox" name="instances" value="${escape(r.id)}"> ${escape(r.label)}</label>`).join('')}
+          </div>
+          <button type="submit" ${!instances.length ? 'disabled' : ''} style="font-size:12px;">Group into Display Surface</button>
+        </form>
+      `;
+    } else if (mapSubTab === 'led') {
+      const surface = surfaces[0];
+      const w = surface && surface.width.status === 'known' ? surface.width.value : 4.0;
+      const h = surface && surface.height.status === 'known' ? surface.height.value : 2.5;
+      const area = (w * h).toFixed(2);
+      const pitchM = selectedPitch / 1000;
+      const nativeW = Math.round(w / pitchM);
+      const nativeH = Math.round(h / pitchM);
+      const totalPixels = nativeW * nativeH;
+      const cabCols = Math.max(1, Math.round(w / 0.5));
+      const cabRows = Math.max(1, Math.round(h / 0.5));
+      const totalCabs = cabCols * cabRows;
+      const cabPxW = Math.round(nativeW / cabCols);
+      const cabPxH = Math.round(nativeH / cabRows);
+      const gigPorts = Math.ceil(totalPixels / 650000);
+      const avgPowerKw = ((totalCabs * 150) / 1000).toFixed(1);
+      const maxPowerKw = ((totalCabs * 450) / 1000).toFixed(1);
+      const totalMassKg = (totalCabs * 9.5).toFixed(0);
+
+      html += `
+        <h2>LED Pixel Pitch & Hardware Calculator</h2>
+        <p>Calculate native LED resolutions, module matrices, controller data ports, and electrical specs.</p>
+        
+        <label>Pixel Pitch
+          <select id="pitch-select" style="margin-top:4px;">
+            <option value="1.9" ${selectedPitch === 1.9 ? 'selected' : ''}>P1.9 mm · Ultra Fine Pitch (Broadcast / Studio)</option>
+            <option value="2.5" ${selectedPitch === 2.5 ? 'selected' : ''}>P2.5 mm · High Density (Indoor Corporate / DJ)</option>
+            <option value="3.91" ${selectedPitch === 3.91 ? 'selected' : ''}>P3.91 mm · Concert Stage Touring Standard</option>
+            <option value="4.81" ${selectedPitch === 4.81 ? 'selected' : ''}>P4.81 mm · Touring Outdoor / Daytime Stage</option>
+            <option value="5.95" ${selectedPitch === 5.95 ? 'selected' : ''}>P5.95 mm · Large Arena / Festival Walls</option>
+            <option value="10.0" ${selectedPitch === 10.0 ? 'selected' : ''}>P10.0 mm · Stadium Perimeter / Mesh Scrim</option>
           </select>
         </label>
-        <div class="coordinates">
-          <label>Width <span>px</span><input name="width" type="number" min="1" step="1" value="1920" required></label>
-          <label>Height <span>px</span><input name="height" type="number" min="1" step="1" value="1080" required></label>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;">
+          <div style="background:var(--field);border:1px solid var(--border);border-radius:6px;padding:10px;">
+            <small style="color:var(--muted);text-transform:uppercase;">Physical Screen</small>
+            <strong style="font-size:16px;display:block;margin-top:4px;color:var(--accent);">${w}m × ${h}m</strong>
+            <small style="color:var(--muted);">${area} m² · ${(w/h).toFixed(2)}:1 aspect</small>
+          </div>
+          <div style="background:var(--field);border:1px solid var(--border);border-radius:6px;padding:10px;">
+            <small style="color:var(--muted);text-transform:uppercase;">Native Resolution</small>
+            <strong style="font-size:16px;display:block;margin-top:4px;color:var(--accent);">${nativeW} × ${nativeH} px</strong>
+            <small style="color:var(--muted);">${totalPixels.toLocaleString()} total LEDs</small>
+          </div>
+          <div style="background:var(--field);border:1px solid var(--border);border-radius:6px;padding:10px;">
+            <small style="color:var(--muted);text-transform:uppercase;">Cabinet Matrix</small>
+            <strong style="font-size:16px;display:block;margin-top:4px;color:var(--accent);">${cabCols}W × ${cabRows}H (${totalCabs} cabs)</strong>
+            <small style="color:var(--muted);">${cabPxW} × ${cabPxH} px per 500mm tile</small>
+          </div>
+          <div style="background:var(--field);border:1px solid var(--border);border-radius:6px;padding:10px;">
+            <small style="color:var(--muted);text-transform:uppercase;">1GbE Controller Ports</small>
+            <strong style="font-size:16px;display:block;margin-top:4px;color:var(--accent);">${gigPorts} Gigabit Ports</strong>
+            <small style="color:var(--muted);">NovaStar / Brompton 650k px/port</small>
+          </div>
         </div>
-        <button type="submit" ${!surfaces.length ? 'disabled' : ''}>Map Video Raster</button>
-      </form>
-      
-      <h3>Mapped Rasters</h3>
-      ${mappings.length ? mappings.map(m => `<div class="data-row"><span>${escape(m.label)} · ${m.width}x${m.height}px</span><button data-remove="${escape(m.id)}">Remove</button></div>`).join('') : '<p class="empty-copy">No video rasters mapped yet.</p>'}
-    `;
+
+        <div style="margin-top:14px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;padding:10px;">
+          <h4 style="margin:0 0 6px;">Power & Structural Load</h4>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">
+            <span style="color:var(--muted);">Average Draw:</span>
+            <strong>${avgPowerKw} kW (${(Number(avgPowerKw)*1000/230).toFixed(1)}A @ 230V)</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">
+            <span style="color:var(--muted);">Peak Inrush:</span>
+            <strong>${maxPowerKw} kW (${(Number(maxPowerKw)*1000/230).toFixed(1)}A @ 230V)</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;">
+            <span style="color:var(--muted);">Total Panel Weight:</span>
+            <strong>${totalMassKg} kg (${Math.round(Number(totalMassKg)*2.20462)} lbs)</strong>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;">
+          <button id="export-mapping-csv" style="font-size:12px;width:100%;">Download Video Mapping Schedule (CSV)</button>
+        </div>
+      `;
+    } else if (mapSubTab === 'dmx') {
+      const mapping = mappings[0] || { width: 1920, height: 1080 };
+      const fixtures = instances.filter(i => i.label.toLowerCase().includes('bar') || i.label.toLowerCase().includes('colorstrip') || i.definitionId.includes('strobe') || i.definitionId.includes('colorstrip'));
+      const fixtureCount = Math.max(fixtures.length, 8);
+      const zonesPerFixture = 4;
+      const channelsPerZone = 3; // RGB
+      const totalChannels = fixtureCount * zonesPerFixture * channelsPerZone;
+      const universes = Math.ceil(totalChannels / 512);
+
+      html += `
+        <h2>DMX Pixel Mapping & Fixture Pixels</h2>
+        <p>Map raster video pixels onto addressable LED bars, tubes, and multi-cell fixtures.</p>
+        
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+          <div style="background:var(--field);border:1px solid var(--border);border-radius:6px;padding:10px;">
+            <small style="color:var(--muted);text-transform:uppercase;">Mapped Fixtures</small>
+            <strong style="font-size:16px;display:block;margin-top:4px;color:var(--accent);">${fixtureCount} Pixel Bars</strong>
+            <small style="color:var(--muted);">${fixtureCount * zonesPerFixture} Addressable RGB Zones</small>
+          </div>
+          <div style="background:var(--field);border:1px solid var(--border);border-radius:6px;padding:10px;">
+            <small style="color:var(--muted);text-transform:uppercase;">DMX Footprint</small>
+            <strong style="font-size:16px;display:block;margin-top:4px;color:var(--accent);">${totalChannels} Channels</strong>
+            <small style="color:var(--muted);">${universes} Art-Net / sACN Universe(s)</small>
+          </div>
+        </div>
+
+        <h3>Pixel Patch Table</h3>
+        <table style="margin-top:8px;font-size:11px;">
+          <thead>
+            <tr><th>Fixture</th><th>Universe</th><th>DMX Ch</th><th>Sample X,Y</th></tr>
+          </thead>
+          <tbody>
+            ${Array.from({ length: Math.min(fixtureCount, 8) }, (_, i) => {
+              const startCh = i * 12 + 1;
+              const u = Math.floor((startCh - 1) / 512) + 1;
+              const ch = ((startCh - 1) % 512) + 1;
+              const sampleX = Math.round((i / Math.max(1, fixtureCount - 1)) * mapping.width);
+              const sampleY = Math.round(mapping.height * 0.5);
+              return `
+                <tr>
+                  <td>${fixtures[i]?.label ?? `COLORstrip Pixel Bar #${i + 1}`}</td>
+                  <td>Univ ${u}</td>
+                  <td>${ch} - ${ch + 11}</td>
+                  <td>[${sampleX}, ${sampleY}]</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+
+        <div style="margin-top:14px;">
+          <button id="export-dmx-pixels" style="font-size:12px;width:100%;">Download DMX Pixel Patch (CSV)</button>
+        </div>
+      `;
+    }
+
+    panel.innerHTML = html;
+
+    panel.querySelectorAll<HTMLButtonElement>('[data-map-tab]').forEach(b => b.onclick = () => {
+      mapSubTab = b.dataset['mapTab'] as any;
+      renderPanel();
+    });
+
+    panel.querySelectorAll<HTMLButtonElement>('[data-vsrc]').forEach(b => b.onclick = () => {
+      viewport?.setVideoSource(b.dataset['vsrc'] as any);
+      renderPanel();
+      notice(`Live screen video source updated: ${b.dataset['vsrc']?.toUpperCase()}`);
+    });
+
+    panel.querySelectorAll<HTMLButtonElement>('.preset-res').forEach(b => b.onclick = () => {
+      const wInput = panel.querySelector<HTMLInputElement>('#raster-w');
+      const hInput = panel.querySelector<HTMLInputElement>('#raster-h');
+      if (wInput && hInput) {
+        wInput.value = b.dataset['w']!;
+        hInput.value = b.dataset['h']!;
+      }
+    });
+
+    panel.querySelectorAll<HTMLButtonElement>('[data-focus-surface]').forEach(b => b.onclick = () => {
+      select(b.dataset['focusSurface']!);
+      viewport?.setCameraView('screen');
+    });
+
+    const pitchSel = panel.querySelector<HTMLSelectElement>('#pitch-select');
+    if (pitchSel) {
+      pitchSel.onchange = () => {
+        selectedPitch = Number(pitchSel.value);
+        renderPanel();
+      };
+    }
+
+    panel.querySelector<HTMLButtonElement>('#export-mapping-csv')?.addEventListener('click', () => run(() => {
+      let csv = 'Surface Name,Shape,Width (m),Height (m),Area (m2),Pixel Pitch (mm),Native Width (px),Native Height (px),Total Pixels,Cabinet Matrix,Cabinet Count,Controller Ports (1GbE),Avg Power (kW),Peak Power (kW),Total Weight (kg)\n';
+      for (const s of surfaces) {
+        const w = s.width.status === 'known' ? s.width.value : 4.0;
+        const h = s.height.status === 'known' ? s.height.value : 2.5;
+        const pitchM = selectedPitch / 1000;
+        const nw = Math.round(w / pitchM);
+        const nh = Math.round(h / pitchM);
+        const tp = nw * nh;
+        const cols = Math.max(1, Math.round(w / 0.5));
+        const rows = Math.max(1, Math.round(h / 0.5));
+        const cabs = cols * rows;
+        const ports = Math.ceil(tp / 650000);
+        const avgKw = ((cabs * 150) / 1000).toFixed(1);
+        const peakKw = ((cabs * 450) / 1000).toFixed(1);
+        const mass = (cabs * 9.5).toFixed(0);
+        csv += `"${s.label}","${s.shape}",${w},${h},${(w*h).toFixed(2)},${selectedPitch},${nw},${nh},${tp},"${cols}x${rows}",${cabs},${ports},${avgKw},${peakKw},${mass}\n`;
+      }
+      downloadCsv(csv, `video-mapping-schedule-r${state.project.revision}.csv`);
+    }));
+
+    panel.querySelector<HTMLButtonElement>('#export-dmx-pixels')?.addEventListener('click', () => run(() => {
+      let csv = 'Fixture,Universe,DMX Start,DMX End,Zones,Channels,Sample X,Sample Y\n';
+      const mapping = mappings[0] || { width: 1920, height: 1080 };
+      const fixtures = instances.filter(i => i.label.toLowerCase().includes('bar') || i.label.toLowerCase().includes('colorstrip') || i.definitionId.includes('strobe') || i.definitionId.includes('colorstrip'));
+      const count = Math.max(fixtures.length, 8);
+      for (let i = 0; i < count; i++) {
+        const startCh = i * 12 + 1;
+        const u = Math.floor((startCh - 1) / 512) + 1;
+        const ch = ((startCh - 1) % 512) + 1;
+        const sx = Math.round((i / Math.max(1, count - 1)) * mapping.width);
+        const sy = Math.round(mapping.height * 0.5);
+        csv += `"${fixtures[i]?.label ?? `COLORstrip Pixel Bar #${i + 1}`}",${u},${ch},${ch + 11},4,12,${sx},${sy}\n`;
+      }
+      downloadCsv(csv, `dmx-pixel-patch-r${state.project.revision}.csv`);
+    }));
 
     panel.querySelector<HTMLFormElement>('#create-surface')?.addEventListener('submit', event => {
       event.preventDefault();
@@ -262,7 +515,7 @@ function renderPanel(): void {
         const assemblyId = createRecordId('assembly');
         const ops: Operation[] = [
           { type: 'put', record: { id: assemblyId, kind: 'assembly', label: 'LED Wall Assembly', locked: false, instanceIds: selectedInstances } },
-          { type: 'put', record: { id: surfaceId, kind: 'surface', label: 'Display Surface', locked: false, shape: 'plane', transform: { position: [0, 0, 0], rotation: [0, 0, 0, 1] }, width: { status: 'unknown', unit: 'm' }, height: { status: 'unknown', unit: 'm' } } }
+          { type: 'put', record: { id: surfaceId, kind: 'surface', label: 'Display Surface', locked: false, shape: 'plane', transform: { position: [0, 2, 0], rotation: [0, 0, 0, 1] }, width: { status: 'known', unit: 'm', value: 4.0, provenance: 'user', source: 'Grouped tiles' }, height: { status: 'known', unit: 'm', value: 2.5, provenance: 'user', source: 'Grouped tiles' } } }
         ];
         transact('Surface defined', ops);
       });
@@ -502,8 +755,25 @@ function render(): void {
 function setWorkspace(name: string): void {
   workspace = name;
   document.querySelectorAll<HTMLButtonElement>('[data-workspace]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset['workspace'] === name)));
-  el('view-title').textContent = ({ Build: 'Build the production', Map: 'Inspect the plan', Connect: 'Connect equipment', Check: 'Review the inputs', Stock: 'Reserve inventory', Deliver: 'Prepare the handoff' } as Record<string, string>)[name]!;
-  root.dataset['workspace'] = name; viewport?.plan(name === 'Map'); renderPanel();
+  el('view-title').textContent = ({
+    Build: 'Build the production',
+    Map: 'Video & Pixel Mapping',
+    Connect: 'Connect equipment',
+    Check: 'Review the inputs',
+    Operations: 'Manage operations',
+    Deliver: 'Prepare the handoff',
+  } as Record<string, string>)[name] ?? name;
+  el('view-subtitle').textContent = ({
+    Build: 'Local scene · metres · optional venue context',
+    Map: 'Map video to display surfaces · pixel pitch · DMX pixel fixtures',
+    Connect: 'Signal routing · power distro · truss cable pathways',
+    Check: 'Safety evaluations · structural calculations · rigging limits',
+    Operations: 'Inventory allocation · crew management · rental vendors',
+    Deliver: 'Crew pull sheets · console handoffs · scene exports',
+  } as Record<string, string>)[name] ?? 'Local scene · metres';
+  root.dataset['workspace'] = name;
+  viewport?.plan(name === 'Map');
+  renderPanel();
 }
 function downloadJson(content: string, filename: string): void {
   const url = URL.createObjectURL(new Blob([content], { type: 'application/json' }));
@@ -539,6 +809,7 @@ function renderDesktopUrl(): void {
   el<HTMLButtonElement>('open-desktop-url').disabled = !desktopUrl;
   el('clear-desktop-url').hidden = !desktopUrl;
 }
+const handoffDialog = el<HTMLDialogElement>('desktop-handoff');
 el('continue-desktop').onclick = () => {
   desktopUrl = '';
   try {
@@ -546,11 +817,25 @@ el('continue-desktop').onclick = () => {
     desktopUrlStatus(desktopUrl ? 'Desktop link saved in this browser.' : 'No desktop link saved. Moonlight can be opened separately.');
   } catch { desktopUrlStatus('Saved desktop link is unavailable. Enter an HTTPS address to replace it.', true); }
   renderDesktopUrl();
-  el<HTMLDialogElement>('desktop-handoff').showModal();
-  el('desktop-handoff').scrollTop = 0;
+  handoffDialog.showModal();
+  handoffDialog.scrollTop = 0;
 };
-el('close-desktop-handoff').onclick = () => el<HTMLDialogElement>('desktop-handoff').close();
+el('close-desktop-handoff').onclick = () => handoffDialog.close();
 el('handoff-export').onclick = () => run(exportProject);
+handoffDialog.addEventListener('close', () => el('continue-desktop').focus());
+if (!('closedBy' in HTMLDialogElement.prototype)) {
+  handoffDialog.addEventListener('click', event => {
+    if (event.target !== handoffDialog) return;
+    const rect = handoffDialog.getBoundingClientRect();
+    const isInside = (
+      rect.top <= event.clientY &&
+      event.clientY <= rect.top + rect.height &&
+      rect.left <= event.clientX &&
+      event.clientX <= rect.left + rect.width
+    );
+    if (!isInside) handoffDialog.close();
+  });
+}
 async function loadStageShowcase(): Promise<void> {
   if (dirty && !confirm('Load the concert stage showcase? Any unsaved changes to the current project will be replaced.')) return;
   notice('Loading concert stage showcase…');
@@ -599,6 +884,7 @@ el('save').onclick = () => run(async () => {
   finally { busy = false; }
 });
 el('export').onclick = () => run(exportProject);
+el('handoff-export').onclick = () => run(exportProject);
 el('open').onclick = () => el<HTMLInputElement>('file-input').click();
 el<HTMLInputElement>('file-input').onchange = () => run(async () => {
   const file = el<HTMLInputElement>('file-input').files?.[0]; if (!file) return;
@@ -618,6 +904,10 @@ el<HTMLInputElement>('file-input').onchange = () => run(async () => {
 el('undo').onclick = () => run(() => { store.undo(crypto.randomUUID(), store.project.revision, human); notice('Edit undone'); });
 el('redo').onclick = () => run(() => { store.redo(crypto.randomUUID(), store.project.revision, human); notice('Edit restored'); });
 el('frame').onclick = () => viewport?.frame();
+el('cam-orbit').onclick = () => viewport?.setCameraView('orbit');
+el('cam-front').onclick = () => viewport?.setCameraView('front');
+el('cam-screen').onclick = () => viewport?.setCameraView('screen');
+el('cam-top').onclick = () => viewport?.setCameraView('top');
 el('search').oninput = renderCatalog; el('category').onchange = renderCatalog;
 for (const [id, className] of [['equipment-toggle', 'show-equipment'], ['inspector-toggle', 'show-inspector']]) {
   el(id!).onclick = () => {

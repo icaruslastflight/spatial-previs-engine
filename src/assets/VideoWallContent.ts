@@ -266,3 +266,188 @@ export async function createVideoWallContent(
     return createEdmLoop(options);
   }
 }
+
+/**
+ * Standard 75% SMPTE Color Bars calibration test pattern.
+ */
+export function createSmpteBars(options: { width?: number; height?: number } = {}): VideoWallContent {
+  const width = options.width ?? 512;
+  const height = options.height ?? 320;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d')!;
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+
+  const colors75 = ['#c0c0c0', '#c0c000', '#00c0c0', '#00c000', '#c000c0', '#c00000', '#0000c0'];
+  const barW = width / 7;
+  const topH = height * 0.67;
+  for (let i = 0; i < 7; i++) {
+    ctx.fillStyle = colors75[i]!;
+    ctx.fillRect(i * barW, 0, barW, topH);
+  }
+  const midH = height * 0.08;
+  const castColors = ['#0000c0', '#131313', '#c000c0', '#131313', '#00c0c0', '#131313', '#c0c0c0'];
+  for (let i = 0; i < 7; i++) {
+    ctx.fillStyle = castColors[i]!;
+    ctx.fillRect(i * barW, topH, barW, midH);
+  }
+  const botY = topH + midH;
+  const botH = height - botY;
+  const bW = width / 6;
+  ctx.fillStyle = '#083840'; ctx.fillRect(0, botY, bW, botH);
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(bW, botY, bW, botH);
+  ctx.fillStyle = '#320068'; ctx.fillRect(bW * 2, botY, bW, botH);
+  ctx.fillStyle = '#131313'; ctx.fillRect(bW * 3, botY, bW, botH);
+  ctx.fillStyle = '#0a0a0a'; ctx.fillRect(bW * 4, botY, bW / 3, botH);
+  ctx.fillStyle = '#131313'; ctx.fillRect(bW * 4 + bW / 3, botY, bW / 3, botH);
+  ctx.fillStyle = '#1c1c1c'; ctx.fillRect(bW * 4 + (bW * 2) / 3, botY, bW / 3, botH);
+  ctx.fillStyle = '#131313'; ctx.fillRect(bW * 5, botY, bW, botH);
+
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.fillRect(width * 0.15, topH * 0.35, width * 0.7, topH * 0.32);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `bold ${Math.round(height * 0.06)}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText('SMPTE COLOR BARS · 75%', width / 2, topH * 0.48);
+  ctx.font = `${Math.round(height * 0.04)}px monospace`;
+  ctx.fillStyle = '#e4bf79';
+  ctx.fillText('1920×1080 · 60 Hz · REC.709', width / 2, topH * 0.48 + height * 0.06);
+  texture.needsUpdate = true;
+
+  return {
+    texture,
+    source: 'smpte-bars',
+    update: () => {},
+    dispose: () => texture.dispose(),
+  };
+}
+
+/**
+ * High-precision Pixel Alignment Grid with safe borders and center crosshairs.
+ */
+export function createPixelGrid(options: { width?: number; height?: number; label?: string } = {}): VideoWallContent {
+  const width = options.width ?? 512;
+  const height = options.height ?? 320;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d')!;
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+
+  let lastSec = -1;
+  function update(timeSeconds: number): void {
+    const sec = Math.floor(timeSeconds);
+    if (sec === lastSec) return;
+    lastSec = sec;
+
+    ctx.fillStyle = '#0c1013';
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.strokeStyle = '#1e2830';
+    ctx.lineWidth = 1;
+    const step = 32;
+    for (let x = 0; x < width; x += step) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+    }
+    for (let y = 0; y < height; y += step) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+    }
+
+    ctx.strokeStyle = '#e4bf79';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(1, 1, width - 2, height - 2);
+    ctx.strokeStyle = 'rgba(228, 191, 121, 0.4)';
+    ctx.setLineDash([4, 4]);
+    ctx.strokeRect(width * 0.05, height * 0.05, width * 0.9, height * 0.9);
+    ctx.setLineDash([]);
+
+    ctx.strokeStyle = 'rgba(90, 140, 200, 0.35)';
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(width, height); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(width, 0); ctx.lineTo(0, height); ctx.stroke();
+
+    const cx = width / 2, cy = height / 2;
+    ctx.strokeStyle = '#4cc9f0';
+    ctx.lineWidth = 1.5;
+    for (const r of [30, 60, 90]) {
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.strokeStyle = '#ff0055';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(cx - 25, cy); ctx.lineTo(cx + 25, cy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, cy - 25); ctx.lineTo(cx, cy + 25); ctx.stroke();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `bold ${Math.max(12, Math.round(height * 0.05))}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText(options.label ?? 'PIXEL ALIGNMENT & 1:1 MAP', cx, cy - 105);
+    ctx.fillStyle = '#4cc9f0';
+    ctx.font = `${Math.max(10, Math.round(height * 0.038))}px monospace`;
+    ctx.fillText(`${width} × ${height} NATIVE RASTER`, cx, cy + 120);
+
+    const tick = (sec % 2 === 0);
+    ctx.fillStyle = tick ? '#00ff88' : '#335544';
+    ctx.beginPath(); ctx.arc(width - 24, 24, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(`SYNC ${sec}s`, width - 38, 28);
+
+    texture.needsUpdate = true;
+  }
+  update(0);
+
+  return {
+    texture,
+    source: 'pixel-grid',
+    update,
+    dispose: () => texture.dispose(),
+  };
+}
+
+/**
+ * Animated rainbow/RGB gradient chaser for dynamic pixel mapping.
+ */
+export function createGradientSweep(options: { width?: number; height?: number } = {}): VideoWallContent {
+  const width = options.width ?? 512;
+  const height = options.height ?? 320;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d')!;
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+
+  function update(timeSeconds: number): void {
+    const shift = (timeSeconds * 0.25) % 1;
+    const grad = ctx.createLinearGradient(0, 0, width, height);
+    const stops = [
+      (0.0 + shift) % 1,
+      (0.25 + shift) % 1,
+      (0.5 + shift) % 1,
+      (0.75 + shift) % 1,
+      (1.0 + shift) % 1,
+    ].sort((a, b) => a - b);
+    const colors = ['#f72585', '#7209b7', '#3a0ca3', '#4361ee', '#4cc9f0'];
+    stops.forEach((pos, i) => grad.addColorStop(pos, colors[i % colors.length]!));
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    for (let y = 0; y < height; y += 4) {
+      ctx.fillRect(0, y, width, 2);
+    }
+    texture.needsUpdate = true;
+  }
+  update(0);
+
+  return {
+    texture,
+    source: 'gradient-sweep',
+    update,
+    dispose: () => texture.dispose(),
+  };
+}
+
