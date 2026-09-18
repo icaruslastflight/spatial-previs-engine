@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>Festival Visualizer — Splat Depth-Pass Spike</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --ink: #e8eaf0;
+        --dim: #8b93a7;
+        --accent: #6ee7ff;
+        --panel: rgba(12, 14, 20, 0.82);
+        --line: rgba(110, 231, 255, 0.22);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #05060a;
+        color: var(--ink);
+        font: 13px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        overflow: hidden;
+      }
+
+      #stage {
+        position: fixed;
+        inset: 0;
+        touch-action: none;
+      }
+
+      .panel {
+        position: fixed;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 14px 16px;
+        backdrop-filter: blur(12px);
+      }
+
+      #title {
+        top: 18px;
+        left: 18px;
+        max-width: 520px;
+      }
+
+      #title h1 {
+        margin: 0 0 4px;
+        font-size: 15px;
+        letter-spacing: 0.04em;
+        color: var(--accent);
+      }
+
+      #title p {
+        margin: 0;
+        color: var(--dim);
+        font-size: 11.5px;
+      }
+
+      #title code {
+        color: var(--ink);
+      }
+
+      #modes {
+        top: 18px;
+        right: 18px;
+        display: flex;
+        gap: 8px;
+      }
+
+      #modes a {
+        color: var(--dim);
+        text-decoration: none;
+        padding: 4px 10px;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        min-width: 40px;
+        text-align: center;
+      }
+
+      #modes a.active {
+        color: var(--accent);
+        border-color: var(--line);
+      }
+
+      #legend {
+        left: 18px;
+        bottom: 18px;
+        max-width: 520px;
+        color: var(--dim);
+        font-size: 11px;
+      }
+
+      #legend b {
+        color: var(--ink);
+        font-weight: 600;
+      }
+
+      #status {
+        right: 18px;
+        bottom: 18px;
+        color: var(--dim);
+        font-size: 10.5px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      #status b {
+        color: #7dffa8;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="stage"></canvas>
+
+    <div class="panel" id="title">
+      <h1>SPLAT DEPTH-PASS SPIKE</h1>
+      <p>
+        A synthesized park capture rendered through the real
+        <code>@mkkellogg/gaussian-splats-3d</code> viewer, with beam cones from
+        <code>SplatViewport.createBeamMesh</code>. <b id="mode-label"></b>
+      </p>
+    </div>
+
+    <div class="panel" id="modes">
+      <a href="?mode=before" data-mode="before">before</a>
+      <a href="?mode=after" data-mode="after">after</a>
+      <a href="?mode=depth" data-mode="depth">depth</a>
+    </div>
+
+    <div class="panel" id="legend">
+      <b>Beam 1</b> (cyan) lands on the ground <i>in front of</i> the near pavilion wall.
+      <b>Beam 2</b> (amber) sits <i>behind</i> it, fixture above the wall top.
+      <b>Beam 3</b> (magenta) is thrown 5 m <i>through</i> the ground.
+      Grey sticks are truss: one in front of the near wall, one between the walls.
+    </div>
+
+    <div class="panel" id="status">initialising…</div>
+
+    <script type="module" src="./splat-occlusion.ts"></script>
+  </body>
+</html>

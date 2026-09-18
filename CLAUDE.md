@@ -256,6 +256,9 @@ npm run bridge      # FOH Art-Net/sACN → WebSocket daemon (lands in Phase 4)
 npm run fetch:gdtf  # sync GDTF fixture profiles into the local cache
 npm run fetch:open-data # fetch the open-data venue layers (terrain, NAIP, OSM) for showcase/open-data-venue.html
 npm run render:wall-loop # regenerate public/assets/video/edm_wall_loop.mp4 (needs ffmpeg + a dev server)
+npm run test:r0:browser # Playwright acceptance against the R0 production build (§7.1) — build + `npx playwright install chromium` first
+npm run bundle       # scripts/build-installation-bundle.mjs — packages a desktop/installer bundle
+npm run showcase     # opens r0.html?showcase=true against a running dev server; dev:showcase does both in one step
 ```
 
 `npm test` runs Vitest over every `src/**/*.test.ts`. Configuration lives in
@@ -313,18 +316,56 @@ src/
   geospatial/PointStateParkAnchor.ts   CP-1 venue origin + landmark registration
   viewport/  DragSnapController.ts     touch drag-and-snap gesture contract
              SiteBounds.ts             GeoJSON site envelope → scene
+  domain/    ProductionProject.ts      versioned project graph (records, typed relationships, units)
+             ProjectStore.ts           atomic commands, stale-revision/duplicate-key rejection, undo/redo
+             ProjectCodec.ts           project-v1 JSON (de)serialization + migration
+             ProjectChecks.ts          named scoped checks, SHA-256 input hashing, dependency invalidation
+             WorkspaceRepository.ts    IndexedDB compare-and-swap saves, active-project pointer
+             WorkspaceState.ts         R0 workspace app state
+             DiagnosticBundle.ts       redacted diagnostic/evidence export
+             ProjectTransforms.ts      coordinate-boundary codec shared with native (see native/README.md)
+  assistant/ SceneTools.ts             read-only `scene.summary` / `scene.inspect` tools, no model provider required
+  mcp/       server.ts                 Express JSON-RPC 2.0 gateway exposing scene/DMX/electrical + memory tools
+  memory/    VectorMemoryStore.ts      in-engine ($0) vector store — distinct from the per-workstation `.memory/` index (§14)
+             SessionMemoryStore.ts     in-engine session lifecycle memory
+  io/        MVRExporter.ts            My Virtual Rig (MVR) interop export
   components/PlaytestController.ts     WASD/RMB desktop playtest rig + diagnostics HUD
              SplatViewport.ts          Gaussian splat viewer composition
   render/    (Phase 6)                 WebGPU volumetric beams, laser MPE safety
   network/   (Phase 4)                 Art-Net 4 / sACN telemetry ingest
-  ui/        (Phase 2, 4, 6)           operator HUD, DMX inspector, atmosphere
-  main.ts                              composition root
+  ui/        ProductionWorkspace.ts    R0 workspace shell: Build / Map / Connect / Check / Operations / Deliver
+             ProductionScene.ts        3D projection of the committed project graph
+             ProductionViewport.ts     R0's viewport composition (camera presets, screen mapping, LED/DMX patch)
+             CablingInspector.ts       power/signal connection editor
+  main.ts                              composition root for the legacy sample viewport (index.html)
 public/assets/scans/                   scan registry + placeholder site bounds
 ```
 
 Tests sit beside the module they cover as `<Module>.test.ts`. Each of
 `render/`, `network/` and `ui/` carries a `README.md` naming the phase that
 fills it and the constraints that already bind it.
+
+### 7.1 Two entry points — legacy sample vs. R0 production workspace
+
+`index.html` (→ `main.ts`) is the original Point State Park sample viewport
+and socket-snapping demo. **`r0.html` is the active production workspace** —
+the command/undo-backed editor described by `docs/r0/README.md`, built from
+`domain/` + `ui/ProductionWorkspace.ts`. Recent feature work (DMX patch,
+aiming solver, gobos, the EDM wall loop) lands there, not in `main.ts`. When
+asked to add or change operator-facing functionality, check `docs/r0/README.md`
+first to see whether it belongs in the R0 workspace rather than the legacy page.
+
+R0's domain layer (CORE-01–04 in `docs/r0/README.md`) is a strict
+command/undo store, not direct object mutation: every edit is an atomic
+command against `ProjectStore`, validated, revisioned, and undoable. Read
+`domain/ProjectStore.ts` before adding a new mutation rather than reaching
+into `ProductionProject` records directly.
+
+`src/memory/` (in-engine `VectorMemoryStore`/`SessionMemoryStore`, used by
+`mcp/server.ts` and the R0 assistant tools) is a **different system** from the
+per-workstation `.memory/` ChromaDB+NetworkX index described in §14 — same
+$0-budget philosophy, different layer (runtime app memory vs. a dev-time repo
+index). Don't conflate the two when asked to touch "memory."
 
 ### Core engine invariants
 
@@ -728,3 +769,40 @@ store the value in a password manager, matching this project's existing
 `GDTF_SHARE_USER`/`PASSWORD` convention (§10). Generated drafts land in
 `scripts/ai-tools/prompts/`, git-ignored per §11, the same per-workstation
 pattern as `.memory/`.
+
+## 16. Native UE5 foundation (`native/`)
+
+`native/SpatialPrevis` is the UE5.8 project implementing the desktop side of
+§1.1's parity contract — currently the **CORE-01 milestone** (import/inspect
+the shared project JSON), not the full native R0 product. See
+`native/README.md` and `docs/r0/UE5_CONFORMANCE.md` for exact scope.
+
+```powershell
+powershell -NoProfile -File scripts/verify-r0-native.ps1 -CoordinatesOnly
+powershell -NoProfile -File scripts/verify-r0-native.ps1 -EngineRoot 'C:\Program Files\Epic Games\UE_5.8'
+node scripts/test-r0-native-comparator.mjs   # comparator's own corruption tests — not native evidence
+```
+
+Requires UE5.8 and its C++ toolchain locally; these are not npm scripts.
+Never commit generated Unreal binaries, caches, `.sln`/project files, or saved
+evidence — source and the fixture version travel together in Git, everything
+Unreal generates does not.
+
+### The native coordinate boundary is a *different* conversion from `SITE_FRAME`
+
+§2's ENU tangent-plane bridge (`three.x/y/z ↔ east/north/up`) governs the web
+scene only. The wire boundary between the shared project JSON and UE5's
+`FTransform` is a separate, already-fixed codec (`ProjectTransforms.ts` on the
+web side, the C++ adapter + commandlet on the native side) — do not reuse or
+hand-derive the ENU bridge for it:
+
+| Value | Shared project JSON | UE boundary |
+| --- | --- | --- |
+| Axes | X east, Y up, Z south (negative north) | X north, Y east, Z up |
+| Position | metres `(x, y, z)` | centimetres `(-100z, 100x, 100y)` |
+| Quaternion | XYZW `(x, y, z, w)` | XYZW `(z, -x, -y, w)` |
+
+Unchanged project JSON round-trips through this codec unnormalized — it is
+not passed through Three.js renderer transforms first. `domain/R0Boundaries.test.ts`
+and `domain/NativeConformance.test.ts` are the regression checks; extend those,
+don't hand-verify a new conversion path.

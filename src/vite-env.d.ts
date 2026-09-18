@@ -26,7 +26,7 @@ interface ImportMeta {
  * this project actually calls is declared here; widen it as usage grows.
  */
 declare module '@mkkellogg/gaussian-splats-3d' {
-  import type { Camera, Scene, WebGLRenderer, Vector3, Quaternion } from 'three';
+  import type { Camera, Mesh, Scene, WebGLRenderer, Vector3, Quaternion } from 'three';
 
   export class Viewer {
     constructor(options?: {
@@ -51,6 +51,12 @@ declare module '@mkkellogg/gaussian-splats-3d' {
     ): Promise<void>;
     update(): void;
     render(): void;
+    /**
+     * The sorted splat mesh, valid once every `addSplatScene` has resolved.
+     * `SplatMesh.build` reassigns `material` on each build, so patch it only
+     * after loading has finished.
+     */
+    getSplatMesh(): Mesh;
     dispose(): Promise<void>;
   }
 }
