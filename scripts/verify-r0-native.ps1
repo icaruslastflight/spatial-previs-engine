@@ -11,6 +11,17 @@ $windowsTemp = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 
 if (!$env:TMP) { $env:TMP = $windowsTemp }
 if (!$env:TEMP) { $env:TEMP = $windowsTemp }
 if (!(Test-Path -LiteralPath $env:TMP)) { New-Item -ItemType Directory -Path $env:TMP -Force | Out-Null }
+# Native tools write progress and warnings to stderr (VS 2026's vcvars, for one,
+# warns that vswhere.exe is not on PATH). Under $ErrorActionPreference = 'Stop'
+# a 2>&1 merge turns each such line into a terminating error before the exit
+# code is read, so a passing step aborted the whole run. Merge with the
+# preference relaxed, keep the log, and let the caller judge $LASTEXITCODE.
+function Invoke-Logged([scriptblock]$Command, [string]$LogPath) {
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try { & $Command 2>&1 | ForEach-Object { "$_" } | Tee-Object -FilePath $LogPath }
+    finally { $ErrorActionPreference = $previous }
+}
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss-fff'
 $evidenceDir = Join-Path $repoRoot "test-results\native\$stamp"
@@ -35,7 +46,7 @@ cl /nologo /std:c++17 /W4 /WX /EHsc /I"$include" "$source" /Fe:"$executable" /Fo
 if errorlevel 1 exit /b 1
 "$executable"
 "@ | Set-Content -LiteralPath $compileCmd -Encoding Ascii
-& cmd.exe /d /c $compileCmd 2>&1 | Tee-Object -FilePath (Join-Path $evidenceDir 'coordinates.log')
+Invoke-Logged { & cmd.exe /d /c $compileCmd } (Join-Path $evidenceDir 'coordinates.log')
 if ($LASTEXITCODE -ne 0) { throw 'Native coordinate compilation or assertions failed.' }
 if ($CoordinatesOnly) { Write-Host "Coordinate evidence: $evidenceDir"; exit 0 }
 
@@ -63,17 +74,17 @@ $report = Join-Path $evidenceDir 'conformance.json'
     gpu=@(Get-CimInstance Win32_VideoController | Select-Object Name,DriverVersion)
     disk=@(Get-PSDrive -PSProvider FileSystem | Select-Object Name,Free)
 } | ConvertTo-Json -Depth 8 | Set-Content (Join-Path $evidenceDir 'host.json') -Encoding UTF8
-& $build SpatialPrevisEditor Win64 Development "-Project=$project" "-MaxParallelActions=$MaxParallelActions" -WaitMutex -NoHotReloadFromIDE 2>&1 | Tee-Object (Join-Path $evidenceDir 'build.log')
+Invoke-Logged { & $build SpatialPrevisEditor Win64 Development "-Project=$project" "-MaxParallelActions=$MaxParallelActions" -WaitMutex -NoHotReloadFromIDE } (Join-Path $evidenceDir 'build.log')
 if ($LASTEXITCODE -ne 0) { throw "UE build failed; inspect $evidenceDir\build.log" }
-& $editor $project -run=SpatialPrevisConformance "-Corpus=$corpus" "-Report=$report" -unattended -NullRHI -nosplash -nop4 2>&1 | Tee-Object (Join-Path $evidenceDir 'commandlet.log')
+Invoke-Logged { & $editor $project -run=SpatialPrevisConformance "-Corpus=$corpus" "-Report=$report" -unattended -NullRHI -nosplash -nop4 } (Join-Path $evidenceDir 'commandlet.log')
 if ($LASTEXITCODE -ne 0) { throw "Native conformance failed; inspect $evidenceDir" }
-& node (Join-Path $PSScriptRoot 'compare-r0-native.mjs') $report 2>&1 | Tee-Object (Join-Path $evidenceDir 'comparison.log')
+Invoke-Logged { & node (Join-Path $PSScriptRoot 'compare-r0-native.mjs') $report } (Join-Path $evidenceDir 'comparison.log')
 if ($LASTEXITCODE -ne 0) { throw 'Native semantic comparison failed.' }
 $workspaceCorpus = Join-Path $repoRoot 'tests\fixtures\r0\workspace-conformance.v1.json'
 $workspaceReport = Join-Path $evidenceDir 'workspace-conformance.json'
-& $editor $project -run=SpatialPrevisWorkspaceConformance "-Corpus=$workspaceCorpus" "-Report=$workspaceReport" -unattended -NullRHI -nosplash -nop4 2>&1 | Tee-Object (Join-Path $evidenceDir 'workspace-commandlet.log')
+Invoke-Logged { & $editor $project -run=SpatialPrevisWorkspaceConformance "-Corpus=$workspaceCorpus" "-Report=$workspaceReport" -unattended -NullRHI -nosplash -nop4 } (Join-Path $evidenceDir 'workspace-commandlet.log')
 if ($LASTEXITCODE -ne 0) { throw "Native workspace conformance failed; inspect $evidenceDir" }
-& node (Join-Path $PSScriptRoot 'compare-r0-native-workspace.mjs') $workspaceReport 2>&1 | Tee-Object (Join-Path $evidenceDir 'workspace-comparison.log')
+Invoke-Logged { & node (Join-Path $PSScriptRoot 'compare-r0-native-workspace.mjs') $workspaceReport } (Join-Path $evidenceDir 'workspace-comparison.log')
 if ($LASTEXITCODE -ne 0) { throw 'Native workspace semantic comparison failed.' }
 Write-Host "Native conformance evidence: $evidenceDir"
 Write-Host 'Contract conformance does not close rendering, actual Android, or owner acceptance gates.'
