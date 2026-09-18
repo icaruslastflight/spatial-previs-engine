@@ -27,6 +27,25 @@ reason to reconsider the choice.
 Each phase follows this project's own §13 planning convention: what it does,
 and how you know it worked.
 
+**Fast path:** [`scripts/workflows/bootstrap_dev_workstation.ps1`](../scripts/workflows/bootstrap_dev_workstation.ps1)
+automates Phases 1, 3, 4, 5, 6, 8 and 9 end to end (every command below is
+copied into it verbatim, not re-derived), and reports Phase 0's host info
+into a JSON evidence file instead of you reading `dxdiag` output by hand.
+Run it with `-WhatIf` first to preview every mutating step. It deliberately
+leaves Phase 2 (interactive account auth), Phase 7 (multi-GB interactive
+installers with real choices to make) and Phase 11 (verification, not
+provisioning) as manual steps — the phases below remain the reference for
+what each of those actually does and why. It also adds one thing not in the
+prose runbook: an optional `-InstallContinueExtension` switch that wires the
+pulled Ollama model into VS Code via the Continue.dev extension, so the
+local model is something you actually use for in-editor assistance rather
+than a process idling behind `ollama run`.
+
+```powershell
+.\scripts\workflows\bootstrap_dev_workstation.ps1 -WhatIf
+.\scripts\workflows\bootstrap_dev_workstation.ps1 -OllamaModel qwen2.5-coder:14b -InstallContinueExtension
+```
+
 ---
 
 ## Phase 0 — Baseline identification
