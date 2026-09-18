@@ -36,3 +36,16 @@ The R0 release gate is conformance of shared contracts and claimed behavior, plu
 separate platform acceptance. It is not identical graphical fidelity or an identical
 feature list. Existing sample coordinate corrections remain correctness work; they
 are not optional capability differences.
+
+## Desktop showcase launch options
+
+The authored festival stage showcase (`src/assets/FestivalStage.ts` and
+`showcase/concert-stage-demo.html`) demonstrates high-fidelity stage design,
+Claypaky Sharpy GDTF moving heads, sACN/Art-Net DMX addressing, EDM video wall,
+volumetric dual-layer light cones, and live EN 60825-1 laser MPE evaluation.
+On desktop, operators can launch directly into the showcase via:
+- `npm run showcase` or `npm run dev:showcase`
+- The Windows launcher `launch-desktop.cmd --showcase` (or interactive menu)
+- Viewport HUD & Playtest diagnostics buttons in the web client (`?showcase=true`)
+- "Stage showcase" button in the Production Workspace command bar and desktop handoff dialog
+- "Launch Stage Showcase" button in the native Unreal Editor module and `Tools -> Spatial Previs` menu

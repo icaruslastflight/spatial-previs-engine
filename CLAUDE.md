@@ -254,6 +254,7 @@ npm run verify      # full foundation health check — structure + all three gat
 npm run build:assets # compile the modular asset library to GLB
 npm run bridge      # FOH Art-Net/sACN → WebSocket daemon (lands in Phase 4)
 npm run fetch:gdtf  # sync GDTF fixture profiles into the local cache
+npm run render:wall-loop # regenerate public/assets/video/edm_wall_loop.mp4 (needs ffmpeg + a dev server)
 ```
 
 `npm test` runs Vitest over every `src/**/*.test.ts`. Configuration lives in
@@ -521,6 +522,19 @@ self-test builds a labelled synthetic capture, and the GDTF suite builds real
 holding genuine DIN SPEC 15800 XML, so the ZIP traversal, attribute names,
 matrix grammar and `value/resolution` DMX grammar are all under test even
 though CI cannot reach GDTF Share.
+
+**Owner-approved exception: `public/assets/video/edm_wall_loop.mp4`.** The
+rule above targets captures and archives that run to tens or hundreds of MB
+and cannot reasonably live in git history; it was never a ban on every binary.
+This file is ~250 KB — smaller than several committed GLBs in
+`public/assets/models/` — and is itself regenerable: `npm run render:wall-loop`
+rebuilds it by capturing `src/assets/VideoWallContent.ts`'s own
+`createEdmLoop` renderer through one seamless loop and encoding it with
+`ffmpeg`, so the committed file and the in-app procedural fallback are
+provably the same art rather than two designs drifting apart. It is the
+default upstage LED wall content; `VideoWallContent.ts` still falls back to
+the live procedural loop if the file is stripped or 404s, so no path depends
+on the binary being present.
 
 ## 12. Showcase renders
 

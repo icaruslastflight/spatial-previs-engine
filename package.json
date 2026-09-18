@@ -6,6 +6,8 @@
   "description": "Spatial Previs Engine — venue-independent live event design and pre-visualization for real and virtual environments.",
   "scripts": {
     "dev": "vite --host",
+    "showcase": "vite --open /r0.html?showcase=true",
+    "dev:showcase": "vite --host --open /r0.html?showcase=true",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
@@ -14,7 +16,9 @@
     "bridge": "node scripts/foh_bridge_daemon.js",
     "build:assets": "node scripts/build-asset-library.js",
     "fetch:gdtf": "node scripts/fetch_gdtf_library.js",
+    "render:wall-loop": "node scripts/render_wall_loop.mjs",
     "showcase:capture": "node scripts/capture_showcase.mjs",
+    "bundle": "node scripts/build-installation-bundle.mjs",
     "verify": "scripts/workflows/verify_foundational_setup.sh"
   },
   "dependencies": {

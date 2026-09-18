@@ -328,6 +328,17 @@ export class PlaytestController {
     hint.textContent = 'WASD move · Space/Shift up-down · RMB orbit';
     root.appendChild(hint);
 
+    const showcaseLink = document.createElement('a');
+    showcaseLink.href = `${import.meta.env.BASE_URL}r0.html?showcase=true`;
+    showcaseLink.target = '_blank';
+    showcaseLink.rel = 'noopener noreferrer';
+    showcaseLink.textContent = '🎭 Launch Stage Showcase';
+    showcaseLink.setAttribute(
+      'style',
+      'display:block;margin-top:6px;padding:3px 6px;text-align:center;background:rgba(157,78,221,0.3);color:#e2caff;border:1px solid rgba(157,78,221,0.6);border-radius:4px;text-decoration:none;pointer-events:auto;cursor:pointer;font-weight:bold;',
+    );
+    root.appendChild(showcaseLink);
+
     return { root, fps, mode, wgs84, hint };
   }
 }

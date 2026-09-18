@@ -64,6 +64,15 @@ native/**/Build/Windows/
 # downloads on first ingest (~80 MB, into %USERPROFILE%\.cache\chroma). Not
 # committed per CLAUDE.md §11 — see §14 for stack details.
 .memory/
+.agents/memory/
+
+# Packaging artifacts
+installation-bundle/
+installer-build/
+*.zip
+*.exe
+*.obj
+SpatialPrevis-Linux-Installer.sh
 
 # Generated prompt-template drafts from scripts/ai-tools/metaprompt.py.
 # Per-workstation output, analogous to .memory/ above -- the tool itself and
