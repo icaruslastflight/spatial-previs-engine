@@ -800,7 +800,7 @@ store the value in a password manager, matching this project's existing
 `scripts/ai-tools/prompts/`, git-ignored per §11, the same per-workstation
 pattern as `.memory/`.
 
-## 16. Native UE5 foundation (`native/`)
+## 17. Native UE5 foundation (`native/`)
 
 `native/SpatialPrevis` is the UE5.8 project implementing the desktop side of
 §1.1's parity contract — currently the **CORE-01 milestone** (import/inspect
