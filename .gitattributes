@@ -1,0 +1,30 @@
+# Line endings are LF in the working tree on every platform.
+#
+# scripts/generate-r0-conformance.mjs --check (and the NativeConformance test
+# that wraps it) compares the committed corpus byte-for-byte against a fresh
+# render. Git for Windows defaults to core.autocrlf=true, which checks text
+# files out as CRLF and makes that comparison fail on every Windows clone even
+# though CI (Linux, LF) is green. Pinning eol=lf here removes the per-machine
+# setting from the equation.
+* text=auto eol=lf
+
+# cmd.exe parses batch files line by line and mishandles LF-only files in
+# some constructs (labels, multi-line blocks), so these stay CRLF.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Never normalize binary assets, whatever their content looks like.
+*.glb binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.mp4 binary
+*.woff2 binary
+*.splat binary
+*.ply binary
+*.gdtf binary
+*.zip binary
+*.pickle binary
