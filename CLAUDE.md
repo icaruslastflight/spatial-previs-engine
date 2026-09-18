@@ -668,9 +668,11 @@ lives at `scripts/ai-tools/metaprompt.py` — no servers, no notebook, $0 beyond
 a per-call Anthropic API token. See `scripts/ai-tools/README.md` for the full
 contract; the short version:
 
-- **What it does:** given a task description, drafts a full Claude prompt
-  template for it (`<Inputs>` / `<Instructions Structure>` / `<Instructions>`),
-  then can test-drive the result against supplied variable values.
+- **What it does:** given a task description, drafts a full prompt template
+  for it (`<Inputs>` / `<Instructions Structure>` / `<Instructions>`), then can
+  test-drive the result against supplied variable values. Only the drafting
+  call is provider-specific; the templates are plain text usable from any
+  agent or model API.
 - **Project customization:** every `draft` call prepends this file
   (`CLAUDE.md`) as fixed context by default, so a drafted template already
   respects this codebase's rules without the caller restating them. It also

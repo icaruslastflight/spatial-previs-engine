@@ -52,7 +52,7 @@ Output is one `path:line` citation per hit with a cosine distance score
 - **The graph is file-level.** Import edges are captured; symbol/reference
   edges are not (yet). Good enough for "what does this touch," not for
   call-graph analysis.
-- **No MCP wiring here.** Both scripts are CLIs. Exposing them to Claude
+- **No MCP wiring here.** Both scripts are CLIs. Exposing them to agent
   sessions as an MCP server is a separate step — write a small MCP wrapper
   that calls into the same `chromadb.PersistentClient` and `nx.DiGraph`
   loaded from `.memory/`.

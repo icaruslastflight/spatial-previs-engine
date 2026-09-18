@@ -9,6 +9,10 @@ same reason `scripts/memory/` is a CLI — no Jupyter dependency for a fresh
 workstation, and notebook JSON diffs badly against this repo's otherwise
 clean text-diff discipline.
 
+Only the drafting step is provider-specific (it calls the Anthropic API). The
+templates it produces are plain text: use them from any agent, CLI or model
+API, and read them without any particular tool installed.
+
 ## What's customized versus upstream
 
 - **CLAUDE.md injection** (on by default). Every `draft` call prepends this
