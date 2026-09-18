@@ -22,7 +22,11 @@ try {
         webChecks = @()
     }
     foreach ($taskName in @('typecheck', 'test', 'build')) {
-        & npm.cmd run $taskName 2>&1 | Tee-Object -FilePath (Join-Path $EvidenceDirectory "$taskName.log")
+        # Merge stderr inside cmd.exe. Under $ErrorActionPreference = 'Stop', a
+        # PowerShell-side 2>&1 turns any stderr line from npm (build-tool
+        # warnings included) into a terminating error before the exit code is
+        # recorded, so a green build was reported as a failed preflight.
+        & cmd.exe /d /c "npm.cmd run $taskName 2>&1" | Tee-Object -FilePath (Join-Path $EvidenceDirectory "$taskName.log")
         $taskExitCode = $LASTEXITCODE
         $summary.webChecks += @{ task = $taskName; exitCode = $taskExitCode }
         if ($taskExitCode -ne 0) { throw "$taskName failed with exit code $taskExitCode" }
