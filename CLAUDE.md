@@ -289,6 +289,11 @@ assets resolve correctly under a subpath. Cesium's `Workers/`, `Assets/`,
 - Prefer scratch objects over per-frame allocation in the render loop.
 - Comments explain *why*, especially where the math is subtle or a constraint is
   non-obvious. Do not annotate the obvious.
+- **Line endings are LF on every platform**, pinned by `.gitattributes`
+  (`* text=auto eol=lf`; only `.cmd`/`.bat` are CRLF). The R0 conformance
+  corpus is compared byte-for-byte, so a CRLF checkout fails `npm test` on
+  Windows even when CI is green. Leave `core.autocrlf` alone — the attributes
+  file overrides it.
 
 ## 7. Layout
 
