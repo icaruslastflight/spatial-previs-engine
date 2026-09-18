@@ -14,6 +14,22 @@ Dashboard**, or run it directly with `launch-desktop.cmd --dashboard` (`-d`).
 It only opens the browser tab — `npm run dev` still needs to be running
 already, same as the launcher's other web entries.
 
+## Remote access from a phone (no desktop required)
+
+`dashboard/index.html` is a Vite build entry (`vite.config.ts`) and gets
+deployed to GitHub Pages by `.github/workflows/deploy.yml` on every push to
+`main` — same $0, keyless-by-default design as the dashboard itself, so
+nothing extra to configure:
+
+**https://icaruslastflight.github.io/spatial-previs-engine/dashboard/**
+
+This is the real production build, not a separate copy — whatever's on
+`main` is what's live there, usually within a minute of the push (the
+workflow's `build` + `deploy` jobs together take well under a minute). No
+desktop needs to be on or running `npm run dev` for this route; it's a
+static page fetching public GitHub API data directly from the phone's
+browser. Add it to your home screen for one-tap access.
+
 ## What it shows
 
 | Panel | Source | Live? |
