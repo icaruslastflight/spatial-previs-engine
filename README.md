@@ -61,6 +61,12 @@ Read the [desktop capability decision](docs/r0/PLATFORM_CAPABILITIES.md) and
 | `npx tsc --noEmit` | Typecheck only |
 | `npm run build:assets` | Compile the modular asset library to GLB |
 
+Two Python CLIs round out the toolchain but aren't npm scripts:
+[`scripts/memory/`](./scripts/memory/README.md), a per-workstation $0
+vector + graph index of this repo, and
+[`scripts/ai-tools/`](./scripts/ai-tools/README.md), a project-customized
+prompt-drafting tool built on Anthropic's metaprompt technique.
+
 ## Deploying (free tier only)
 
 ```bash

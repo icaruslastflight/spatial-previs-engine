@@ -660,3 +660,40 @@ chunks and lets any model or human read them. It is intentionally a CLI
 rather than an MCP server — MCP wiring is a separate concern and lives (if
 added) beside the query script rather than replacing it. Do not swap it for
 a paid vector API; that would cross the §1.2 hard budget.
+
+## 15. Local prompt-drafting tool
+
+A project-customized fork of Anthropic's `metaprompt.ipynb` cookbook notebook
+lives at `scripts/ai-tools/metaprompt.py` — no servers, no notebook, $0 beyond
+a per-call Anthropic API token. See `scripts/ai-tools/README.md` for the full
+contract; the short version:
+
+- **What it does:** given a task description, drafts a full Claude prompt
+  template for it (`<Inputs>` / `<Instructions Structure>` / `<Instructions>`),
+  then can test-drive the result against supplied variable values.
+- **Project customization:** every `draft` call prepends this file
+  (`CLAUDE.md`) as fixed context by default, so a drafted template already
+  respects this codebase's rules without the caller restating them. It also
+  shells out to `scripts/memory/query.py --with-neighbors` (§14) for grounding
+  citations, respecting that module's own CLI-not-library boundary rather than
+  reaching into its internals.
+- **Domain examples:** three of its five few-shot examples are swapped for
+  this project's own review patterns — a GDTF flux→candela photometric check
+  (§10) and an `extras.sockets` schema review (§3) both double as this
+  project's canonical checklist wording; the `domain-correctness-review`
+  skill (`.claude/skills/`) reuses the same checklist text rather than
+  re-deriving it, so the two must not drift apart.
+
+```bash
+pip install -r scripts/ai-tools/requirements.txt
+python scripts/ai-tools/metaprompt.py draft --task "review a new extras.sockets entry"
+python scripts/ai-tools/metaprompt.py full --task "..." --values NAME=value
+```
+
+**What this is not:** a general-purpose chat tool — it writes reusable prompt
+*templates*, not one-off answers. The `ANTHROPIC_API_KEY` it needs is never a
+project file: set it once at the workstation level (`setx` on Windows) and
+store the value in a password manager, matching this project's existing
+`GDTF_SHARE_USER`/`PASSWORD` convention (§10). Generated drafts land in
+`scripts/ai-tools/prompts/`, git-ignored per §11, the same per-workstation
+pattern as `.memory/`.

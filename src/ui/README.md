@@ -3,11 +3,22 @@
 Canvas and DOM overlays the operator drives on site. Distinct from
 `src/components/`, which holds viewport-embedded controls.
 
-**Currently empty by design.** Phase 1 establishes the event vocabulary these
-panels subscribe to (`src/core/EventBus.ts`) and the frame clock they refresh
-against (`src/core/EngineLoop.ts`); the panels land with their own phases.
+**No longer empty.** The R0 production workspace landed here first, ahead of
+the Phase 4/6 HUD panels the table below originally named — those panels
+still don't exist yet and remain future work, listed separately so this
+table stays honest about what's actually in the directory.
 
-## What lands here
+## What's here
+
+| Module | Purpose |
+| --- | --- |
+| `ProductionWorkspace.ts` | Top-level R0 workspace shell — owns the project/record store, undo, save/reopen, desktop handoff, diagnostic checks, and composes the viewport and cabling inspector into one screen. |
+| `ProductionViewport.ts` | Three.js viewport: a read-only projection of committed records (domain state never comes from mesh UUIDs), catalog asset loading, drag/orbit/pinch gesture handling. |
+| `ProductionScene.ts` (+ `.test.ts`) | Scene-graph helpers the viewport calls into — lifting glTF-node `extras.sockets` to a wrapper's local frame, preparing a socket-snapped move. |
+| `CablingInspector.ts` | Truss cable-routing overlay: drag-to-route handles over `TrussCableRouter`, rendered as its own `THREE.Group` layered on the shared scene. |
+| `workspace.css` | Styling for the above. |
+
+## Still pending (not yet landed)
 
 | Module | Phase | Purpose |
 | --- | --- | --- |
