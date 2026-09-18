@@ -64,3 +64,9 @@ native/**/Build/Windows/
 # downloads on first ingest (~80 MB, into %USERPROFILE%\.cache\chroma). Not
 # committed per CLAUDE.md §11 — see §14 for stack details.
 .memory/
+
+# Generated prompt-template drafts from scripts/ai-tools/metaprompt.py.
+# Per-workstation output, analogous to .memory/ above -- the tool itself and
+# its curated examples/ are committed, these task-specific run artifacts are
+# not.
+scripts/ai-tools/prompts/
