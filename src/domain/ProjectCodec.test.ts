@@ -105,4 +105,65 @@ describe('R0 production contract', () => {
     d.projectRevision = 1;
     expect(() => validateProject(p)).toThrow('future revision');
   });
+  it('round-trips a cue with every attribute phaser populated', () => {
+    const p = project();
+    const attributePhaser = {steps: [{value: 0, transition: 1}, {value: 1, transition: 0.5}], speedBpm: 120, easing: 'sine' as const};
+    const cue: ProductionRecord = {
+      kind: 'cue', id: 'cue:wash', label: 'Center wash', locked: false,
+      instanceIds: ['inst_0001', 'inst_0002'], mirroredInstanceIds: ['inst_0002'],
+      aimTargetMeters: [0, 1.5, -3],
+      pan: attributePhaser, tilt: attributePhaser, dimmer: attributePhaser,
+      color: {steps: [{value: [1, 0, 0], transition: 1}], speedBpm: 60, easing: 'linear' as const},
+    };
+    p.records.push(cue);
+    const reopened = parseProject(serializeProject(p));
+    expect(reopened).toEqual(p);
+  });
+  it('accepts a minimal cue with every optional field null', () => {
+    const p = project();
+    p.records.push({kind: 'cue', id: 'cue:min', label: 'Static', locked: false,
+      instanceIds: ['inst_0001'], mirroredInstanceIds: [], aimTargetMeters: null,
+      pan: null, tilt: null, dimmer: null, color: null});
+    expect(() => validateProject(p)).not.toThrow();
+  });
+  it('rejects a cue with no fixtures or a dangling fixture reference', () => {
+    const p = project();
+    const cue: ProductionRecord = {kind: 'cue', id: 'cue:empty', label: 'Empty', locked: false,
+      instanceIds: [], mirroredInstanceIds: [], aimTargetMeters: null, pan: null, tilt: null, dimmer: null, color: null};
+    p.records.push(cue);
+    expect(() => validateProject(p)).toThrow('at least one fixture');
+    find(p, 'cue').instanceIds = ['absent'];
+    expect(() => validateProject(p)).toThrow('asset_instance reference');
+  });
+  it('rejects a mirrored fixture that is not one of the cue\'s own instances', () => {
+    const p = project();
+    p.records.push({kind: 'cue', id: 'cue:mirror', label: 'Mirror', locked: false,
+      instanceIds: ['inst_0001'], mirroredInstanceIds: ['inst_0002'],
+      aimTargetMeters: null, pan: null, tilt: null, dimmer: null, color: null});
+    expect(() => validateProject(p)).toThrow('own instances');
+  });
+  it('rejects malformed phaser and colour phaser data', () => {
+    const p = project();
+    const base = {kind: 'cue' as const, id: 'cue:bad', label: 'Bad', locked: false,
+      instanceIds: ['inst_0001'], mirroredInstanceIds: [], aimTargetMeters: null,
+      tilt: null, dimmer: null, color: null};
+    p.records.push({...base, pan: {steps: [], speedBpm: 120, easing: 'sine'}});
+    expect(() => validateProject(p)).toThrow('at least one step');
+    find(p, 'cue').pan = {steps: [{value: 0, transition: 1}], speedBpm: 0, easing: 'sine'};
+    expect(() => validateProject(p)).toThrow('positive BPM');
+    find(p, 'cue').pan = {steps: [{value: 0, transition: 1}], speedBpm: 120, easing: 'strobe' as any};
+    expect(() => validateProject(p)).toThrow('expected one of');
+    find(p, 'cue').pan = {steps: [{value: 0, transition: 1.5}], speedBpm: 120, easing: 'sine'};
+    expect(() => validateProject(p)).toThrow('between 0 and 1');
+    find(p, 'cue').pan = null;
+    find(p, 'cue').color = {steps: [{value: [0, 0, 1.2], transition: 1}], speedBpm: 60, easing: 'linear'};
+    expect(() => validateProject(p)).toThrow('RGB channels');
+  });
+  it('rejects an out-of-range aim target shape', () => {
+    const p = project();
+    p.records.push({kind: 'cue', id: 'cue:aim', label: 'Aim', locked: false,
+      instanceIds: ['inst_0001'], mirroredInstanceIds: [], aimTargetMeters: [0, 0] as unknown as [number, number, number],
+      pan: null, tilt: null, dimmer: null, color: null});
+    expect(() => validateProject(p)).toThrow('finite numbers');
+  });
 });

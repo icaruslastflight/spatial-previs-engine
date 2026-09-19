@@ -3,6 +3,8 @@
  * Experimental contract: UE5 conformance is an OPEN checkpoint (docs/r0/README.md).
  * No runtime scene, socket, device or approval behavior is changed by this module.
  */
+import type { PhaserEasing } from '../engine/Phaser.ts';
+
 export const PROJECT_SCHEMA_VERSION = 1 as const;
 
 export type Provenance = 'placeholder' | 'user' | 'manufacturer' | 'measured' | 'checked';
@@ -143,9 +145,65 @@ export interface RasterMapping extends RecordBase {
   height: number;
 }
 
+/** One attribute's steps, driven by `engine/Phaser.ts`'s `Phaser` at playback/preview time. */
+export interface CuePhaserStep {
+  value: number;
+  /** Fraction of this step spent fading to the next, 0..1. Stored explicit, never implied. */
+  transition: number;
+}
+
+export interface CueAttributePhaser {
+  steps: CuePhaserStep[];
+  speedBpm: number;
+  easing: PhaserEasing;
+}
+
+export interface CueColorStep {
+  /** 0..1 RGB, matching `engine/Phaser.ts`'s `ColorPhaser`. */
+  value: [number, number, number];
+  transition: number;
+}
+
+export interface CueColorPhaser {
+  steps: CueColorStep[];
+  speedBpm: number;
+  easing: PhaserEasing;
+}
+
+/**
+ * grandMA3/Onyx-style cue: a named, storable, triggerable set of phaser
+ * assignments over a group of patched fixtures. References fixtures by
+ * `asset_instance` id rather than duplicating patch data -- universe/address
+ * is derived from `engine/DmxPatch.ts`'s `allocatePatch` at read time, not
+ * stored redundantly here.
+ */
+export interface Cue extends RecordBase {
+  kind: 'cue';
+  /** Fixtures this cue drives. */
+  instanceIds: string[];
+  /**
+   * Subset of `instanceIds` whose pan is mirrored (grandMA3
+   * `Attribute "Pan" At % -100`) -- what makes stage-left/stage-right sweep
+   * toward or away from each other instead of tracking in parallel.
+   */
+  mirroredInstanceIds: string[];
+  /**
+   * World point in metres the cue aims at, solved per-fixture via
+   * `engine/FixtureAiming.ts`'s closed-form solver at playback time -- never
+   * stored as raw pan/tilt, so the cue stays correct if a fixture's profile,
+   * mount orientation or patch changes. Null for a cue with no aim target
+   * (a static wash, a blinder, a color-only cue).
+   */
+  aimTargetMeters: [number, number, number] | null;
+  pan: CueAttributePhaser | null;
+  tilt: CueAttributePhaser | null;
+  dimmer: CueAttributePhaser | null;
+  color: CueColorPhaser | null;
+}
+
 export type ProductionRecord = AssetDefinition | InventoryItem | StockPool | AssetInstance
   | Assembly | Surface | Zone | Port | Connection | MechanicalAttachment | DocumentSnapshot | RasterMapping
-  | Container | Personnel | Vendor;
+  | Container | Personnel | Vendor | Cue;
 
 export interface ProductionProject {
   schemaVersion: typeof PROJECT_SCHEMA_VERSION;

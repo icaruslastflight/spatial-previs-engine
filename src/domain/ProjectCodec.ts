@@ -1,5 +1,6 @@
 import { PROJECT_SCHEMA_VERSION } from './ProductionProject.ts';
 import type { ProductionProject, ProductionRecord } from './ProductionProject.ts';
+import { PHASER_EASINGS } from '../engine/Phaser.ts';
 
 type ObjectValue = Record<string, unknown>;
 export class ProjectValidationError extends Error {
@@ -53,6 +54,43 @@ function quantity(value: unknown, path: string): void {
     text(v.source, `${path}.source`);
   }
 }
+function fraction(value: unknown, path: string): void {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1) {
+    fail(path, 'expected a number between 0 and 1');
+  }
+}
+/** A phaser's steps and clock -- shared shape between an attribute phaser and a colour phaser. */
+function phaserClock(v: ObjectValue, path: string): void {
+  if (typeof v.speedBpm !== 'number' || !Number.isFinite(v.speedBpm) || v.speedBpm <= 0) {
+    fail(`${path}.speedBpm`, 'expected positive BPM');
+  }
+  oneOf(v.easing, PHASER_EASINGS, `${path}.easing`);
+}
+function attributePhaser(value: unknown, path: string): void {
+  const v = object(value, path);
+  keys(v, ['steps', 'speedBpm', 'easing'], path);
+  if (!Array.isArray(v.steps) || v.steps.length === 0) fail(`${path}.steps`, 'expected at least one step');
+  v.steps.forEach((step, i) => {
+    const s = object(step, `${path}.steps[${i}]`);
+    keys(s, ['value', 'transition'], `${path}.steps[${i}]`);
+    if (typeof s.value !== 'number' || !Number.isFinite(s.value)) fail(`${path}.steps[${i}].value`, 'expected finite number');
+    fraction(s.transition, `${path}.steps[${i}].transition`);
+  });
+  phaserClock(v, path);
+}
+function colorPhaser(value: unknown, path: string): void {
+  const v = object(value, path);
+  keys(v, ['steps', 'speedBpm', 'easing'], path);
+  if (!Array.isArray(v.steps) || v.steps.length === 0) fail(`${path}.steps`, 'expected at least one step');
+  v.steps.forEach((step, i) => {
+    const s = object(step, `${path}.steps[${i}]`);
+    keys(s, ['value', 'transition'], `${path}.steps[${i}]`);
+    tuple(s.value, 3, `${path}.steps[${i}].value`);
+    if ((s.value as number[]).some(c => c < 0 || c > 1)) fail(`${path}.steps[${i}].value`, 'expected RGB channels between 0 and 1');
+    fraction(s.transition, `${path}.steps[${i}].transition`);
+  });
+  phaserClock(v, path);
+}
 
 const fields: Record<ProductionRecord['kind'], string[]> = {
   asset_definition: ['catalogId', 'category', 'specifications'],
@@ -70,6 +108,7 @@ const fields: Record<ProductionRecord['kind'], string[]> = {
   mechanical_attachment: ['parentInstanceId', 'childInstanceId', 'parentSocketId', 'childSocketId'],
   document_snapshot: ['projectRevision', 'templateId', 'templateVersion', 'status', 'includedRecordIds'],
   raster_mapping: ['surfaceId', 'width', 'height'],
+  cue: ['instanceIds', 'mirroredInstanceIds', 'aimTargetMeters', 'pan', 'tilt', 'dimmer', 'color'],
 };
 const domains = ['power', 'video', 'audio', 'data'];
 
@@ -85,7 +124,11 @@ function record(value: unknown, path: string): void {
   for (const field of fields[kind]) {
     const p = `${path}.${field}`, val = v[field];
     if (['transform'].includes(field)) transform(val, p);
-    else if (['instanceIds', 'includedRecordIds'].includes(field)) strings(val, p);
+    else if (field === 'instanceIds') {
+      strings(val, p);
+      if (kind === 'cue' && (val as string[]).length === 0) fail(p, 'expected at least one fixture');
+    }
+    else if (['mirroredInstanceIds', 'includedRecordIds'].includes(field)) strings(val, p);
     else if (['quantity', 'projectRevision'].includes(field)) natural(val, p);
     else if (['width', 'height'].includes(field)) {
       if (kind === 'raster_mapping') {
@@ -114,6 +157,9 @@ function record(value: unknown, path: string): void {
     else if (field === 'role') oneOf(val, ['audience', 'keep_out', 'listening', 'target', 'termination', 'routing'], p);
     else if (['roles', 'skills'].includes(field)) strings(val, p);
     else if (field === 'dimensionsMm') { if (val !== null) { tuple(val, 3, p); if (val.some(x => x <= 0)) fail(p, 'expected positive dimension'); } }
+    else if (field === 'aimTargetMeters') { if (val !== null) tuple(val, 3, p); }
+    else if (['pan', 'tilt', 'dimmer'].includes(field)) { if (val !== null) attributePhaser(val, p); }
+    else if (field === 'color') { if (val !== null) colorPhaser(val, p); }
     else if (field === 'weightKg' || field === 'dayRate') { if (val !== null) { if (typeof val !== 'number' || !Number.isFinite(val) || val <= 0) fail(p, 'expected positive number'); } }
     else if (['inventoryItemId', 'serialNumber', 'connector', 'protocol', 'vendorId', 'containerId', 'email', 'phone', 'contactName'].includes(field) && val === null) { /* Explicit unknown/unallocated. */ }
     else text(val, p);
@@ -184,6 +230,12 @@ export function validateProject(value: unknown): asserts value is ProductionProj
     }
     if (r.kind === 'raster_mapping') {
       reference(r.surfaceId, 'surface', r.id);
+    }
+    if (r.kind === 'cue') {
+      for (const id of r.instanceIds) reference(id, 'asset_instance', r.id);
+      for (const id of r.mirroredInstanceIds) {
+        if (!r.instanceIds.includes(id)) fail(r.id, 'mirrored fixture must be one of the cue\'s own instances');
+      }
     }
   }
   for (const child of parentOf.keys()) {
