@@ -1,14 +1,16 @@
 # R0 desktop conformance
 
-Status: native CORE-01 source implemented; Unreal build and runtime conformance pending.
-The AirGPU workstation was accessed successfully after the owner's restart.
-Epic subsequently showed UE5.8.2 verification at 88%; confirm installation completion
-before native validation resumes. See `WORKSTATION_CONTROLS.md`. Visual Studio
-2026 and its C++ tools are verified.
-Epic Games Launcher installed successfully on 17 September 2026; UE5.8.2 files are now
-present. The initial build encountered a missing Windows TMP variable in the remote
-process environment; preflight now restores it. The owner restarted the PC during
-the next attempt. Native build and commandlet results remain unverified.
+Status: **native CORE-01 build and runtime conformance PASSED (17 Sept 2026)**,
+on the remote Windows workstation against UE 5.8.2-56702186 (Visual Studio
+14.51.36257 toolchain, Windows 11 25H2, AMD Ryzen 9 9950X). 292 native CORE-01
+semantic round-trip cases and 26 syntax-rejection cases pass; workspace
+conformance (62 parse cases, 8 SHA-256 cases, 10 scenarios/93 steps) passed in
+the same run. Evidence retained at
+`test-results/native/20260917-023802-105/` (build.log, host.json,
+conformance.json, commandlet.log, comparison.log, workspace-*) — see
+`docs/r0/VERIFICATION.md` for the full record. This closes the native build/
+conformance gate described below; CORE-02/03/04 (command/history/check/review/
+persistence) remain unimplemented, see the note further down.
 
 `native/SpatialPrevis/SpatialPrevis.uproject` is pinned to UE5.8. It contains the
 strict project codec, Tools > Spatial Previs R0 record inspector, coordinate adapter,
