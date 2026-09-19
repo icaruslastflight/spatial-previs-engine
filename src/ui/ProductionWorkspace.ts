@@ -11,10 +11,39 @@ import { createDiagnosticBundle } from '../domain/DiagnosticBundle.ts';
 import { ProductionViewport } from './ProductionViewport.ts';
 import { CablingInspector } from './CablingInspector.ts';
 import type { CatalogAsset } from './ProductionViewport.ts';
+import { allocatePatch } from '../engine/DmxPatch.ts';
+import type { PatchEntry } from '../engine/DmxPatch.ts';
 import './workspace.css';
 
 const escape = (value: unknown) => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 const root = document.querySelector<HTMLDivElement>('#workspace')!;
+
+/**
+ * Zones and RGB channels per pixel-mapped bar, and the addresses that footprint
+ * claims -- shared by the "DMX Pixel Mapping" panel and its CSV export so the
+ * two never compute two different patches for the same fixtures. Previously
+ * each hand-rolled its own universe/channel arithmetic independently of
+ * `engine/DmxPatch.ts`'s tested allocator, and the two were free to (and did)
+ * drift apart from it.
+ */
+export const PIXEL_BAR_ZONES = 4;
+export const PIXEL_BAR_CHANNELS_PER_ZONE = 3; // RGB
+export const PIXEL_BAR_FOOTPRINT = PIXEL_BAR_ZONES * PIXEL_BAR_CHANNELS_PER_ZONE;
+
+/**
+ * Patch a fixed-size list of pixel-mapped bars, padding with synthetic
+ * placeholders when fewer than `count` real fixtures exist yet -- the panel
+ * shows a representative patch sheet even on an empty project.
+ */
+export function pixelMappingPatch(fixtures: readonly AssetInstance[], count: number): PatchEntry[] {
+  const requests = Array.from({ length: count }, (_, i) => ({
+    id: fixtures[i]?.id ?? `synthetic-pixel-bar-${i}`,
+    label: fixtures[i]?.label ?? `COLORstrip Pixel Bar #${i + 1}`,
+    mode: 'RGB Zones',
+    footprint: PIXEL_BAR_FOOTPRINT,
+  }));
+  return allocatePatch(requests, { startUniverse: 1, startAddress: 1 });
+}
 root.innerHTML = `<header class="project-bar"><div class="wordmark"><span class="mark">SP</span><div><strong>Spatial Previs</strong><small>Production workspace</small></div></div>
   <div class="project-identity"><span id="project-name">Local production</span><span id="revision">Revision 0</span></div>
   <span class="mode">Design only</span></header>
@@ -380,20 +409,19 @@ function renderPanel(): void {
       const mapping = mappings[0] || { width: 1920, height: 1080 };
       const fixtures = instances.filter(i => i.label.toLowerCase().includes('bar') || i.label.toLowerCase().includes('colorstrip') || i.definitionId.includes('strobe') || i.definitionId.includes('colorstrip'));
       const fixtureCount = Math.max(fixtures.length, 8);
-      const zonesPerFixture = 4;
-      const channelsPerZone = 3; // RGB
-      const totalChannels = fixtureCount * zonesPerFixture * channelsPerZone;
-      const universes = Math.ceil(totalChannels / 512);
+      const patch = pixelMappingPatch(fixtures, fixtureCount);
+      const totalChannels = fixtureCount * PIXEL_BAR_FOOTPRINT;
+      const universes = patch[patch.length - 1]?.universe ?? 1;
 
       html += `
         <h2>DMX Pixel Mapping & Fixture Pixels</h2>
         <p>Map raster video pixels onto addressable LED bars, tubes, and multi-cell fixtures.</p>
-        
+
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
           <div style="background:var(--field);border:1px solid var(--border);border-radius:6px;padding:10px;">
             <small style="color:var(--muted);text-transform:uppercase;">Mapped Fixtures</small>
             <strong style="font-size:16px;display:block;margin-top:4px;color:var(--accent);">${fixtureCount} Pixel Bars</strong>
-            <small style="color:var(--muted);">${fixtureCount * zonesPerFixture} Addressable RGB Zones</small>
+            <small style="color:var(--muted);">${fixtureCount * PIXEL_BAR_ZONES} Addressable RGB Zones</small>
           </div>
           <div style="background:var(--field);border:1px solid var(--border);border-radius:6px;padding:10px;">
             <small style="color:var(--muted);text-transform:uppercase;">DMX Footprint</small>
@@ -408,17 +436,14 @@ function renderPanel(): void {
             <tr><th>Fixture</th><th>Universe</th><th>DMX Ch</th><th>Sample X,Y</th></tr>
           </thead>
           <tbody>
-            ${Array.from({ length: Math.min(fixtureCount, 8) }, (_, i) => {
-              const startCh = i * 12 + 1;
-              const u = Math.floor((startCh - 1) / 512) + 1;
-              const ch = ((startCh - 1) % 512) + 1;
+            ${patch.slice(0, 8).map((entry, i) => {
               const sampleX = Math.round((i / Math.max(1, fixtureCount - 1)) * mapping.width);
               const sampleY = Math.round(mapping.height * 0.5);
               return `
                 <tr>
-                  <td>${fixtures[i]?.label ?? `COLORstrip Pixel Bar #${i + 1}`}</td>
-                  <td>Univ ${u}</td>
-                  <td>${ch} - ${ch + 11}</td>
+                  <td>${entry.label}</td>
+                  <td>Univ ${entry.universe}</td>
+                  <td>${entry.address} - ${entry.endAddress}</td>
                   <td>[${sampleX}, ${sampleY}]</td>
                 </tr>
               `;
@@ -493,14 +518,12 @@ function renderPanel(): void {
       const mapping = mappings[0] || { width: 1920, height: 1080 };
       const fixtures = instances.filter(i => i.label.toLowerCase().includes('bar') || i.label.toLowerCase().includes('colorstrip') || i.definitionId.includes('strobe') || i.definitionId.includes('colorstrip'));
       const count = Math.max(fixtures.length, 8);
-      for (let i = 0; i < count; i++) {
-        const startCh = i * 12 + 1;
-        const u = Math.floor((startCh - 1) / 512) + 1;
-        const ch = ((startCh - 1) % 512) + 1;
+      const patch = pixelMappingPatch(fixtures, count);
+      patch.forEach((entry, i) => {
         const sx = Math.round((i / Math.max(1, count - 1)) * mapping.width);
         const sy = Math.round(mapping.height * 0.5);
-        csv += `"${fixtures[i]?.label ?? `COLORstrip Pixel Bar #${i + 1}`}",${u},${ch},${ch + 11},4,12,${sx},${sy}\n`;
-      }
+        csv += `"${entry.label}",${entry.universe},${entry.address},${entry.endAddress},${PIXEL_BAR_ZONES},${PIXEL_BAR_FOOTPRINT},${sx},${sy}\n`;
+      });
       downloadCsv(csv, `dmx-pixel-patch-r${state.project.revision}.csv`);
     }));
 
