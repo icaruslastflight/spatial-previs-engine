@@ -224,6 +224,17 @@ else
     else
       fail "dist/cesium/ runtime assets missing -- Cesium will 404 at runtime"
     fi
+    # dashboard/main.ts fetches this by a bare relative URL at runtime, not a
+    # static import -- Vite's build only copies files it can see referenced
+    # (public/ verbatim, or an import/new URL() it can trace), so a file that
+    # only `npm run dev`'s filesystem-serving mode can find silently vanishes
+    # from `dist/` while local dev keeps working. Exactly this shipped once
+    # (404 on the real GitHub Pages deploy, dev server never showed it).
+    if [[ -f dist/dashboard/data/decisions.json ]]; then
+      pass "dist/dashboard/data/decisions.json emitted"
+    else
+      fail "dist/dashboard/data/decisions.json missing -- the decisions panel will 404 in production"
+    fi
   fi
 fi
 

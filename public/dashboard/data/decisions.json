@@ -49,6 +49,14 @@
       "resolvedNote": "Owner said \"proceed\"; merged. A later auto-merge attempt on a subsequent PR was blocked by the session's own permission classifier (\"Merge Without Review\"), so PRs opened after that point are left in draft for explicit review instead of auto-merged.",
       "title": "Merge PR #17 (open-data venue showcase) once green?",
       "relatedPRs": [17]
+    },
+    {
+      "id": "decisions-json-404-in-prod",
+      "raised": "2026-09-18",
+      "status": "resolved",
+      "resolvedNote": "Root-caused after the owner reported \"my dashboard isnt working\": this very file lived at dashboard/data/decisions.json, fetched by main.ts via a bare relative URL. Vite's production build only copies files it can trace (public/ verbatim, or an actual import/new URL()) -- a runtime-only fetch() target isn't one, so npm run dev's filesystem-serving mode kept working locally while the real GitHub Pages deploy 404'd on this exact file the whole time. Moved to public/dashboard/data/decisions.json (no code change needed, relative fetch still resolves) and added a dedicated gate to verify_foundational_setup.sh so npm run build fails loudly instead of shipping a silent 404 if this ever regresses.",
+      "title": "Dashboard's decisions panel 404s on the real GitHub Pages deploy",
+      "relatedPRs": []
     }
   ]
 }

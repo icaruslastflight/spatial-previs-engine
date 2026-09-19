@@ -39,7 +39,7 @@ browser. Add it to your home screen for one-tap access.
 | Recent commits | GitHub REST API, `GET /repos/{owner}/{repo}/commits`, with `Co-Authored-By: Claude …` / `Claude-Session:` trailers parsed into an agent badge | Yes |
 | CI — latest commit | GitHub REST API, `GET /repos/{owner}/{repo}/commits/{sha}/check-runs` | Yes |
 | Recent workflow runs | GitHub REST API, `GET /repos/{owner}/{repo}/actions/runs` | Yes |
-| Open decisions | `dashboard/data/decisions.json` | Hand-maintained |
+| Open decisions | `public/dashboard/data/decisions.json` | Hand-maintained |
 
 Nothing here is mocked. `src/dashboard/GitHubActivity.ts` and
 `src/dashboard/RoadmapStatus.ts` are unit-tested (`*.test.ts` beside each)
@@ -67,9 +67,9 @@ basemap tiers in `src/geo/CesiumGlobe.ts` (§4).
 
 ## The decisions ledger
 
-`dashboard/data/decisions.json` is a small, hand-maintained log of owner
-decisions raised across development sessions — the kind of thing that has
-repeatedly gotten lost in chat history on this project. An entry:
+`public/dashboard/data/decisions.json` is a small, hand-maintained log of
+owner decisions raised across development sessions — the kind of thing that
+has repeatedly gotten lost in chat history on this project. An entry:
 
 ```jsonc
 {
@@ -93,13 +93,17 @@ honest list an owner can scan in ten seconds, not a complete audit trail.
 dashboard/
   index.html        page shell, HUD-panel styling matching showcase/
   main.ts           composition: fetch, render, document.body.dataset.ready
-  data/
-    decisions.json   hand-maintained decisions ledger
 src/dashboard/
   GitHubActivity.ts       GitHub REST fetch + response parsing (tested)
   GitHubActivity.test.ts
   RoadmapStatus.ts        docs/ROADMAP.md milestone-table parser (tested)
   RoadmapStatus.test.ts
+public/dashboard/data/
+  decisions.json     hand-maintained decisions ledger -- under public/ so
+                      Vite's build copies it verbatim; main.ts's runtime
+                      fetch() can't be traced as a build dependency the way
+                      a static import can, so anywhere outside public/
+                      silently 404s once deployed (it did, once)
 ```
 
 The fetch/parse logic lives under `src/dashboard/` rather than inside

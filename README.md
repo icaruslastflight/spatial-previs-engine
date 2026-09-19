@@ -72,7 +72,7 @@ prompt-drafting tool built on Anthropic's metaprompt technique.
 recent commits and CI status pulled from the real GitHub API, plus a
 hand-maintained log of open owner decisions.
 
-`npm run telegram-bot` (see CLAUDE.md §17) is a read-only companion: the
+`npm run telegram-bot` (see CLAUDE.md §18) is a read-only companion: the
 same open-PR/CI status as a `/status` command in Telegram, for checking in
 from a phone without opening the dashboard.
 

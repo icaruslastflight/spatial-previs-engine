@@ -253,7 +253,7 @@ npm test            # vitest: core engine, geodetic, CP-1, snapping, asset libra
 npm run verify      # full foundation health check — structure + all three gates
 npm run build:assets # compile the modular asset library to GLB
 npm run bridge      # FOH Art-Net/sACN → WebSocket daemon (lands in Phase 4)
-npm run telegram-bot # read-only /status Telegram bot — see §17
+npm run telegram-bot # read-only /status Telegram bot — see §18
 npm run fetch:gdtf  # sync GDTF fixture profiles into the local cache
 npm run fetch:open-data # fetch the open-data venue layers (terrain, NAIP, OSM) for showcase/open-data-venue.html
 npm run render:wall-loop # regenerate public/assets/video/edm_wall_loop.mp4 (needs ffmpeg + a dev server)
@@ -792,9 +792,15 @@ full contract; the short version:
 - **The roadmap panel parses the real `docs/ROADMAP.md`**, fetched from
   `raw.githubusercontent.com` — not a hand-maintained JSON mirror that could
   drift from the actual table the way §1.1 warns shared constants must not.
-- **The decisions ledger** (`dashboard/data/decisions.json`) is the one
-  hand-maintained part: a short, honest list of open owner decisions raised
-  across sessions, edited directly by whoever raises or resolves one.
+- **The decisions ledger** (`public/dashboard/data/decisions.json`) is the
+  one hand-maintained part: a short, honest list of open owner decisions
+  raised across sessions, edited directly by whoever raises or resolves one.
+  It lives under `public/` — not `dashboard/data/` — because `main.ts` fetches
+  it by a bare relative URL at runtime rather than a static import, and Vite's
+  build only copies files it can trace (`public/` verbatim, or an actual
+  `import`/`new URL()`); a file only `npm run dev`'s filesystem-serving mode
+  can find silently 404s once deployed. It shipped broken this way once —
+  `npm run build` now has its own gate for this file specifically.
 - **Fetch/parse logic lives under `src/dashboard/`**, not inside
   `dashboard/` itself, so it's tested the way every other `src/` module is
   (`<Module>.test.ts` beside it, §7) rather than needing a `vitest.config.ts`
@@ -814,7 +820,7 @@ store the value in a password manager, matching this project's existing
 `scripts/ai-tools/prompts/`, git-ignored per §11, the same per-workstation
 pattern as `.memory/`.
 
-## 16. Native UE5 foundation (`native/`)
+## 17. Native UE5 foundation (`native/`)
 
 `native/SpatialPrevis` is the UE5.8 project implementing the desktop side of
 §1.1's parity contract — currently the **CORE-01 milestone** (import/inspect
@@ -851,7 +857,7 @@ not passed through Three.js renderer transforms first. `domain/R0Boundaries.test
 and `domain/NativeConformance.test.ts` are the regression checks; extend those,
 don't hand-verify a new conversion path.
 
-## 17. Telegram status bot
+## 18. Telegram status bot
 
 A deliberately narrow, read-only `/status` bot lives at
 `scripts/telegram_bot_daemon.js` — no server, no paid hosting, $0 beyond
