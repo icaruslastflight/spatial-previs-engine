@@ -1,0 +1,884 @@
+[
+ {
+  "claim": "The SourceForge product page for Vectorworks Vision has zero user reviews submitted (0.0/5 across all rating categories).",
+  "quote": "This software hasn't been reviewed yet. Be the first to provide a review.",
+  "importance": "central",
+  "sourceQuality": "unreliable",
+  "publishDate": null
+ },
+ {
+  "claim": "Vectorworks Vision has a starting price of $1,600 as a one-time payment, with a free trial available.",
+  "quote": "Starting Price: $1,600 one-time payment",
+  "importance": "supporting",
+  "sourceQuality": "unreliable",
+  "publishDate": null
+ },
+ {
+  "claim": "Vectorworks Vision integrates with Vectorworks Spotlight to automate paperwork and visualize designs in rendered 3D, targeting previs and show cueing workflows.",
+  "quote": "design documents, automate paperwork, and visualize your design in rendered 3D views",
+  "importance": "supporting",
+  "sourceQuality": "unreliable",
+  "publishDate": null
+ },
+ {
+  "claim": "Vectorworks Architect is priced per-user, per-month with annual subscription at $127.50/user/month and monthly subscription at $153.00/user/month, with no free version available.",
+  "quote": "Annual Subscription: $127.50/user/month; Monthly Subscription: $153.00/user/month",
+  "importance": "central",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "Users report that Vectorworks' 'Service Select' support/upgrade plan is a separate paid add-on, and without it users cannot get software updates or upgrades.",
+  "quote": "The service select feature which is marketed as a customer support platform comes at a separated cost, further you cannot get updates or pay for upgrades without it.",
+  "importance": "central",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "A user reported that even paying for the premium support tier does not guarantee problems get resolved.",
+  "quote": "even if you pay the premium, which is not worth it, as they often can't solve your problem.",
+  "importance": "supporting",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "Vectorworks Architect holds a 4.3/5 overall rating from 53 Capterra reviews with a value-for-money score of 3.9.",
+  "quote": "4.3 out of 5 stars based on 53 reviews, with a value-for-money rating of 3.9.",
+  "importance": "supporting",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "Vectorworks Vision is priced at $1,600 as a one-time payment, while Capture offers a free version, indicating a significant accessibility/pricing gap between the two competitors.",
+  "quote": "Vectorworks Vision: $1,600 one-time payment",
+  "importance": "central",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "Capture's feature set centers on real-time lighting, media, and motion visualization with DirectX/Metal rendering and DMX console integration (talkback, patch exchange).",
+  "quote": "Bring lighting, media and motion into your visualisation",
+  "importance": "supporting",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "Vectorworks Vision is tightly coupled to Vectorworks Spotlight, positioning it as an extension of a CAD design workflow rather than a standalone previs tool.",
+  "quote": "Integrates with Vectorworks Spotlight design software",
+  "importance": "supporting",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "Neither product has any user-submitted reviews or ratings on SourceForge, so this page provides no direct user sentiment, complaints, or feature requests.",
+  "quote": "Both show 0.0/5 overall ratings across all categories (ease, features, design, support)",
+  "importance": "tangential",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "Capture Visualization software does not accurately render reflective surfaces such as mirror balls, a limitation users should weigh when choosing visualization software.",
+  "quote": "Capture doesn't do reflective surfaces like mirror balls so if you absolutely have to have an accurate visualization of a mirror ball it's off your list",
+  "importance": "central",
+  "sourceQuality": "forum",
+  "publishDate": "2016-06-23"
+ },
+ {
+  "claim": "A user considered Capture the best value-for-performance visualizer they evaluated, citing its paperwork/documentation features and visualization quality as strengths.",
+  "quote": "the best combination of value and performance... really like how it does paperwork and the visualization is high enough quality",
+  "importance": "central",
+  "sourceQuality": "forum",
+  "publishDate": "2016-06-23"
+ },
+ {
+  "claim": "Users expressed dissatisfaction with alternative visualizer/control software (Martin Show Designer) due to usability, prompting a switch to other tools.",
+  "quote": "I used to use Martin Show Designer but I can't stand it anymore",
+  "importance": "supporting",
+  "sourceQuality": "forum",
+  "publishDate": "2016-06-23"
+ },
+ {
+  "claim": "Avolites planned to bundle Capture visualization directly into its Titan V10 console software, indicating industry integration trends for previs tools.",
+  "quote": "Informed that Titan V10 would include built-in Capture visualization",
+  "importance": "supporting",
+  "sourceQuality": "forum",
+  "publishDate": "2016-06-23"
+ },
+ {
+  "claim": "Users evaluating visualization tools prioritize support for special effects simulation (CO2, water, pyrotechnics) alongside standard fixture control integration (Avolites, grandMA).",
+  "quote": "prioritized special effects capabilities, including CO2, water effects, and pyrotechnics, as essential for their workflow with Avolites and Grand MA boards",
+  "importance": "tangential",
+  "sourceQuality": "forum",
+  "publishDate": "2016-06-23"
+ },
+ {
+  "claim": "grandMA3D is free for MA console users and considered essential for learning grandMA consoles",
+  "quote": "Highlighted as a free tool for MA console users, recommended as \"a must\" for learning MA consoles.",
+  "importance": "supporting",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "WYSIWYG is characterized as an extremely powerful visualizer with enhanced beam renderings, footprints, shadows, an integrated plotter and fixture library",
+  "quote": "Described as \"an extremely powerful Visualizer\" with enhanced beam renderings, footprints, shadows, and an integrated plotter and fixture library.",
+  "importance": "central",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "Capture is noted for real-time shadows, volumetric beams, and HDR mapping to prevent whiteouts",
+  "quote": "Noted for real-time shadows, volumetric beams, and HDR mapping to prevent whiteouts.",
+  "importance": "central",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "Light Jockey 2 is a free/cheap previs option but limited to 100 fixtures",
+  "quote": "Described as \"a free, cheap way to pre-vis work\" despite supporting only 100 fixtures.",
+  "importance": "supporting",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "The thread is primarily a software catalog and lacks substantive user commentary on learning curve, pricing, or feature requests",
+  "quote": "The thread lacks substantive user commentary on learning curves, pricing concerns, feature requests, or practical complaints—it's primarily a software catalog rather than a discussion of user experiences.",
+  "importance": "tangential",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "Vectorworks is considered the industry standard for lighting plots but its cost is a barrier for freelancers",
+  "quote": "For lighting plots Vectorworks is the standard.",
+  "importance": "central",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "Vectorworks Service Select subscription pricing is criticized as inconsistent, varying by enrollment year and causing renewal frustration",
+  "quote": "With Autodesk, you get more perks for having the monthly subscription over perpetual licenses, but with Nemeschek, you get 2 free universes of Vision only if you buy a perpetual license.",
+  "importance": "supporting",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "Users treat Capture, WYSIWYG, and Vision as roughly interchangeable visualization/rendering tools among several budget alternatives (SoftPlot, Drafty, Depence2, Augment3d) rather than must-haves",
+  "quote": "Don't ever feel like you need one piece of software to do your job...if you can communicate your ideas effectively using another tool, there's no compelling reason to spend thousands.",
+  "importance": "central",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "Depence2 is praised specifically for superior physics simulation but is limited to Windows only",
+  "quote": "Depence2 (praised for superior physics; Windows-only)",
+  "importance": "supporting",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "grandMA3D is offered as a free visualizer designed for GrandMA console users, targeted at the concert lighting world",
+  "quote": "FREE visualizer... render live a full lighting rig, and is designed more for the concert world",
+  "importance": "central",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "Capture supports real-time work across lighting, video mapping, projection, moving scenery, lasers, and water jets on Windows and Mac OS X",
+  "quote": "allows you to work in real-time with all elements of your design",
+  "importance": "central",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "ESP Vision (Vectorworks Vision) is regarded as one of the standard pre-visualization tools for concert lighting, nearing version 3.0",
+  "quote": "one of the standards in pre-visualization software for lighting",
+  "importance": "central",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "Martin's Light Jockey 2 is a free but limited previs tool, capped at 100 fixtures and 2 DMX universes",
+  "quote": "free, cheap way to pre-vis work",
+  "importance": "supporting",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "LXBeams is a low-cost previs option currently limited to Mac with Windows support planned",
+  "quote": "currently Mac-only with Windows planned",
+  "importance": "tangential",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "Capture Solo Edition costs roughly £300 and is limited to a single DMX universe",
+  "quote": "I bought the Capture Solo edition for around £300. It only does one universe",
+  "importance": "central",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "GrandMA3D/GrandMA visualizer is criticized for lacking scenic design capability and having fixture compatibility issues for non-MA (e.g. ETC) users, requiring workarounds like modeling scenery in SketchUp and importing it",
+  "quote": "disliked it due to inability to design scenic elements and fixture compatibility issues as an ETC user",
+  "importance": "central",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "ChamSys Visualizer is praised for performance but is restricted to ChamSys consoles, requiring an Art-Net workaround to use with other control software",
+  "quote": "Limitation: only compatible with Chamsys consoles",
+  "importance": "supporting",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "WYSIWYG is regarded by forum users as the industry gold-standard but is considered expensive",
+  "quote": "WYSIWYG mentioned as gold standard but expensive",
+  "importance": "central",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "Free/low-cost options like Show Express and Freestyler DMX exist but offer only generic stage objects and limited visualization sophistication, capping their usefulness for precise planning",
+  "quote": "Generic stage objects limit realism for precise planning",
+  "importance": "supporting",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "Capture is a freemium visualization/documentation software offering a free Student Edition",
+  "quote": "Documentation and visualisation software... free Student Edition",
+  "importance": "supporting",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "Depence² combines design and visualization with real-show control capability and is not free",
+  "quote": "Combines design and visualization process with the potential to control the real show",
+  "importance": "supporting",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "Ma3D is a free lighting visualizer specifically for GrandMA consoles/software",
+  "quote": "Free lighting visualizer for GrandMA consoles/software",
+  "importance": "central",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "wysiwyg is positioned as an all-in-one lighting design suite with integrated CAD, plots, data, visualization and virtual show control, and is not free",
+  "quote": "an all-in-one lighting design software with fully integrated CAD, plots, data, visualization and virtual show control",
+  "importance": "central",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "Vectorworks Vision integrates directly with Vectorworks Spotlight, allowing fixture and model information to be sent to Vision for previsualization, programming, and cueing a show, i.e. a design-to-cue workflow pipeline rather than a standalone tool.",
+  "quote": "easily send fixture and model information directly to Vision to previsualize, program, and cue your show",
+  "importance": "central",
+  "sourceQuality": "primary",
+  "publishDate": null
+ },
+ {
+  "claim": "Vision allows customization of fixture parameters (colors, gobos, lenses, shutters) and provides access to comprehensive pre-built fixture libraries.",
+  "quote": "Customizable Fixtures: Users can modify colors, gobos, lenses, shutters, and other fixture parameters",
+  "importance": "supporting",
+  "sourceQuality": "primary",
+  "publishDate": null
+ },
+ {
+  "claim": "Vision is marketed as cross-platform (Mac and PC) desktop software with console integration, but the product page gives no information on mobile or touch support, positioning it as a traditional desktop-only workflow tool.",
+  "quote": "Cross-Platform: Available for both Mac and PC",
+  "importance": "central",
+  "sourceQuality": "primary",
+  "publishDate": null
+ },
+ {
+  "claim": "The vendor markets Vision's core value proposition as eliminating the need for on-site venue travel and crew standby time via pre-production visualization, targeting cost/time savings rather than accessibility or pricing.",
+  "quote": "Eliminates need for on-site venue travel and crew standby time",
+  "importance": "supporting",
+  "sourceQuality": "primary",
+  "publishDate": null
+ },
+ {
+  "claim": "Vectorworks Vision is priced at a $1,600 one-time payment, while Capture is listed as free",
+  "quote": "Capture: Free (with free trial and free version options available) / Vectorworks Vision: $1,600 one-time payment",
+  "importance": "supporting",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "The Slashdot comparison page shows no actual user reviews or star ratings for either product, limiting its value as a source of real user sentiment",
+  "quote": "Both products show 0 user reviews on this comparison platform, with no star ratings available for either tool.",
+  "importance": "central",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "Capture supports DMX talkback for console interaction and uses DirectX/Metal rendering with an ACEScg color pipeline for high-fidelity visualization",
+  "quote": "DMX talkback for console interaction ... DirectX and Metal native technologies with ACEScg color pipeline",
+  "importance": "supporting",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "Vectorworks Vision integrates directly with Vectorworks Spotlight for fixture/model transfer and offers show previsualization and cueing functionality",
+  "quote": "Integration with Vectorworks Spotlight design software ... Show previsualization and cueing functionality",
+  "importance": "supporting",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "Both tools claim mobile app support (iPhone, iPad, Android) per this aggregator listing",
+  "quote": "Both support multiple platforms: Web-based, on-premises, and mobile apps (iPhone, iPad, Android), plus Windows, Mac, and Linux.",
+  "importance": "tangential",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "WYSIWYG is described as the global standard in lighting design, with an extensive fixture library of 20,000+ fixtures, but has a steep learning curve and is Windows-only.",
+  "quote": "the global standard in lighting design",
+  "importance": "central",
+  "sourceQuality": "blog",
+  "publishDate": "2024-07-14"
+ },
+ {
+  "claim": "Depence R3 achieves unparalleled realism but lacks plan/documentation generation, requires high-end graphics hardware, and carries premium pricing.",
+  "quote": "unparalleled levels of realism",
+  "importance": "central",
+  "sourceQuality": "blog",
+  "publishDate": "2024-07-14"
+ },
+ {
+  "claim": "Vectorworks Spotlight's VISION visualizer integration lacks refined shadow/texture detail and uses a subscription-based pricing model.",
+  "quote": "VISION visualizer integration lacks refined shadow/texture detail",
+  "importance": "central",
+  "sourceQuality": "blog",
+  "publishDate": "2024-07-14"
+ },
+ {
+  "claim": "grandMA3 3D is free and built into grandMA2 consoles with good visualization quality for show prep, but cannot export documentation.",
+  "quote": "Cannot export documentation",
+  "importance": "supporting",
+  "sourceQuality": "blog",
+  "publishDate": "2024-07-14"
+ },
+ {
+  "claim": "L8 offers an affordable entry point ranging from €88 to €7500 with extensive device libraries and 3D import, but has weak documentation/annotation tools and a game-like interface learning curve.",
+  "quote": "Affordable entry point (€88–€7500)",
+  "importance": "supporting",
+  "sourceQuality": "blog",
+  "publishDate": "2024-07-14"
+ },
+ {
+  "claim": "Vectorworks Vision is bundled with existing Vectorworks licenses (Spotlight/Design Suite) rather than sold standalone, with tiers gated by subscription type",
+  "quote": "Vision licensing is included at no additional cost for all Service Select members with a Design Suite or Spotlight license, including all active subscription licenses, plus perpetual license owners.",
+  "importance": "central",
+  "sourceQuality": "primary",
+  "publishDate": null
+ },
+ {
+  "claim": "Vision has two tiers: 'Vision Plus' (4 universes) for monthly/perpetual+Service Select users, and 'Vision Unlimited' for annual subscribers at no extra cost or as a paid add-on for perpetual owners",
+  "quote": "Vision Plus... Includes 4 Universes... Vision Unlimited... Available to annual subscription license holders at no additional cost",
+  "importance": "central",
+  "sourceQuality": "primary",
+  "publishDate": null
+ },
+ {
+  "claim": "Integration with MA-Net2/MA-Net3 DMX networks requires purchasing additional hardware (dongle or viz-key) beyond the software license",
+  "quote": "special requirements for MA-Net2 DMX integration (requires dongle purchase) and MANet3 (requires viz-key from MA distributor)",
+  "importance": "supporting",
+  "sourceQuality": "primary",
+  "publishDate": null
+ },
+ {
+  "claim": "Vectorworks does not publish transparent flat pricing for Vision on its buy page, requiring customers to contact sales or check a customer portal",
+  "quote": "Actual pricing figures are not provided on this page; customers must contact sales or check the Customer Portal for cost details.",
+  "importance": "supporting",
+  "sourceQuality": "primary",
+  "publishDate": null
+ },
+ {
+  "claim": "Capture Polar has tiered pricing accessible to students/hobbyists: a free student edition with limited fixture library, a Solo edition around £250 for a single universe, and a full version over £1,000.",
+  "quote": "Solo edition (~£250) offers single universe; full version costs over £1,000",
+  "importance": "central",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "WYSIWYG is regarded as expensive and Windows-only, though users work around the OS limitation by partitioning Macs.",
+  "quote": "Drawbacks: Windows-only (though users ran it on partitioned iMacs), expensive",
+  "importance": "central",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "ChamSys MagicQ's visualizer is free and cross-platform (Mac/PC/Linux) with automatic fixture head generation and direct console control.",
+  "quote": "Completely free, runs on Mac, PC, and Linux",
+  "importance": "supporting",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "A forum moderator cautions that previs software is not a substitute for hands-on training and may not save time in academic/learning contexts.",
+  "quote": "pre-vis software is a great aid...but it is NOT a replacement for hands on learning.",
+  "importance": "supporting",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "Users with prior Vectorworks experience report an easier learning curve for WYSIWYG due to workflow/interface familiarity.",
+  "quote": "Learning curve: \"less painful\" for those with Vectorworks background",
+  "importance": "supporting",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "Capture Visualization uses a tiered pricing model with named tiers (Solo/Duet/Quartet/Symphony) rather than a single price, ranging roughly €399 to €3,199.",
+  "quote": "Solo: €399 / Duet: €799 / Quartet: €1,599 / Symphony: €3,199",
+  "importance": "central",
+  "sourceQuality": "blog",
+  "publishDate": "2023-04-18"
+ },
+ {
+  "claim": "WYSIWYG (CAST Software) is criticized as having a steeper learning curve and being less user-friendly than some competing tools.",
+  "quote": "May not be as user-friendly or intuitive as some other options",
+  "importance": "central",
+  "sourceQuality": "blog",
+  "publishDate": "2023-04-18"
+ },
+ {
+  "claim": "Vectorworks Spotlight is priced around $2,895 for a new license, substantially higher entry cost than Capture's lowest tier.",
+  "quote": "New license: ~$2,895",
+  "importance": "supporting",
+  "sourceQuality": "blog",
+  "publishDate": "2023-04-18"
+ },
+ {
+  "claim": "grandMA3D is bundled with grandMA console purchase or available as a free download, but lacks built-in 2D drafting/3D modeling and has fewer features than dedicated previs software.",
+  "quote": "Specifically designed for use with grandMA lighting consoles ... Lacks built-in 2D drafting and 3D modeling capabilities",
+  "importance": "supporting",
+  "sourceQuality": "blog",
+  "publishDate": "2023-04-18"
+ },
+ {
+  "claim": "The article contains no information on Depence3 pricing or features.",
+  "quote": "The article does not contain claims about Depence3.",
+  "importance": "tangential",
+  "sourceQuality": "blog",
+  "publishDate": "2023-04-18"
+ },
+ {
+  "claim": "Vectorworks Vision integrates with Vectorworks Spotlight, allowing fixture and model information to be sent directly to Vision for previsualization, programming, and cueing shows.",
+  "quote": "seamless integration between Vectorworks Spotlight and Vision allows you to create design documents, automate paperwork, and visualize your design in rendered 3D views",
+  "importance": "central",
+  "sourceQuality": "primary",
+  "publishDate": null
+ },
+ {
+  "claim": "Vectorworks Vision is a desktop application supporting both Mac and PC, with no mention of a mobile/touch client, differing from Spatial Previs Engine's touch-first mobile browser client.",
+  "quote": "both Mac and PC operating systems",
+  "importance": "central",
+  "sourceQuality": "primary",
+  "publishDate": null
+ },
+ {
+  "claim": "Vision provides fixture customization tools (colors, gobos, lenses, shutters, other parameters) and comprehensive fixture libraries.",
+  "quote": "flexible Vision tools that allow you to customize colors, gobos, lenses, shutters, or any other fixture parameter",
+  "importance": "supporting",
+  "sourceQuality": "primary",
+  "publishDate": null
+ },
+ {
+  "claim": "Vectorworks markets Vision's core value proposition as cost/time savings by previsualizing rigs without traveling to the venue.",
+  "quote": "save time and money by previsualizing what your rig can do without needing to travel to the venue",
+  "importance": "supporting",
+  "sourceQuality": "primary",
+  "publishDate": null
+ },
+ {
+  "claim": "Vectorworks Vision is priced at a one-time payment of $1,600, while Capture is free with a trial/free version, representing a major accessibility gap between the two competitors' pricing models.",
+  "quote": "Pricing: $1,600 one-time payment",
+  "importance": "central",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "Vectorworks Vision requires integration with Vectorworks Spotlight for design documentation and is not a fully standalone previs tool, unlike Capture which is standalone.",
+  "quote": "Integration with Vectorworks Spotlight for design documentation",
+  "importance": "supporting",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "Capture markets itself around rendering high-quality standalone images and videos for interactive design presentations, using DirectX/Metal rendering with an ACEScg color pipeline and DMX talkback for fixture focus/programming.",
+  "quote": "\"Render it into high-quality images and videos\" for standalone presentations",
+  "importance": "supporting",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "Both products list mobile apps (iOS/Android) as part of their deployment options according to this directory listing, though the listing provides no user reviews to substantiate real-world mobile/touch usability.",
+  "quote": "Deployment: Web-based, on-premises, mobile apps (iOS/Android), Windows, Mac, Linux",
+  "importance": "tangential",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "WYSIWYG has a steep learning curve and requires substantial capital investment despite offering CAD modeling tools, 20,000+ fixture library and 102,400 DMX channels",
+  "quote": "UX/UI: Combines CAD drawing functionality with professional 3D preview. Vector-based interface familiar to design professionals, though steep learning curve noted.",
+  "importance": "central",
+  "sourceQuality": "blog",
+  "publishDate": "2024-07-14"
+ },
+ {
+  "claim": "Capture uses a vector drawing interface with integrated 3D elements and is considered user-friendly, but its documentation tools are only adequate, not exceptional",
+  "quote": "UX/UI: Vector drawing interface with integrated 3D elements; user-friendly for design professionals; established workflow",
+  "importance": "central",
+  "sourceQuality": "blog",
+  "publishDate": "2024-07-14"
+ },
+ {
+  "claim": "Depence R3 has no planning or documentation capabilities and requires significantly above-average graphics hardware, limiting accessibility despite superior rendering realism",
+  "quote": "Cons: No planning or documentation capabilities; requires significantly above-average graphics hardware; premium pricing; limited accessibility",
+  "importance": "central",
+  "sourceQuality": "blog",
+  "publishDate": "2024-07-14"
+ },
+ {
+  "claim": "grandMA3 3D is free of charge and integrated within the grandMA2 console ecosystem, but lacks documentation or plan export and is not production-grade for visualization quality",
+  "quote": "Cons: No documentation or plan export; visualization quality adequate but not production-grade; limited standalone functionality",
+  "importance": "central",
+  "sourceQuality": "blog",
+  "publishDate": "2024-07-14"
+ },
+ {
+  "claim": "Vectorworks Spotlight with VISION offers strong CAD/BIM documentation and architectural integration but has a steep learning curve and less refined VISION rendering compared to competitors",
+  "quote": "Cons: Steep learning curve; VISION rendering quality less refined than competitors; significant initial investment for full capabilities",
+  "importance": "supporting",
+  "sourceQuality": "blog",
+  "publishDate": "2024-07-14"
+ },
+ {
+  "claim": "Capture is valued by users for combining good value with strong performance compared to alternatives, though it cannot accurately render reflective surfaces like mirror balls",
+  "quote": "User praise for \"value and performance\" combination... Cannot render reflective surfaces like mirror balls accurately",
+  "importance": "supporting",
+  "sourceQuality": "forum",
+  "publishDate": "2016-06-23"
+ },
+ {
+  "claim": "As of the 2016 thread, Avolites Titan V10 was set to integrate built-in Capture visualization, indicating console/visualizer integration is a feature users value",
+  "quote": "the thread from June 23, 2016 notes Avolites subsequently announced V10 release for June 28th with built-in Capture visualization",
+  "importance": "tangential",
+  "sourceQuality": "forum",
+  "publishDate": "2016-06-23"
+ },
+ {
+  "claim": "WYSIWYG and LD Assistant are mentioned by forum users as options for special effects (CO2, water, pyro) visualization when comparing to Martin Show Designer, but no detailed UX or pricing feedback was given in this thread",
+  "quote": "User expressed frustration with Avolites Titan V10 delays... seeking software supporting special effects (CO2, water, pyro)",
+  "importance": "supporting",
+  "sourceQuality": "forum",
+  "publishDate": "2016-06-23"
+ },
+ {
+  "claim": "WYSIWYG is described as the industry-standard visualizer with enhanced beam renderings, correct footprints and shadows, functioning as an all-in-one package with plotting capabilities",
+  "quote": "industry standard... enhanced beam renderings, correct footprints and shadows",
+  "importance": "supporting",
+  "sourceQuality": "forum",
+  "publishDate": "2009-09-14"
+ },
+ {
+  "claim": "grandMA 3D is a free visualizer for MA console users, recommended as a way to learn MA consoles",
+  "quote": "highly recommended",
+  "importance": "supporting",
+  "sourceQuality": "forum",
+  "publishDate": "2009-09-14"
+ },
+ {
+  "claim": "Capture is highlighted for realtime shadows, volumetric beams, realistic color mixing, and HDR mapping",
+  "quote": "realtime shadows, volumetric beams, realistic color mixing and HDR mapping",
+  "importance": "supporting",
+  "sourceQuality": "forum",
+  "publishDate": "2009-09-14"
+ },
+ {
+  "claim": "Light Jockey 2 is a free, limited alternative capped at 100 fixtures and 2048 DMX channels",
+  "quote": "one of the smaller pre-vis programs",
+  "importance": "tangential",
+  "sourceQuality": "forum",
+  "publishDate": "2009-09-14"
+ },
+ {
+  "claim": "Capture Solo is priced around £300 and considered good value but limited to a single DMX universe",
+  "quote": "Judge praised it as \"complete and brilliant and very good value,\" though limited to one DMX universe",
+  "importance": "supporting",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "WYSIWYG's capabilities significantly exceed free alternative visualizers",
+  "quote": "MikeJ noted users \"won't get anywhere close to the capabilities\" with free alternatives",
+  "importance": "supporting",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "grandMA3D is limited to lighting and lacks scenic/set design capabilities, with SketchUp recommended as a supplement",
+  "quote": "MA3D restricted to lighting; SketchUp recommended for set design",
+  "importance": "central",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "Chamsys Visualizer only works with Chamsys consoles, illustrating a vendor lock-in complaint among free/low-cost visualizers",
+  "quote": "Praised as working \"great\" but \"only works with Chamsys\"",
+  "importance": "central",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "EasyView suffers performance/lag issues on lower-end hardware with multiple moving heads",
+  "quote": "erin_bound found it \"laggy\" with 10 moving heads using gobos",
+  "importance": "supporting",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "WYSIWYG (version 28 at time of writing) is described as an industry-standard all-in-one tool with enhanced beam renderings, correct footprints and shadows, hotspots, plotting capabilities, and extensive fixture libraries.",
+  "quote": "industry standard tool\" at version 28, featuring \"enhanced beam renderings, correct footprints and shadows, hotspots",
+  "importance": "supporting",
+  "sourceQuality": "forum",
+  "publishDate": "2013-11"
+ },
+ {
+  "claim": "Capture supports real-time design across multiple show disciplines beyond lighting, including video mapping, projection, moving scenery, lasers, and water jets, on both Windows and Mac.",
+  "quote": "offering \"real-time\" design work with support for lighting, video mapping, projection, moving scenery, lasers, and water jets",
+  "importance": "supporting",
+  "sourceQuality": "forum",
+  "publishDate": "2013-11"
+ },
+ {
+  "claim": "grandMA3D is offered as a free/complimentary visualizer by MA Lighting for concert applications, able to render a full lighting rig live and is recommended as a tool for learning grandMA console operation.",
+  "quote": "A complimentary visualizer by MA Lighting designed for concert applications, capable of \"render[ing] live a full lighting rig\" and recommended for learning MA console operation.",
+  "importance": "central",
+  "sourceQuality": "forum",
+  "publishDate": "2013-11"
+ },
+ {
+  "claim": "This wiki page does not cover Depence3 or Vectorworks Vision, and contains no user reviews, pricing information, or comparative UX analysis; it was last updated in November 2013.",
+  "quote": "The requested software—Depence and Vectorworks Vision—do not appear in this wiki article... last updated November 2013",
+  "importance": "tangential",
+  "sourceQuality": "forum",
+  "publishDate": "2013-11"
+ },
+ {
+  "claim": "Capture is a native macOS and Windows application with a free Student Edition (freemium model)",
+  "quote": "a native macOS and Windows application that lets you work with lighting, video, laser, moving scenery and water effects",
+  "importance": "supporting",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "Depence² combines design/visualization with real show control capability and is not free",
+  "quote": "a unique application, which combines the design and visualization process with the potential to control the real show",
+  "importance": "supporting",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "WYSIWYG is an all-in-one lighting design software with integrated CAD, plots, data, visualization and virtual show control, and is not free",
+  "quote": "an all-in-one lighting design software with fully integrated CAD, plots, data, visualization and virtual show control",
+  "importance": "central",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "Ma3D (grandMA3D) is a free lighting visualization tool specifically for GrandMA consoles/software",
+  "quote": "Ma3D - Listed as a free lighting visualization tool specifically for GrandMA consoles and software",
+  "importance": "central",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "Vectorworks Spotlight is positioned as an entertainment-focused, not-free extension of Vectorworks for architectural/landscape design with visualization",
+  "quote": "Vectorworks, which offers an entertainment-focused version called Vectorworks Spotlight for architectural and landscape design with visualization capabilities",
+  "importance": "supporting",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "Depence2 (predecessor/family to Depence3) is praised for superior physics and 4K rendering but is Windows-only, a platform limitation relevant to accessibility/UX comparisons.",
+  "quote": "Depence2 (praised for superior physics and 4K rendering, though Windows-only)",
+  "importance": "supporting",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "Vectorworks/Vision pricing (via Service Select annual subscription) generates user frustration due to inconsistent rate increases tied to enrollment year, causing backlash among users.",
+  "quote": "Users report that Service Select annual costs increase inconsistently, with rates potentially locked to enrollment year, creating \"a certain backlash currently against VW.\"",
+  "importance": "central",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "Cost-conscious lighting designers use cheaper or free alternatives to expensive dedicated previs/plotting tools (SoftPlot, Drafty, GIMP, Photoshop, Excel, PowerPoint) when communication of design intent is the priority over polished visualization.",
+  "quote": "Drafting is about communication more than anything else and if you can communicate your ideas effectively using another tool, there's no compelling reason to spend thousands of dollars.",
+  "importance": "supporting",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "Augment3D is an emerging ETC Eos-integrated previs tool still in beta at time of discussion, indicating an active competitive landscape beyond the named majors.",
+  "quote": "Augment3D (emerging EOS integration tool, still in beta)",
+  "importance": "tangential",
+  "sourceQuality": "forum",
+  "publishDate": null
+ },
+ {
+  "claim": "SourceForge lists no user reviews for Vectorworks Vision at time of access",
+  "quote": "This software hasn't been reviewed yet. Be the first to provide a review.",
+  "importance": "supporting",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "Vectorworks Vision has a starting price of $1,600 one-time payment with a free trial available",
+  "quote": "Starting Price: $1,600 one-time payment",
+  "importance": "central",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "Vectorworks Vision integrates with Vectorworks Spotlight for previsualizing, programming, and cueing shows before venue setup",
+  "quote": "previsualize, program, and cue your show",
+  "importance": "central",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "Vectorworks Vision offers customizable fixture parameters and DMX console compatibility with comprehensive fixture libraries",
+  "quote": "Customizable parameters (colors, gobos, lenses, shutters)",
+  "importance": "supporting",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "Vectorworks Vision is priced at $1,600 one-time payment, while Capture offers a free version.",
+  "quote": "Vectorworks Vision: $1,600 one-time payment ... Capture: Free version available",
+  "importance": "central",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "Neither Capture nor Vectorworks Vision has received user reviews on SourceForge, with both showing 0.0/5 ratings across all categories.",
+  "quote": "Neither product has received user reviews yet on SourceForge. Both show 0.0/5 ratings across all categories (ease, features, design, support).",
+  "importance": "supporting",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "Capture emphasizes standalone presentations with full design interactivity, while Vectorworks Vision prioritizes console integration and show cueing workflows.",
+  "quote": "Capture emphasizes standalone presentations with full design interactivity ... Vectorworks Vision prioritizes console integration and show cueing workflows",
+  "importance": "supporting",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "Vectorworks Vision integrates with Vectorworks Spotlight design software to previsualize and cue shows with customizable fixture parameters.",
+  "quote": "Vectorworks Vision integrates with Vectorworks Spotlight design software, enabling users to \"previsualize and cue your show\" with customizable fixture parameters and comprehensive fixture libraries.",
+  "importance": "supporting",
+  "sourceQuality": "secondary",
+  "publishDate": null
+ },
+ {
+  "claim": "Vectorworks Spotlight full new license pricing is approximately $2,895, with upgrades around $1,045",
+  "quote": "New license: ~$2,895 / Upgrade: ~$1,045",
+  "importance": "central",
+  "sourceQuality": "blog",
+  "publishDate": "2023-04-18"
+ },
+ {
+  "claim": "Capture uses a tiered per-seat pricing model ranging from €399 (Solo) to €3,199 (Symphony)",
+  "quote": "Solo: €399 / Duet: €799 / Quartet: €1,599 / Symphony: €3,199",
+  "importance": "central",
+  "sourceQuality": "blog",
+  "publishDate": "2023-04-18"
+ },
+ {
+  "claim": "WYSIWYG by CAST Software has a steeper learning curve and is considered less user-friendly than some alternatives",
+  "quote": "Can have a steeper learning curve compared to some other software... may not be as user-friendly or intuitive as some other options",
+  "importance": "central",
+  "sourceQuality": "blog",
+  "publishDate": "2023-04-18"
+ },
+ {
+  "claim": "grandMA3D is bundled free with grandMA console purchase but is limited to users of that console ecosystem",
+  "quote": "specifically designed for use with grandMA lighting consoles, so it may not be suitable for users who work with other consoles",
+  "importance": "supporting",
+  "sourceQuality": "blog",
+  "publishDate": "2023-04-18"
+ },
+ {
+  "claim": "Vectorworks supports linking objects to cables, a capability the article says Capture does not yet support",
+  "quote": "Vectorworks will allow you to link objects to cables, whereas this is not supported yet in capture",
+  "importance": "supporting",
+  "sourceQuality": "blog",
+  "publishDate": "2023-04-18"
+ },
+ {
+  "claim": "Vectorworks Vision is bundled with existing subscription/Service Select licenses rather than sold as a standalone product with transparent list pricing — Vision Plus is included for monthly subscribers and active Service Select perpetual license holders, and Vision Unlimited is free for annual subscribers or a paid add-on for perpetual license owners.",
+  "quote": "All Service Select members with Design Suite or Spotlight licenses receive Vision licensing included at no additional cost.",
+  "importance": "central",
+  "sourceQuality": "primary",
+  "publishDate": null
+ },
+ {
+  "claim": "Vision Plus is capped at 4 DMX universes, creating a tiered feature limitation between the included tier and the unlimited paid tier.",
+  "quote": "Vision Plus (Included)... Includes 4 Universes",
+  "importance": "supporting",
+  "sourceQuality": "primary",
+  "publishDate": null
+ },
+ {
+  "claim": "Vision requires specific desktop hardware (dedicated graphics card, i5/Ryzen 5+, 8GB+ RAM) and additional paid hardware dongles for certain MA console integrations, raising the accessibility barrier versus a browser-based/touch-first client.",
+  "quote": "MA-Net2 users require an additional dongle (purchased separately)",
+  "importance": "supporting",
+  "sourceQuality": "primary",
+  "publishDate": null
+ },
+ {
+  "claim": "Capture's Solo edition costs approximately £250, with full versions exceeding £1,000, and a limited free student version is available.",
+  "quote": "free student version which has a limited library of fixtures",
+  "importance": "central",
+  "sourceQuality": "forum",
+  "publishDate": "2013-03"
+ },
+ {
+  "claim": "WYSIWYG is Windows-only software (can run on partitioned Macs) and is described as not cheap.",
+  "quote": "NOT cheap, and is a Windows only software",
+  "importance": "central",
+  "sourceQuality": "forum",
+  "publishDate": "2013-03"
+ },
+ {
+  "claim": "MA3D is free for grandMA console users, tying accessibility of the previs tool to owning costly grandMA hardware/console licenses.",
+  "quote": "a GrandMA certainly ain't",
+  "importance": "supporting",
+  "sourceQuality": "forum",
+  "publishDate": "2013-03"
+ },
+ {
+  "claim": "Users warn that previs software file formats are largely proprietary, creating compatibility gaps between competing tools.",
+  "quote": "all the file formats are proprietary",
+  "importance": "supporting",
+  "sourceQuality": "forum",
+  "publishDate": "2013-03"
+ },
+ {
+  "claim": "MagicQ (ChamSys) offers a free download for PC and Mac including a built-in visualizer, positioning it as a low-cost/no-cost entry point.",
+  "quote": "MagicQ (Chamsys) offers a free download for PC and Mac with an included visualizer",
+  "importance": "supporting",
+  "sourceQuality": "forum",
+  "publishDate": "2013-03"
+ }
+]
